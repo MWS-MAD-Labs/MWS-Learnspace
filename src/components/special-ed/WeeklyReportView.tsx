@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
-import { IEPReport, WeeklyGoalProgress, Student, LJReviewStatus, LJApprovalStatus, WorkflowHistoryEntry } from '../../types';
+import { IEPReport, WeeklyGoalProgress, Student, IEPRecord, IEPGoal, LJReviewStatus, LJApprovalStatus, WorkflowHistoryEntry } from '../../types';
 import { WeeklyReportStatusTracker } from './WeeklyReportStatusTracker';
 import { StatusBadge } from '../common/StatusBadge';
 import { 
@@ -27,7 +27,13 @@ import {
   MessageSquare,
   ArrowRight,
   Check,
-  Eye
+  Eye,
+  Target,
+  ExternalLink,
+  PlusCircle,
+  CheckSquare,
+  Square,
+  Info
 } from 'lucide-react';
 
 export const WeeklyReportView: React.FC = () => {
@@ -37,10 +43,12 @@ export const WeeklyReportView: React.FC = () => {
     students, 
     currentUser, 
     showToast,
-    refreshData 
+    refreshData,
+    navigateToIEP 
   } = useApp();
 
   const [reportViewMode, setReportViewMode] = useState<'EDITOR' | 'STATUS_TRACKER'>('EDITOR');
+  const [goalFilter, setGoalFilter] = useState<'ALL' | 'ADDRESSED' | 'UNADDRESSED'>('ALL');
 
   const isCoordinator = Boolean(currentUser.isSpecialEdCoordinator);
   const isDirector = currentUser.role === 'DIRECTOR' || currentUser.role === 'PRINCIPAL';
@@ -75,63 +83,120 @@ export const WeeklyReportView: React.FC = () => {
 
   const [selectedWeek, setSelectedWeek] = useState(8);
 
-  const loadDefaultReport = (stud: Student, week: number): IEPReport => ({
-    id: `wr-${stud.id}-w${week}`,
-    studentId: stud.id,
-    iepId: `iep-${stud.id}-2026`,
-    year: '2026',
-    weekNumber: week,
-    weekRange: week === 8 ? 'Oct 19 – 23, 2026' : `Week ${week}`,
-    weekStart: '2026-10-19',
-    weekEnd: '2026-10-23',
-    teacherId: stud.assignedGPKTeacherId || currentUser.id,
-    teacherName: stud.assignedGPKTeacherName || currentUser.name,
-    status: 'Draft',
-    draftStatus: 'On Progress',
-    coordinatorReviewStatus: 'Not Started',
-    directorApprovalStatus: 'Not Started',
-    workflowHistory: [],
-    goalProgress: [
-      {
-        goalId: 'g1',
-        addressedThisWeek: true,
-        rating: 4,
-        notes: `Utilized calm-down headphones during fire alarm drill. Transitioned back to desk with 1 verbal prompt.`
-      },
-      {
-        goalId: 'g2',
-        addressedThisWeek: true,
-        rating: 4,
-        notes: `Maintained 10 minutes of fine motor tasks on slant board without complaints.`
+  // Retrieve student's active IEP Plan and SMART goals
+  const studentIEP = useMemo<IEPRecord | undefined>(() => {
+    if (!currentStudent) return undefined;
+    const records = storageService.getIEPRecords(currentStudent.id);
+    return records[0];
+  }, [currentStudent?.id]);
+
+  // Helper to build default or synced report populated from IEP Plan goals
+  const buildReportFromIEP = (stud: Student, week: number, iep?: IEPRecord): IEPReport => {
+    const existingReports = storageService.getIEPReports(stud.id);
+    const existing = existingReports.find(r => r.weekNumber === week);
+
+    // Week date range calculation
+    const weekRanges: Record<number, { range: string; start: string; end: string }> = {
+      6: { range: 'Oct 5–9, 2026', start: '2026-10-05', end: '2026-10-09' },
+      7: { range: 'Oct 12–16, 2026', start: '2026-10-12', end: '2026-10-16' },
+      8: { range: 'Oct 19–23, 2026', start: '2026-10-19', end: '2026-10-23' },
+      9: { range: 'Oct 26–30, 2026', start: '2026-10-26', end: '2026-10-30' },
+      10: { range: 'Nov 2–6, 2026', start: '2026-11-02', end: '2026-11-06' },
+      14: { range: 'Nov 6–10, 2026', start: '2026-11-06', end: '2026-11-10' },
+      15: { range: 'Nov 13–17, 2026', start: '2026-11-13', end: '2026-11-17' },
+    };
+
+    const dates = weekRanges[week] || {
+      range: `Week ${week}`,
+      start: '2026-10-19',
+      end: '2026-10-23'
+    };
+
+    // Goals pulled directly from the student's IEP Plan
+    const iepGoals = iep?.goals || [];
+
+    const goalProgressList: WeeklyGoalProgress[] = iepGoals.map((goal, gIdx) => {
+      const existingGp = existing?.goalProgress?.find(p => p.goalId === goal.id);
+      if (existingGp) {
+        return {
+          ...existingGp,
+          goalId: goal.id,
+          goalCode: goal.code,
+          performanceArea: goal.performanceArea,
+          measurableGoal: goal.measurableGoal,
+          addressedThisWeek: Boolean(existingGp.addressedThisWeek),
+          rating: existingGp.rating || 3,
+          notes: existingGp.notes || '',
+          markedAchievedThisWeek: Boolean(existingGp.markedAchievedThisWeek || (goal.achieved && goal.achievedDate === dates.end)),
+          achievedDate: existingGp.achievedDate || (goal.achieved ? goal.achievedDate : dates.end),
+          achievedNote: existingGp.achievedNote || goal.achievedNote || ''
+        };
       }
-    ],
-    descriptiveObservation: `${stud.nickname || stud.fullName} showed enthusiastic engagement during movement stations and classroom routines.`,
-    homeConnection: 'Encourage 10 minutes of finger grip or playdough strengthening over the weekend.',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  });
+
+      // Default state for newly initialized report:
+      // First 2 goals addressed by default as sample
+      const isDefaultAddressed = gIdx < 2;
+      return {
+        goalId: goal.id,
+        goalCode: goal.code,
+        performanceArea: goal.performanceArea,
+        measurableGoal: goal.measurableGoal,
+        addressedThisWeek: isDefaultAddressed,
+        rating: 3,
+        notes: isDefaultAddressed ? `Demonstrated positive engagement on target milestone during classroom routines.` : '',
+        markedAchievedThisWeek: false,
+        achievedDate: dates.end,
+        achievedNote: ''
+      };
+    });
+
+    if (existing) {
+      return {
+        ...existing,
+        weekRange: existing.weekRange || dates.range,
+        weekStart: existing.weekStart || dates.start,
+        weekEnd: existing.weekEnd || dates.end,
+        goalProgress: goalProgressList
+      };
+    }
+
+    return {
+      id: `wr-${stud.id}-w${week}`,
+      studentId: stud.id,
+      iepId: iep?.id || `iep-${stud.id}-2026`,
+      year: '2026',
+      weekNumber: week,
+      weekRange: dates.range,
+      weekStart: dates.start,
+      weekEnd: dates.end,
+      teacherId: stud.assignedGPKTeacherId || currentUser.id,
+      teacherName: stud.assignedGPKTeacherName || currentUser.name,
+      status: 'Draft',
+      draftStatus: 'On Progress',
+      coordinatorReviewStatus: 'Not Started',
+      directorApprovalStatus: 'Not Started',
+      workflowHistory: [],
+      goalProgress: goalProgressList,
+      descriptiveObservation: `${stud.nickname || stud.fullName} showed enthusiastic engagement during movement stations, sensory routines, and collaborative tasks this week.`,
+      homeConnection: 'Encourage 10 minutes of structured routine practice and sensory calm-down activities over the weekend.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  };
 
   const [report, setReport] = useState<IEPReport>(() => {
     if (!currentStudent) {
-      return loadDefaultReport({ id: 'temp', fullName: 'Student', name: 'Student', specialNeedsFlag: true } as any, 8);
+      return buildReportFromIEP({ id: 'temp', fullName: 'Student', name: 'Student', specialNeedsFlag: true } as any, 8);
     }
-    const existing = storageService.getIEPReports(currentStudent.id);
-    const match = existing.find(r => r.weekNumber === selectedWeek);
-    if (match) return match;
-    return loadDefaultReport(currentStudent, selectedWeek);
+    return buildReportFromIEP(currentStudent, selectedWeek, studentIEP);
   });
 
-  // Sync report on student or week change
+  // Sync report on student, week, or IEP change
   useEffect(() => {
     if (!currentStudent) return;
-    const existing = storageService.getIEPReports(currentStudent.id);
-    const match = existing.find(r => r.weekNumber === selectedWeek);
-    if (match) {
-      setReport(match);
-    } else {
-      setReport(loadDefaultReport(currentStudent, selectedWeek));
-    }
-  }, [currentStudent?.id, selectedWeek]);
+    const synced = buildReportFromIEP(currentStudent, selectedWeek, studentIEP);
+    setReport(synced);
+  }, [currentStudent?.id, selectedWeek, studentIEP?.id]);
 
   // Find latest return feedback if returned
   const latestReturnFeedback = useMemo(() => {
@@ -149,17 +214,59 @@ export const WeeklyReportView: React.FC = () => {
   const isReturned = report.coordinatorReviewStatus === 'Returned' || report.directorApprovalStatus === 'Returned';
 
   // Role-based editing authorization
-  // 1. SE Teacher can edit only during their drafting stage or when returned for revisions
   const canSETeacherEdit = isSETeacher && (!isDraftSubmitted || isReturned);
-  
-  // 2. Coordinator can edit only during Coordinator Review stage (after teacher submission and before coordinator verification)
   const canCoordinatorEdit = isCoordinator && isDraftSubmitted && !isCoordinatorVerified;
-  
-  // 3. Director can edit only during Director Approval stage
   const canDirectorEdit = isDirector && isCoordinatorVerified && !isDirectorApproved;
 
   const canCurrentUserEdit = canSETeacherEdit || canCoordinatorEdit || canDirectorEdit;
   const isFormReadOnly = !canCurrentUserEdit;
+
+  // Goals statistics
+  const totalGoalsCount = report.goalProgress?.length || 0;
+  const addressedGoalsCount = report.goalProgress?.filter(g => g.addressedThisWeek).length || 0;
+
+  // Filtered goals to display
+  const filteredGoals = useMemo(() => {
+    if (!report.goalProgress) return [];
+    if (goalFilter === 'ADDRESSED') {
+      return report.goalProgress.filter(g => g.addressedThisWeek);
+    }
+    if (goalFilter === 'UNADDRESSED') {
+      return report.goalProgress.filter(g => !g.addressedThisWeek);
+    }
+    return report.goalProgress;
+  }, [report.goalProgress, goalFilter]);
+
+  // Toggle goal addressed this week
+  const handleToggleGoalAddressed = (goalId: string) => {
+    if (isFormReadOnly) return;
+    setReport(prev => {
+      const updated = prev.goalProgress.map(gp => {
+        if (gp.goalId === goalId) {
+          const nextAddressed = !gp.addressedThisWeek;
+          return {
+            ...gp,
+            addressedThisWeek: nextAddressed,
+            // If toggling on and rating missing, set default rating 3
+            rating: gp.rating || 3
+          };
+        }
+        return gp;
+      });
+      return { ...prev, goalProgress: updated };
+    });
+  };
+
+  const handleSelectAllGoals = (select: boolean) => {
+    if (isFormReadOnly) return;
+    setReport(prev => ({
+      ...prev,
+      goalProgress: prev.goalProgress.map(gp => ({
+        ...gp,
+        addressedThisWeek: select
+      }))
+    }));
+  };
 
   const handleUpdateGoalRating = (goalId: string, rating: 1 | 2 | 3 | 4 | 5) => {
     if (isFormReadOnly) return;
@@ -174,6 +281,41 @@ export const WeeklyReportView: React.FC = () => {
     setReport(prev => ({
       ...prev,
       goalProgress: prev.goalProgress.map(gp => gp.goalId === goalId ? { ...gp, notes } : gp)
+    }));
+  };
+
+  const handleToggleGoalAchieved = (goalId: string) => {
+    if (isFormReadOnly) return;
+    setReport(prev => ({
+      ...prev,
+      goalProgress: prev.goalProgress.map(gp => {
+        if (gp.goalId === goalId) {
+          const nextAchieved = !gp.markedAchievedThisWeek;
+          return {
+            ...gp,
+            markedAchievedThisWeek: nextAchieved,
+            achievedDate: nextAchieved ? (report.weekEnd || '2026-10-23') : undefined,
+            achievedNote: nextAchieved ? (gp.notes || 'Mastered in weekly observation session.') : undefined
+          };
+        }
+        return gp;
+      })
+    }));
+  };
+
+  const handleUpdateGoalAchievedDate = (goalId: string, achievedDate: string) => {
+    if (isFormReadOnly) return;
+    setReport(prev => ({
+      ...prev,
+      goalProgress: prev.goalProgress.map(gp => gp.goalId === goalId ? { ...gp, achievedDate } : gp)
+    }));
+  };
+
+  const handleUpdateGoalAchievedNote = (goalId: string, achievedNote: string) => {
+    if (isFormReadOnly) return;
+    setReport(prev => ({
+      ...prev,
+      goalProgress: prev.goalProgress.map(gp => gp.goalId === goalId ? { ...gp, achievedNote } : gp)
     }));
   };
 
@@ -196,6 +338,7 @@ export const WeeklyReportView: React.FC = () => {
     const updated: IEPReport = {
       ...report,
       studentId: currentStudent.id,
+      iepId: studentIEP?.id || report.iepId,
       teacherId: report.teacherId || currentUser.id,
       teacherName: report.teacherName || currentUser.name,
       draftStatus: isDraftSubmitted ? report.draftStatus : 'On Progress',
@@ -203,7 +346,11 @@ export const WeeklyReportView: React.FC = () => {
     };
     storageService.saveIEPReport(updated);
     setReport(updated);
-    showToast('success', 'Changes Saved', `Weekly progress report for ${currentStudent.fullName} (Week ${report.weekNumber}) updated.`);
+    showToast(
+      'success', 
+      'Weekly Report & IEP Plan Synchronized', 
+      `Updated ${addressedGoalsCount} goals for ${currentStudent.fullName}. Addressed dates & achievement status synced with the IEP Plan.`
+    );
     refreshData();
   };
 
@@ -214,10 +361,16 @@ export const WeeklyReportView: React.FC = () => {
       return;
     }
 
-    // Save first
+    if (addressedGoalsCount === 0) {
+      showToast('warning', 'No Goals Addressed', 'Please choose at least 1 IEP goal that was addressed this week before submitting.');
+      return;
+    }
+
+    // Save first (which also triggers synchronization with the IEP Plan)
     const saved = storageService.saveIEPReport({
       ...report,
       studentId: currentStudent.id,
+      iepId: studentIEP?.id || report.iepId,
       teacherId: currentUser.id,
       teacherName: currentUser.name,
       updatedAt: new Date().toISOString()
@@ -228,7 +381,7 @@ export const WeeklyReportView: React.FC = () => {
       'draftStatus',
       'Done',
       currentUser,
-      `Submitted Week ${report.weekNumber} progress log for Special Education Coordinator verification.`
+      `Submitted Week ${report.weekNumber} progress log for Special Education Coordinator verification (${addressedGoalsCount} goals addressed).`
     );
 
     if (updated) {
@@ -237,7 +390,7 @@ export const WeeklyReportView: React.FC = () => {
     showToast(
       'success',
       'Submitted for Coordinator Review',
-      `Week ${report.weekNumber} IEP report submitted to Ms. Elena Johnson (Special Ed Coordinator).`
+      `Week ${report.weekNumber} IEP report submitted to Ms. Elena Johnson (Special Ed Coordinator). Addressed dates synced to IEP Plan.`
     );
     refreshData();
   };
@@ -567,7 +720,7 @@ export const WeeklyReportView: React.FC = () => {
                 className="w-14 h-14 rounded-2xl object-cover border-2 border-[#EFE7DC] shadow-xs"
               />
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#6E161E] bg-[#6E161E]/10 px-2.5 py-0.5 rounded-full">
                     Weekly IEP Progress Report
                   </span>
@@ -579,7 +732,7 @@ export const WeeklyReportView: React.FC = () => {
                   {currentStudent.fullName}
                 </h1>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  Grade: {currentStudent.grade} ({currentStudent.className}) · Special Ed Case Teacher: {report.teacherName}
+                  Grade: {currentStudent.grade} ({currentStudent.className}) · Case Teacher: <strong>{report.teacherName}</strong>
                 </p>
               </div>
             </div>
@@ -595,8 +748,6 @@ export const WeeklyReportView: React.FC = () => {
                   value={selectedStudentId}
                   onChange={(e) => {
                     setSelectedStudentId(e.target.value);
-                    const ex = storageService.getIEPReports(e.target.value);
-                    if (ex.length > 0) setReport(ex[0]);
                   }}
                   className="px-3.5 py-2 text-xs font-bold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-900 focus:outline-hidden"
                 >
@@ -608,7 +759,7 @@ export const WeeklyReportView: React.FC = () => {
 
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
-                  Week
+                  Week Number
                 </span>
                 <div className="flex items-center gap-1 bg-[#FAF5EF] border border-[#E8DFC8] p-1 rounded-xl">
                   <button
@@ -639,66 +790,307 @@ export const WeeklyReportView: React.FC = () => {
             </div>
           </div>
 
-          {/* SMART Goals Addressed This Week */}
-          <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
+          {/* IEP Plan Connection Pill Banner */}
+          <div className="bg-linear-to-r from-[#FAF5EF] to-amber-50/50 border border-[#E8DFC8] rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#6E161E] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <Target className="w-5 h-5" />
+              </div>
               <div>
-                <h2 className="text-base font-bold text-stone-900">
-                  Target SMART Goals Progress This Week
-                </h2>
-                <p className="text-xs text-stone-500">
-                  Rate student performance and provide anecdotal evidence for IEP milestones.
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-[#6E161E]/10 text-[#6E161E] px-2 py-0.5 rounded-md">
+                    Connected to IEP Plan
+                  </span>
+                  <span className="text-xs font-bold text-stone-800">
+                    {studentIEP ? `IEP ${studentIEP.academicYear} · ${studentIEP.primaryClassification}` : 'No IEP Plan Found'}
+                  </span>
+                </div>
+                <p className="text-xs text-stone-600 mt-0.5">
+                  Goals are pulled directly from the student's active IEP Plan. Choose the goals addressed this week; logged dates and achievements sync automatically to the plan.
                 </p>
               </div>
-              <span className="text-[11px] font-bold text-stone-500 bg-[#FAF5EF] border border-[#E8DFC8] px-2.5 py-1 rounded-xl">
-                Scale: 1 (Emerging) to 5 (Mastered)
-              </span>
             </div>
 
-            <div className="space-y-4">
-              {report.goalProgress.map((gp, idx) => (
-                <div key={gp.goalId} className="p-4 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-[#6E161E] text-white text-xs font-bold flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                      <span className="text-xs font-bold text-stone-900">
-                        Goal {gp.goalId.toUpperCase()}: {idx === 0 ? 'Emotional Self-Regulation & Transitions' : 'Handwriting Endurance on Slant Board'}
-                      </span>
-                    </div>
+            <button
+              type="button"
+              id="btn-nav-to-iep-plan"
+              onClick={() => navigateToIEP(currentStudent.id)}
+              className="px-3.5 py-2 bg-white hover:bg-[#6E161E] hover:text-white border border-[#E8DFC8] text-[#6E161E] text-xs font-bold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 shrink-0 self-start sm:self-center"
+            >
+              <span>View Student's IEP Plan</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-semibold text-stone-500 mr-1">Rating:</span>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          disabled={isFormReadOnly}
-                          onClick={() => handleUpdateGoalRating(gp.goalId, star as any)}
-                          className={`w-7 h-7 rounded-lg text-xs font-bold border transition-all ${
-                            gp.rating === star
-                              ? 'bg-[#6E161E] text-white border-[#6E161E]'
-                              : 'bg-white text-stone-600 border-stone-300 hover:bg-stone-100 disabled:opacity-60'
-                          }`}
-                        >
-                          {star}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <textarea
-                    rows={2}
-                    value={gp.notes || ''}
-                    disabled={isFormReadOnly}
-                    onChange={(e) => handleUpdateGoalNotes(gp.goalId, e.target.value)}
-                    placeholder="Weekly anecdotal evidence, prompt level, and intervention notes..."
-                    className="w-full p-2.5 text-xs bg-white border border-[#E8DFC8] rounded-xl text-stone-900 focus:outline-hidden disabled:bg-stone-100/70"
-                  />
+          {/* SMART Goals Addressed This Week */}
+          <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-100">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-stone-900">
+                    IEP SMART Goals ({totalGoalsCount})
+                  </h2>
+                  <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-[#6E161E] text-white">
+                    {addressedGoalsCount} Addressed this Week
+                  </span>
                 </div>
-              ))}
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Select which goals were actively targeted during Week {report.weekNumber}, rate mastery, and record observations.
+                </p>
+              </div>
+
+              {/* Goal Quick Filter & Selection */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center bg-[#FAF5EF] border border-[#E8DFC8] p-1 rounded-xl text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setGoalFilter('ALL')}
+                    className={`px-2.5 py-1 rounded-lg transition-colors ${goalFilter === 'ALL' ? 'bg-[#6E161E] text-white' : 'text-stone-600 hover:text-stone-900'}`}
+                  >
+                    All ({totalGoalsCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGoalFilter('ADDRESSED')}
+                    className={`px-2.5 py-1 rounded-lg transition-colors ${goalFilter === 'ADDRESSED' ? 'bg-[#6E161E] text-white' : 'text-stone-600 hover:text-stone-900'}`}
+                  >
+                    Addressed ({addressedGoalsCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGoalFilter('UNADDRESSED')}
+                    className={`px-2.5 py-1 rounded-lg transition-colors ${goalFilter === 'UNADDRESSED' ? 'bg-[#6E161E] text-white' : 'text-stone-600 hover:text-stone-900'}`}
+                  >
+                    Not Addressed ({totalGoalsCount - addressedGoalsCount})
+                  </button>
+                </div>
+
+                {!isFormReadOnly && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAllGoals(true)}
+                      className="px-2.5 py-1.5 bg-[#FAF5EF] hover:bg-[#F2EAE0] text-stone-700 border border-[#E8DFC8] rounded-xl text-[11px] font-bold transition-colors"
+                      title="Select all goals as addressed this week"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAllGoals(false)}
+                      className="px-2.5 py-1.5 bg-[#FAF5EF] hover:bg-[#F2EAE0] text-stone-700 border border-[#E8DFC8] rounded-xl text-[11px] font-bold transition-colors"
+                      title="Clear all selections"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {totalGoalsCount === 0 ? (
+              <div className="text-center py-10 bg-[#FAF5EF] rounded-2xl border border-dashed border-[#E8DFC8] space-y-3 p-6">
+                <Target className="w-10 h-10 text-stone-400 mx-auto" />
+                <h3 className="text-sm font-bold text-stone-800">No SMART Goals Found in IEP Plan</h3>
+                <p className="text-xs text-stone-500 max-w-md mx-auto">
+                  {currentStudent.fullName} does not have SMART goals configured in their IEP document yet. 
+                  Open the IEP Plan to define measurable learning objectives.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigateToIEP(currentStudent.id)}
+                  className="px-4 py-2 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+                >
+                  Open IEP Plan to Add Goals
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredGoals.map((gp, idx) => {
+                  const iepGoal = studentIEP?.goals?.find(g => g.id === gp.goalId);
+                  const isAddressed = gp.addressedThisWeek;
+                  const isAchieved = gp.markedAchievedThisWeek || iepGoal?.achieved;
+
+                  return (
+                    <div 
+                      key={gp.goalId} 
+                      id={`weekly-goal-card-${gp.goalId}`}
+                      className={`rounded-2xl border transition-all ${
+                        isAddressed 
+                          ? 'bg-white border-[#E8DFC8] ring-1 ring-[#6E161E]/20 p-5 shadow-xs space-y-4' 
+                          : 'bg-[#FAF5EF]/70 border-stone-200 p-4 opacity-85 hover:opacity-100'
+                      }`}
+                    >
+                      {/* Card Header & Checkbox */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <button
+                            type="button"
+                            disabled={isFormReadOnly}
+                            onClick={() => handleToggleGoalAddressed(gp.goalId)}
+                            className={`mt-0.5 w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${
+                              isAddressed 
+                                ? 'bg-[#6E161E] text-white border-[#6E161E] shadow-2xs' 
+                                : 'bg-white text-stone-400 border-stone-300 hover:border-[#6E161E]'
+                            } ${isFormReadOnly ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}
+                            title={isAddressed ? 'Click to uncheck goal' : 'Click to mark goal as addressed this week'}
+                          >
+                            {isAddressed ? <Check className="w-4 h-4 stroke-[3]" /> : null}
+                          </button>
+
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="px-2 py-0.5 rounded-md bg-[#6E161E] text-white text-[10px] font-black uppercase tracking-wider">
+                                {gp.goalCode || iepGoal?.code || `GL-00${idx + 1}`}
+                              </span>
+                              <span className="text-[11px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200">
+                                Domain: {gp.performanceArea || iepGoal?.performanceArea || 'General Development'}
+                              </span>
+                              {isAchieved && (
+                                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300 flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                                  Mastered / Achieved
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs font-bold text-stone-900 mt-1.5 leading-snug">
+                              {gp.measurableGoal || iepGoal?.measurableGoal || 'Target learning benchmark'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Addressed Status Toggle Button */}
+                        <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                          <button
+                            type="button"
+                            disabled={isFormReadOnly}
+                            onClick={() => handleToggleGoalAddressed(gp.goalId)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                              isAddressed
+                                ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                : 'bg-white text-stone-600 border-stone-300 hover:bg-stone-100'
+                            }`}
+                          >
+                            {isAddressed ? '✓ Addressed This Week' : '+ Address This Week'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Content Shown when Addressed */}
+                      {isAddressed ? (
+                        <div className="pt-3 border-t border-stone-100 space-y-3.5">
+                          {/* Rating Selector */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#FAF5EF] p-3 rounded-xl border border-[#E8DFC8]">
+                            <div>
+                              <span className="text-xs font-bold text-stone-900 block">Performance & Prompt Level:</span>
+                              <span className="text-[11px] text-stone-500">
+                                {gp.rating === 1 && '1 - Emerging: Needs intensive physical / verbal scaffolding'}
+                                {gp.rating === 2 && '2 - Developing: Needs frequent teacher prompting'}
+                                {gp.rating === 3 && '3 - Practicing: Demonstrating skill with occasional cues'}
+                                {gp.rating === 4 && '4 - Proficient: Performing consistently with visual cues'}
+                                {gp.rating === 5 && '5 - Mastered: Performing independently across routines'}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  disabled={isFormReadOnly}
+                                  onClick={() => handleUpdateGoalRating(gp.goalId, star as any)}
+                                  className={`w-8 h-8 rounded-xl text-xs font-black border transition-all flex items-center justify-center ${
+                                    gp.rating === star
+                                      ? 'bg-[#6E161E] text-white border-[#6E161E] shadow-2xs scale-105'
+                                      : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100 disabled:opacity-60'
+                                  }`}
+                                  title={`Rating ${star}/5`}
+                                >
+                                  {star}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Observation Notes */}
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-bold text-stone-700 flex items-center justify-between">
+                              <span>Weekly Anecdotal Evidence & Observation Notes:</span>
+                              <span className="text-stone-400 font-normal">Details sync to IEP tracking history</span>
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={gp.notes || ''}
+                              disabled={isFormReadOnly}
+                              onChange={(e) => handleUpdateGoalNotes(gp.goalId, e.target.value)}
+                              placeholder="Describe specific strategies, response to prompts, work samples, and observable milestones..."
+                              className="w-full p-2.5 text-xs bg-white border border-[#E8DFC8] rounded-xl text-stone-900 focus:outline-hidden disabled:bg-stone-100/70"
+                            />
+                          </div>
+
+                          {/* Goal Achievement Card within Report */}
+                          <div className={`p-3.5 rounded-xl border transition-all ${
+                            gp.markedAchievedThisWeek 
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-950' 
+                              : 'bg-stone-50/70 border-stone-200 text-stone-700'
+                          }`}>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  disabled={isFormReadOnly}
+                                  checked={Boolean(gp.markedAchievedThisWeek)}
+                                  onChange={() => handleToggleGoalAchieved(gp.goalId)}
+                                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-stone-300"
+                                />
+                                <span className="text-xs font-bold text-stone-900">
+                                  🎯 Mark Goal as Achieved / Mastered this week
+                                </span>
+                              </label>
+
+                              {gp.markedAchievedThisWeek && (
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="font-semibold text-emerald-900">Achieved Date:</span>
+                                  <input
+                                    type="date"
+                                    disabled={isFormReadOnly}
+                                    value={gp.achievedDate || report.weekEnd || '2026-10-23'}
+                                    onChange={(e) => handleUpdateGoalAchievedDate(gp.goalId, e.target.value)}
+                                    className="px-2 py-1 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-emerald-950 focus:outline-hidden"
+                                  />
+                                </div>
+                              )}
+                            </div>
+
+                            {gp.markedAchievedThisWeek && (
+                              <div className="mt-2.5 pt-2 border-t border-emerald-200/70 space-y-1">
+                                <input
+                                  type="text"
+                                  disabled={isFormReadOnly}
+                                  value={gp.achievedNote || ''}
+                                  onChange={(e) => handleUpdateGoalAchievedNote(gp.goalId, e.target.value)}
+                                  placeholder="Achievement rationale (e.g., Demonstrated 80% independent accuracy over 4 consecutive trials)..."
+                                  className="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs text-stone-800 focus:outline-hidden"
+                                />
+                                <p className="text-[11px] text-emerald-800 flex items-center gap-1">
+                                  <Info className="w-3 h-3 text-emerald-700 shrink-0" />
+                                  <span>Saving this report will immediately update the student's Annual IEP Plan with this achievement date and mark the goal as Mastered.</span>
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-stone-500 italic mt-1">
+                          Not targeted during this weekly rotation cycle. Click "+ Address This Week" to log ratings and observation notes.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Qualitative Descriptive Observations */}
@@ -777,7 +1169,7 @@ export const WeeklyReportView: React.FC = () => {
                       className="px-4 py-2 bg-[#FAF5EF] hover:bg-[#F2EAE0] text-stone-800 text-xs font-bold rounded-xl border border-[#E8DFC8] shadow-2xs transition-colors flex items-center gap-1.5"
                     >
                       <Save className="w-3.5 h-3.5" />
-                      Save Draft
+                      Save Draft & Sync IEP
                     </button>
                   )}
 

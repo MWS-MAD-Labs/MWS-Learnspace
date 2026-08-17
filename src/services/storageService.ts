@@ -454,6 +454,101 @@ class StorageService {
   }
 
   // IEP Records
+  public syncIEPGoalsWithWeeklyReports(studentId: string): IEPRecord | undefined {
+    try {
+      const recordsData = localStorage.getItem(STORAGE_KEYS.IEP_RECORDS);
+      let records: IEPRecord[] = recordsData ? JSON.parse(recordsData) : SEED_IEP_RECORDS;
+      const iepIdx = records.findIndex(r => r.studentId === studentId);
+      if (iepIdx < 0) return undefined;
+
+      const iep = records[iepIdx];
+      const reports = this.getIEPReports(studentId);
+
+      // Deep sync each goal
+      iep.goals = iep.goals.map(goal => {
+        // Find all weekly reports where this goal was addressed
+        const matchingWeeklyLogs: {
+          reportId: string;
+          weekNumber: number;
+          weekRange?: string;
+          date: string;
+          rating?: 1 | 2 | 3 | 4 | 5;
+          notes?: string;
+          markedAchieved?: boolean;
+        }[] = [];
+
+        reports.forEach(rep => {
+          if (!rep.goalProgress) return;
+          const gp = rep.goalProgress.find(p => p.goalId === goal.id);
+          if (gp && gp.addressedThisWeek) {
+            const logDate = rep.weekEnd || rep.weekStart || (rep.updatedAt ? rep.updatedAt.split('T')[0] : '2026-11-10');
+            matchingWeeklyLogs.push({
+              reportId: rep.id,
+              weekNumber: rep.weekNumber,
+              weekRange: rep.weekRange,
+              date: logDate,
+              rating: gp.rating,
+              notes: gp.notes,
+              markedAchieved: Boolean(gp.markedAchievedThisWeek)
+            });
+          }
+        });
+
+        // Sort chronologically by week number
+        matchingWeeklyLogs.sort((a, b) => a.weekNumber - b.weekNumber);
+
+        let lastAddressedDate = goal.lastAddressedDate;
+        let lastAddressedWeek = goal.lastAddressedWeek;
+        let lastAddressedRating = goal.lastAddressedRating;
+
+        if (matchingWeeklyLogs.length > 0) {
+          const latestLog = matchingWeeklyLogs[matchingWeeklyLogs.length - 1];
+          lastAddressedDate = latestLog.date;
+          lastAddressedWeek = latestLog.weekNumber;
+          lastAddressedRating = latestLog.rating;
+        }
+
+        // Check achievement in reports
+        let achieved = goal.achieved;
+        let achievedDate = goal.achievedDate;
+        let achievedNote = goal.achievedNote;
+        let achievedInReportId = goal.achievedInReportId;
+
+        // Check if marked achieved in any weekly report
+        for (const rep of reports) {
+          if (!rep.goalProgress) continue;
+          const gp = rep.goalProgress.find(p => p.goalId === goal.id);
+          if (gp && gp.markedAchievedThisWeek) {
+            achieved = true;
+            achievedDate = gp.achievedDate || rep.weekEnd || rep.weekStart || achievedDate || new Date().toISOString().split('T')[0];
+            achievedNote = gp.achievedNote || gp.notes || achievedNote || 'Mastered in weekly observation log.';
+            achievedInReportId = rep.id;
+            break;
+          }
+        }
+
+        return {
+          ...goal,
+          lastAddressedDate,
+          lastAddressedWeek,
+          lastAddressedRating,
+          timesAddressed: matchingWeeklyLogs.length,
+          addressedHistory: matchingWeeklyLogs,
+          achieved,
+          achievedDate,
+          achievedNote,
+          achievedInReportId
+        };
+      });
+
+      records[iepIdx] = { ...iep, updatedAt: new Date().toISOString() };
+      localStorage.setItem(STORAGE_KEYS.IEP_RECORDS, JSON.stringify(records));
+      return records[iepIdx];
+    } catch {
+      return undefined;
+    }
+  }
+
   public getIEPRecords(studentId?: string): IEPRecord[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.IEP_RECORDS);
@@ -480,7 +575,12 @@ class StorageService {
       list.unshift({ ...record, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
     }
     localStorage.setItem(STORAGE_KEYS.IEP_RECORDS, JSON.stringify(list));
-    return record;
+    
+    // Sync with weekly reports
+    this.syncIEPGoalsWithWeeklyReports(record.studentId);
+    
+    const updated = this.getIEPRecord(record.id);
+    return updated || record;
   }
 
   public updateIEPWorkflow(
@@ -589,27 +689,8 @@ class StorageService {
     }
     localStorage.setItem(STORAGE_KEYS.IEP_REPORTS, JSON.stringify(list));
 
-    // If any goal was marked achieved in this report, sync with the IEP record!
-    if (report.goalProgress) {
-      const iep = this.getIEPRecord(report.iepId);
-      if (iep) {
-        let modified = false;
-        report.goalProgress.forEach(gp => {
-          if (gp.markedAchievedThisWeek) {
-            const g = iep.goals.find(g => g.id === gp.goalId);
-            if (g && !g.achieved) {
-              g.achieved = true;
-              g.achievedDate = gp.achievedDate || new Date().toISOString().split('T')[0];
-              g.achievedNote = gp.achievedNote || gp.notes || 'Achieved in weekly session.';
-              modified = true;
-            }
-          }
-        });
-        if (modified) {
-          this.saveIEPRecord(iep);
-        }
-      }
-    }
+    // Automatically update the IEP Plan with the date the goals are being addressed and when goals are achieved!
+    this.syncIEPGoalsWithWeeklyReports(report.studentId);
 
     return report;
   }

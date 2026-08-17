@@ -347,6 +347,16 @@ export interface IEPPerformanceArea {
   summaryOfResults?: string;
 }
 
+export interface IEPGoalAddressLog {
+  reportId: string;
+  weekNumber: number;
+  weekRange?: string;
+  date: string;
+  rating?: 1 | 2 | 3 | 4 | 5;
+  notes?: string;
+  markedAchieved?: boolean;
+}
+
 export interface IEPGoal {
   id: string;
   code: string; // e.g. "GL-001"
@@ -364,6 +374,12 @@ export interface IEPGoal {
   achieved: boolean;
   achievedDate?: string;
   achievedNote?: string;
+  achievedInReportId?: string;
+  lastAddressedDate?: string;
+  lastAddressedWeek?: number;
+  lastAddressedRating?: 1 | 2 | 3 | 4 | 5;
+  timesAddressed?: number;
+  addressedHistory?: IEPGoalAddressLog[];
 }
 
 export interface IEPServiceScheduleItem {
