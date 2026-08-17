@@ -1,0 +1,7 @@
+{
+  "name": "Learnspace",
+  "description": "Learnspace - Comprehensive academic and special education educator portal for curriculum learning journeys, FEDC/Sensory/SFA observations, IEP planning, and weekly progress monitoring.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
