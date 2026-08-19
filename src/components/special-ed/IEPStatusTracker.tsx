@@ -1,36 +1,32 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
-import { IEPRecord, Student, LJReviewStatus, LJApprovalStatus } from '../../types';
+import { IEPRecord, LJReviewStatus, LJApprovalStatus } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  CheckCircle2, 
-  RotateCcw, 
-  Edit3, 
-  Eye, 
-  Trash2, 
-  MessageSquare, 
-  Sparkles, 
-  ShieldCheck, 
-  Calendar, 
-  Clock, 
-  Send, 
-  AlertCircle, 
-  X,
-  FileSignature,
-  FileText,
-  UserCheck
+import {
+  Search,
+  CheckCircle2,
+  RotateCcw,
+  Edit3,
+  ShieldCheck,
+  Clock,
+  Send,
 } from 'lucide-react';
 
 interface IEPStatusTrackerProps {
   onSelectIEPForEdit?: (studentId: string) => void;
 }
 
-export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPForEdit }) => {
-  const { currentUser, students, setSelectedStudentId, showToast, refreshData } = useApp();
+export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
+  onSelectIEPForEdit,
+}) => {
+  const {
+    currentUser,
+    students,
+    setSelectedStudentId,
+    showToast,
+    refreshData,
+  } = useApp();
 
   const [searchFilter, setSearchFilter] = useState('');
   const [gradeFilter, setGradeFilter] = useState('All Grades');
@@ -38,7 +34,9 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
 
   // Review Modal state
   const [reviewingIEP, setReviewingIEP] = useState<IEPRecord | null>(null);
-  const [reviewAction, setReviewAction] = useState<'Approve' | 'Return'>('Approve');
+  const [reviewAction, setReviewAction] = useState<'Approve' | 'Return'>(
+    'Approve',
+  );
   const [reviewComment, setReviewComment] = useState('');
 
   // Timeline / History Modal state
@@ -46,22 +44,31 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
 
   // Fetch all special needs students and their IEPs
   const isCoordinator = currentUser.isSpecialEdCoordinator;
-  const isDirector = currentUser.role === 'DIRECTOR' || currentUser.role === 'PRINCIPAL';
-  const isSETeacher = currentUser.isGPK || (currentUser.role === 'SPECIAL_ED_TEACHER' && !currentUser.isSpecialEdCoordinator);
+  const isDirector =
+    currentUser.role === 'DIRECTOR' || currentUser.role === 'PRINCIPAL';
+  const isSETeacher =
+    currentUser.isGPK ||
+    (currentUser.role === 'SPECIAL_ED_TEACHER' &&
+      !currentUser.isSpecialEdCoordinator);
 
   const specialStudents = useMemo(() => {
     if (isCoordinator || isDirector) {
-      return students.filter(s => s.specialNeedsFlag);
+      return students.filter((s) => s.specialNeedsFlag);
     }
-    return students.filter(s => s.specialNeedsFlag && (s.assignedGPKTeacherId === currentUser.id || currentUser.assignedSpecialNeedsStudentIds?.includes(s.id)));
+    return students.filter(
+      (s) =>
+        s.specialNeedsFlag &&
+        (s.assignedGPKTeacherId === currentUser.id ||
+          currentUser.assignedSpecialNeedsStudentIds?.includes(s.id)),
+    );
   }, [students, currentUser, isCoordinator, isDirector]);
 
   const iepRecords = storageService.getIEPRecords();
 
   // Build combined rows for all special needs students
   const studentIEPRows = useMemo(() => {
-    return specialStudents.map(student => {
-      const record = iepRecords.find(r => r.studentId === student.id) || {
+    return specialStudents.map((student) => {
+      const record = iepRecords.find((r) => r.studentId === student.id) || {
         id: `iep-${student.id}-2026`,
         studentId: student.id,
         year: '2026',
@@ -76,12 +83,18 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
         currentPlacement: 'General Education with GPK Support',
         teamMembers: [],
         performanceAreas: [],
-        academicAccommodations: { math: 'A', science: 'A', english: 'A', pe: 'M', makerspace: 'A' },
+        academicAccommodations: {
+          math: 'A',
+          science: 'A',
+          english: 'A',
+          pe: 'M',
+          makerspace: 'A',
+        },
         instructionalAccommodations: [],
         environmentalAccommodations: [],
         assessmentAccommodations: [],
         goals: [],
-        workflowHistory: []
+        workflowHistory: [],
       };
       return { student, iep: record };
     });
@@ -90,24 +103,51 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
   // Filtered rows
   const filteredRows = useMemo(() => {
     return studentIEPRows.filter(({ student, iep }) => {
-      if (searchFilter && !student.name.toLowerCase().includes(searchFilter.toLowerCase()) && !student.nisn.includes(searchFilter)) {
+      if (
+        searchFilter &&
+        !student.name.toLowerCase().includes(searchFilter.toLowerCase()) &&
+        !student.nisn.includes(searchFilter)
+      ) {
         return false;
       }
-      if (gradeFilter !== 'All Grades' && student.grade !== gradeFilter) return false;
+      if (gradeFilter !== 'All Grades' && student.grade !== gradeFilter)
+        return false;
       if (stageFilter === 'Draft' && iep.draftStatus !== 'Done') return false;
-      if (stageFilter === 'Coordinator Review' && (iep.coordinatorReviewStatus !== 'On Progress' && iep.coordinatorReviewStatus !== 'Returned')) return false;
-      if (stageFilter === 'Director Approval' && (iep.directorApprovalStatus !== 'On Progress' && iep.directorApprovalStatus !== 'Returned')) return false;
-      if (stageFilter === 'Approved' && iep.directorApprovalStatus !== 'Done') return false;
+      if (
+        stageFilter === 'Coordinator Review' &&
+        iep.coordinatorReviewStatus !== 'On Progress' &&
+        iep.coordinatorReviewStatus !== 'Returned'
+      )
+        return false;
+      if (
+        stageFilter === 'Director Approval' &&
+        iep.directorApprovalStatus !== 'On Progress' &&
+        iep.directorApprovalStatus !== 'Returned'
+      )
+        return false;
+      if (stageFilter === 'Approved' && iep.directorApprovalStatus !== 'Done')
+        return false;
       return true;
     });
   }, [studentIEPRows, searchFilter, gradeFilter, stageFilter]);
 
   // KPI Metrics
   const totalCount = studentIEPRows.length;
-  const draftCount = studentIEPRows.filter(r => r.iep.draftStatus !== 'Done').length;
-  const coordinatorReviewCount = studentIEPRows.filter(r => r.iep.draftStatus === 'Done' && r.iep.coordinatorReviewStatus !== 'Done').length;
-  const directorApprovalCount = studentIEPRows.filter(r => r.iep.coordinatorReviewStatus === 'Done' && r.iep.directorApprovalStatus !== 'Done').length;
-  const approvedCount = studentIEPRows.filter(r => r.iep.directorApprovalStatus === 'Done').length;
+  const draftCount = studentIEPRows.filter(
+    (r) => r.iep.draftStatus !== 'Done',
+  ).length;
+  const coordinatorReviewCount = studentIEPRows.filter(
+    (r) =>
+      r.iep.draftStatus === 'Done' && r.iep.coordinatorReviewStatus !== 'Done',
+  ).length;
+  const directorApprovalCount = studentIEPRows.filter(
+    (r) =>
+      r.iep.coordinatorReviewStatus === 'Done' &&
+      r.iep.directorApprovalStatus !== 'Done',
+  ).length;
+  const approvedCount = studentIEPRows.filter(
+    (r) => r.iep.directorApprovalStatus === 'Done',
+  ).length;
 
   // Handle Submit Draft (Teacher Action)
   const handleSubmitDraft = (iep: IEPRecord) => {
@@ -116,10 +156,14 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
       'draftStatus',
       'Done',
       currentUser,
-      'Submitted complete IEP proposal to Special Education Coordinator for review.'
+      'Submitted complete IEP proposal to Special Education Coordinator for review.',
     );
     refreshData();
-    showToast('success', 'Draft Submitted', 'Annual IEP submitted to Coordinator for verification.');
+    showToast(
+      'success',
+      'Draft Submitted',
+      'Annual IEP submitted to Coordinator for verification.',
+    );
   };
 
   // Handle Open Review
@@ -134,37 +178,53 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
     if (!reviewingIEP) return;
 
     if (reviewAction === 'Return' && !reviewComment.trim()) {
-      showToast('error', 'Feedback Required', 'Please provide revision notes explaining what adjustments are required.');
+      showToast(
+        'error',
+        'Feedback Required',
+        'Please provide revision notes explaining what adjustments are required.',
+      );
       return;
     }
 
     if (isCoordinator) {
-      const status: LJReviewStatus = reviewAction === 'Approve' ? 'Done' : 'Returned';
+      const status: LJReviewStatus =
+        reviewAction === 'Approve' ? 'Done' : 'Returned';
       storageService.updateIEPWorkflow(
         reviewingIEP.id,
         'coordinatorReviewStatus',
         status,
         currentUser,
-        reviewComment || 'Coordinator reviewed and verified baseline assessments and accommodation targets.'
+        reviewComment ||
+          'Coordinator reviewed and verified baseline assessments and accommodation targets.',
       );
       showToast(
         reviewAction === 'Approve' ? 'success' : 'info',
-        reviewAction === 'Approve' ? 'Coordinator Verified' : 'Returned for Adjustments',
-        reviewAction === 'Approve' ? 'IEP forwarded to Director for final administrative authorization.' : 'IEP returned to assigned GPK teacher.'
+        reviewAction === 'Approve'
+          ? 'Coordinator Verified'
+          : 'Returned for Adjustments',
+        reviewAction === 'Approve'
+          ? 'IEP forwarded to Director for final administrative authorization.'
+          : 'IEP returned to assigned GPK teacher.',
       );
     } else if (isDirector) {
-      const status: LJApprovalStatus = reviewAction === 'Approve' ? 'Done' : 'Returned';
+      const status: LJApprovalStatus =
+        reviewAction === 'Approve' ? 'Done' : 'Returned';
       storageService.updateIEPWorkflow(
         reviewingIEP.id,
         'directorApprovalStatus',
         status,
         currentUser,
-        reviewComment || 'Director authorized and ratified annual IEP accommodations and service schedule.'
+        reviewComment ||
+          'Director authorized and ratified annual IEP accommodations and service schedule.',
       );
       showToast(
         reviewAction === 'Approve' ? 'success' : 'info',
-        reviewAction === 'Approve' ? 'IEP Fully Approved' : 'Returned by Director',
-        reviewAction === 'Approve' ? 'Annual IEP ratified and in active legal standing.' : 'IEP returned to Special Education Coordinator.'
+        reviewAction === 'Approve'
+          ? 'IEP Fully Approved'
+          : 'Returned by Director',
+        reviewAction === 'Approve'
+          ? 'Annual IEP ratified and in active legal standing.'
+          : 'IEP returned to Special Education Coordinator.',
       );
     }
 
@@ -176,54 +236,104 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
     <div id="iep-status-tracker-container" className="space-y-6">
       {/* KPI Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div 
+        <div
           onClick={() => setStageFilter('All Stages')}
           className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-            stageFilter === 'All Stages' ? 'bg-[#6E161E] text-white border-[#6E161E] shadow-sm' : 'bg-white border-[#EFE7DC] hover:border-[#6E161E]/40'
+            stageFilter === 'All Stages'
+              ? 'bg-[#6E161E] text-white border-[#6E161E] shadow-sm'
+              : 'bg-white border-[#EFE7DC] hover:border-[#6E161E]/40'
           }`}
         >
-          <span className={`text-[10px] font-bold uppercase ${stageFilter === 'All Stages' ? 'text-white/80' : 'text-stone-400'}`}>Total Students</span>
-          <p className={`text-xl font-black mt-0.5 ${stageFilter === 'All Stages' ? 'text-white' : 'text-stone-900'}`}>{totalCount}</p>
+          <span
+            className={`text-[10px] font-bold uppercase ${stageFilter === 'All Stages' ? 'text-white/80' : 'text-stone-400'}`}
+          >
+            Total Students
+          </span>
+          <p
+            className={`text-xl font-black mt-0.5 ${stageFilter === 'All Stages' ? 'text-white' : 'text-stone-900'}`}
+          >
+            {totalCount}
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Draft')}
           className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-            stageFilter === 'Draft' ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-white border-[#EFE7DC] hover:border-amber-400'
+            stageFilter === 'Draft'
+              ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+              : 'bg-white border-[#EFE7DC] hover:border-amber-400'
           }`}
         >
-          <span className={`text-[10px] font-bold uppercase ${stageFilter === 'Draft' ? 'text-white/80' : 'text-amber-600'}`}>1. Teacher Draft</span>
-          <p className={`text-xl font-black mt-0.5 ${stageFilter === 'Draft' ? 'text-white' : 'text-amber-700'}`}>{draftCount}</p>
+          <span
+            className={`text-[10px] font-bold uppercase ${stageFilter === 'Draft' ? 'text-white/80' : 'text-amber-600'}`}
+          >
+            1. Teacher Draft
+          </span>
+          <p
+            className={`text-xl font-black mt-0.5 ${stageFilter === 'Draft' ? 'text-white' : 'text-amber-700'}`}
+          >
+            {draftCount}
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Coordinator Review')}
           className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-            stageFilter === 'Coordinator Review' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white border-[#EFE7DC] hover:border-blue-400'
+            stageFilter === 'Coordinator Review'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+              : 'bg-white border-[#EFE7DC] hover:border-blue-400'
           }`}
         >
-          <span className={`text-[10px] font-bold uppercase ${stageFilter === 'Coordinator Review' ? 'text-white/80' : 'text-blue-600'}`}>2. Coordinator Review</span>
-          <p className={`text-xl font-black mt-0.5 ${stageFilter === 'Coordinator Review' ? 'text-white' : 'text-blue-700'}`}>{coordinatorReviewCount}</p>
+          <span
+            className={`text-[10px] font-bold uppercase ${stageFilter === 'Coordinator Review' ? 'text-white/80' : 'text-blue-600'}`}
+          >
+            2. Coordinator Review
+          </span>
+          <p
+            className={`text-xl font-black mt-0.5 ${stageFilter === 'Coordinator Review' ? 'text-white' : 'text-blue-700'}`}
+          >
+            {coordinatorReviewCount}
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Director Approval')}
           className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-            stageFilter === 'Director Approval' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white border-[#EFE7DC] hover:border-purple-400'
+            stageFilter === 'Director Approval'
+              ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+              : 'bg-white border-[#EFE7DC] hover:border-purple-400'
           }`}
         >
-          <span className={`text-[10px] font-bold uppercase ${stageFilter === 'Director Approval' ? 'text-white/80' : 'text-purple-600'}`}>3. Director Approval</span>
-          <p className={`text-xl font-black mt-0.5 ${stageFilter === 'Director Approval' ? 'text-white' : 'text-purple-700'}`}>{directorApprovalCount}</p>
+          <span
+            className={`text-[10px] font-bold uppercase ${stageFilter === 'Director Approval' ? 'text-white/80' : 'text-purple-600'}`}
+          >
+            3. Director Approval
+          </span>
+          <p
+            className={`text-xl font-black mt-0.5 ${stageFilter === 'Director Approval' ? 'text-white' : 'text-purple-700'}`}
+          >
+            {directorApprovalCount}
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Approved')}
           className={`p-3.5 rounded-2xl border transition-all cursor-pointer col-span-2 sm:col-span-1 ${
-            stageFilter === 'Approved' ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white border-[#EFE7DC] hover:border-emerald-500'
+            stageFilter === 'Approved'
+              ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
+              : 'bg-white border-[#EFE7DC] hover:border-emerald-500'
           }`}
         >
-          <span className={`text-[10px] font-bold uppercase ${stageFilter === 'Approved' ? 'text-white/80' : 'text-emerald-700'}`}>4. Ratified & Active</span>
-          <p className={`text-xl font-black mt-0.5 ${stageFilter === 'Approved' ? 'text-white' : 'text-emerald-800'}`}>{approvedCount}</p>
+          <span
+            className={`text-[10px] font-bold uppercase ${stageFilter === 'Approved' ? 'text-white/80' : 'text-emerald-700'}`}
+          >
+            4. Ratified & Active
+          </span>
+          <p
+            className={`text-xl font-black mt-0.5 ${stageFilter === 'Approved' ? 'text-white' : 'text-emerald-800'}`}
+          >
+            {approvedCount}
+          </p>
         </div>
       </div>
 
@@ -276,7 +386,9 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
               <tr className="border-b border-[#EFE7DC] bg-[#FAF5EF] text-stone-600 font-bold">
                 <th className="py-3.5 px-4">Student & Diagnosis</th>
                 <th className="py-3.5 px-4">Grade</th>
-                <th className="py-3.5 px-4 text-center">Draft (Assigned Teacher)</th>
+                <th className="py-3.5 px-4 text-center">
+                  Draft (Assigned Teacher)
+                </th>
                 <th className="py-3.5 px-4 text-center">Coordinator Review</th>
                 <th className="py-3.5 px-4 text-center">Director Approval</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
@@ -284,26 +396,45 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
             </thead>
             <tbody className="divide-y divide-[#EFE7DC] text-stone-800">
               {filteredRows.map(({ student, iep }) => {
-                const isAssignedGPK = student.assignedGPKTeacherId === currentUser.id;
+                const isAssignedGPK =
+                  student.assignedGPKTeacherId === currentUser.id;
                 const canEdit = isAssignedGPK || isCoordinator || isDirector;
-                const canSubmitDraft = (isAssignedGPK || isCoordinator) && iep.draftStatus !== 'Done';
-                const canReviewCoordinator = isCoordinator && iep.draftStatus === 'Done' && iep.coordinatorReviewStatus !== 'Done';
-                const canReviewDirector = isDirector && iep.coordinatorReviewStatus === 'Done' && iep.directorApprovalStatus !== 'Done';
+                const canSubmitDraft =
+                  (isAssignedGPK || isCoordinator) &&
+                  iep.draftStatus !== 'Done';
+                const canReviewCoordinator =
+                  isCoordinator &&
+                  iep.draftStatus === 'Done' &&
+                  iep.coordinatorReviewStatus !== 'Done';
+                const canReviewDirector =
+                  isDirector &&
+                  iep.coordinatorReviewStatus === 'Done' &&
+                  iep.directorApprovalStatus !== 'Done';
 
                 return (
-                  <tr key={student.id} className="hover:bg-[#FAF5EF]/50 transition-colors">
+                  <tr
+                    key={student.id}
+                    className="hover:bg-[#FAF5EF]/50 transition-colors"
+                  >
                     {/* Student Info */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
                         <img
-                          src={student.avatarUrl || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=80'}
+                          src={
+                            student.avatarUrl ||
+                            'https://images.unsplash.com/photo-1544717305-2782549b5136?w=80'
+                          }
                           alt={student.name}
                           className="w-9 h-9 rounded-full object-cover border border-stone-200"
                         />
                         <div>
-                          <p className="font-bold text-stone-900">{student.name}</p>
+                          <p className="font-bold text-stone-900">
+                            {student.name}
+                          </p>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-stone-500 font-mono">NISN: {student.nisn}</span>
+                            <span className="text-[10px] text-stone-500 font-mono">
+                              NISN: {student.nisn}
+                            </span>
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
                               {student.primaryDiagnosis || 'Special Needs'}
                             </span>
@@ -320,7 +451,10 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
                     {/* Step 1: Draft */}
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <StatusBadge status={iep.draftStatus || 'Not Started'} size="sm" />
+                        <StatusBadge
+                          status={iep.draftStatus || 'Not Started'}
+                          size="sm"
+                        />
                         <span className="text-[10px] text-stone-500 font-medium">
                           {student.assignedGPKTeacherName || 'Assigned GPK'}
                         </span>
@@ -330,7 +464,10 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
                     {/* Step 2: Coordinator Review */}
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <StatusBadge status={iep.coordinatorReviewStatus || 'Not Started'} size="sm" />
+                        <StatusBadge
+                          status={iep.coordinatorReviewStatus || 'Not Started'}
+                          size="sm"
+                        />
                         <span className="text-[10px] text-stone-500 font-medium">
                           SpecEd Coordinator
                         </span>
@@ -340,7 +477,10 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
                     {/* Step 3: Director Approval */}
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <StatusBadge status={iep.directorApprovalStatus || 'Not Started'} size="sm" />
+                        <StatusBadge
+                          status={iep.directorApprovalStatus || 'Not Started'}
+                          size="sm"
+                        />
                         <span className="text-[10px] text-stone-500 font-medium">
                           Director / Principal
                         </span>
@@ -365,7 +505,8 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
                           id={`edit-iep-btn-${student.id}`}
                           onClick={() => {
                             setSelectedStudentId(student.id);
-                            if (onSelectIEPForEdit) onSelectIEPForEdit(student.id);
+                            if (onSelectIEPForEdit)
+                              onSelectIEPForEdit(student.id);
                           }}
                           className="flex items-center gap-1 px-2.5 py-1.5 bg-[#FAF5EF] hover:bg-[#6E161E] hover:text-white border border-[#E8DFC8] rounded-xl font-bold text-stone-700 transition-all text-xs shadow-2xs"
                         >
@@ -425,13 +566,19 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <div>
                 <h3 className="font-heading font-black text-base text-stone-900">
-                  {isCoordinator ? 'Special Education Coordinator Review' : 'Administrative Authorization'}
+                  {isCoordinator
+                    ? 'Special Education Coordinator Review'
+                    : 'Administrative Authorization'}
                 </h3>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  IEP ID: {reviewingIEP.id} · Student: {specialStudents.find(s => s.id === reviewingIEP.studentId)?.name}
+                  IEP ID: {reviewingIEP.id} · Student:{' '}
+                  {
+                    specialStudents.find((s) => s.id === reviewingIEP.studentId)
+                      ?.name
+                  }
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setReviewingIEP(null)}
                 className="text-stone-400 hover:text-stone-700 font-bold"
               >
@@ -451,7 +598,9 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
                   }`}
                 >
                   <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-emerald-600" />
-                  <span>{isCoordinator ? 'Verify & Forward' : 'Approve & Ratify'}</span>
+                  <span>
+                    {isCoordinator ? 'Verify & Forward' : 'Approve & Ratify'}
+                  </span>
                 </button>
 
                 <button
@@ -470,13 +619,19 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
 
               <div className="space-y-1">
                 <label className="font-bold text-stone-700">
-                  {reviewAction === 'Return' ? 'Revision Notes & Required Adjustments *' : 'Reviewer Feedback & Remarks (Optional)'}
+                  {reviewAction === 'Return'
+                    ? 'Revision Notes & Required Adjustments *'
+                    : 'Reviewer Feedback & Remarks (Optional)'}
                 </label>
                 <textarea
                   rows={3}
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
-                  placeholder={reviewAction === 'Return' ? 'Specify required adjustments in goals, accommodations, or baseline evidence...' : 'Add congratulatory or clarifying comments...'}
+                  placeholder={
+                    reviewAction === 'Return'
+                      ? 'Specify required adjustments in goals, accommodations, or baseline evidence...'
+                      : 'Add congratulatory or clarifying comments...'
+                  }
                   className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl font-normal"
                 />
               </div>
@@ -494,7 +649,8 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
                   onClick={handleSubmitReview}
                   className="px-4 py-2 bg-[#6E161E] hover:bg-[#581118] text-white rounded-xl font-bold shadow-xs"
                 >
-                  Confirm {reviewAction === 'Approve' ? 'Verification' : 'Return'}
+                  Confirm{' '}
+                  {reviewAction === 'Approve' ? 'Verification' : 'Return'}
                 </button>
               </div>
             </div>
@@ -510,11 +666,19 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
               <div className="flex items-center gap-2.5">
                 <Clock className="w-5 h-5 text-[#6E161E]" />
                 <div>
-                  <h3 className="font-heading font-black text-base text-stone-900">IEP Workflow Audit Trail</h3>
-                  <p className="text-xs text-stone-500">Student: {specialStudents.find(s => s.id === historyIEP.studentId)?.name}</p>
+                  <h3 className="font-heading font-black text-base text-stone-900">
+                    IEP Workflow Audit Trail
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Student:{' '}
+                    {
+                      specialStudents.find((s) => s.id === historyIEP.studentId)
+                        ?.name
+                    }
+                  </p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setHistoryIEP(null)}
                 className="text-stone-400 hover:text-stone-700 font-bold"
               >
@@ -523,21 +687,34 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({ onSelectIEPF
             </div>
 
             <div className="p-6 overflow-y-auto space-y-4 text-xs">
-              {(!historyIEP.workflowHistory || historyIEP.workflowHistory.length === 0) ? (
-                <p className="text-stone-400 text-center py-6">No historical workflow transitions recorded yet.</p>
+              {!historyIEP.workflowHistory ||
+              historyIEP.workflowHistory.length === 0 ? (
+                <p className="text-stone-400 text-center py-6">
+                  No historical workflow transitions recorded yet.
+                </p>
               ) : (
                 <div className="space-y-4 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-stone-200">
                   {historyIEP.workflowHistory.map((h, i) => (
                     <div key={h.id || i} className="relative pl-9 space-y-1">
                       <div className="absolute left-2.5 top-1 w-3 h-3 rounded-full bg-[#6E161E] ring-4 ring-[#FAF5EF]" />
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-stone-900">{h.stage} → {h.status}</span>
+                        <span className="font-bold text-stone-900">
+                          {h.stage} → {h.status}
+                        </span>
                         <span className="text-[10px] text-stone-400 font-mono">
-                          {new Date(h.timestamp).toLocaleDateString()} {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(h.timestamp).toLocaleDateString()}{' '}
+                          {new Date(h.timestamp).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </span>
                       </div>
                       <p className="text-[11px] text-stone-600 font-medium">
-                        By <strong className="text-stone-800">{h.authorName}</strong> ({h.authorRole})
+                        By{' '}
+                        <strong className="text-stone-800">
+                          {h.authorName}
+                        </strong>{' '}
+                        ({h.authorRole})
                       </p>
                       {h.comment && (
                         <p className="p-2 bg-[#FAF5EF] rounded-lg border border-[#E8DFC8] text-stone-700 mt-1 italic">

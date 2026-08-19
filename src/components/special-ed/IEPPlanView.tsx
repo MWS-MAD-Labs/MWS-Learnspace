@@ -4,21 +4,16 @@ import { storageService } from '../../services/storageService';
 import { IEPRecord, IEPGoal, Student } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { IEPStatusTracker } from './IEPStatusTracker';
-import { 
-  FileText, 
-  User, 
-  Target, 
-  Calendar, 
-  CheckCircle2, 
-  Plus, 
-  Printer, 
-  Save, 
-  Sparkles, 
-  ShieldCheck, 
-  BookOpen, 
-  Brain, 
-  Activity, 
-  ChevronRight, 
+import {
+  FileText,
+  Target,
+  Calendar,
+  CheckCircle2,
+  Plus,
+  Printer,
+  Save,
+  ShieldCheck,
+  ChevronRight,
   ChevronDown,
   Trash2,
   Edit3,
@@ -26,58 +21,71 @@ import {
   FileSignature,
   Clock,
   ArrowRight,
-  Info,
   Award,
-  ExternalLink
+  ExternalLink,
 } from 'lucide-react';
 
-const IEP_TABS = ['Profile & Team', 'Baseline Diagnostics', 'SMART Goals', 'Accommodations & Services', 'Signatures'] as const;
+const IEP_TABS = [
+  'Profile & Team',
+  'Baseline Diagnostics',
+  'SMART Goals',
+  'Accommodations & Services',
+  'Signatures',
+] as const;
 
 export const IEPPlanView: React.FC = () => {
-  const { 
-    selectedStudentId, 
-    setSelectedStudentId, 
-    students, 
-    currentUser, 
-    toggleObservationDrawer, 
+  const {
+    selectedStudentId,
+    setSelectedStudentId,
+    students,
+    currentUser,
+    toggleObservationDrawer,
     showToast,
     refreshData,
-    navigateToWeeklyReport
+    navigateToWeeklyReport,
   } = useApp();
 
-  const [iepViewMode, setIepViewMode] = useState<'DOCUMENT' | 'STATUS_TRACKER'>('DOCUMENT');
-  const [expandedHistoryGoalId, setExpandedHistoryGoalId] = useState<string | null>(null);
+  const [iepViewMode, setIepViewMode] = useState<'DOCUMENT' | 'STATUS_TRACKER'>(
+    'DOCUMENT',
+  );
+  const [expandedHistoryGoalId, setExpandedHistoryGoalId] = useState<
+    string | null
+  >(null);
 
   // Edit goal modal
   const [editingGoal, setEditingGoal] = useState<IEPGoal | null>(null);
   const [isEditingNew, setIsEditingNew] = useState(false);
 
-  const isCoordinatorOrLeadership = 
-    Boolean(currentUser.isSpecialEdCoordinator) || 
-    currentUser.role === 'PRINCIPAL' || 
+  const isCoordinatorOrLeadership =
+    Boolean(currentUser.isSpecialEdCoordinator) ||
+    currentUser.role === 'PRINCIPAL' ||
     currentUser.role === 'DIRECTOR';
 
-  const isSETeacher = 
-    currentUser.isGPK || 
-    (currentUser.role === 'SPECIAL_ED_TEACHER' && !currentUser.isSpecialEdCoordinator);
+  const isSETeacher =
+    currentUser.isGPK ||
+    (currentUser.role === 'SPECIAL_ED_TEACHER' &&
+      !currentUser.isSpecialEdCoordinator);
 
   // Filter accessible students: SE teachers can ONLY access SN students assigned to them
   const accessibleStudents = useMemo(() => {
     if (isCoordinatorOrLeadership) {
-      return students.filter(s => s.specialNeedsFlag);
+      return students.filter((s) => s.specialNeedsFlag);
     }
     return students.filter(
-      s => s.specialNeedsFlag && (
-        s.assignedGPKTeacherId === currentUser.id || 
-        currentUser.assignedSpecialNeedsStudentIds?.includes(s.id)
-      )
+      (s) =>
+        s.specialNeedsFlag &&
+        (s.assignedGPKTeacherId === currentUser.id ||
+          currentUser.assignedSpecialNeedsStudentIds?.includes(s.id)),
     );
   }, [students, currentUser, isCoordinatorOrLeadership]);
 
   // Current active student must be within accessible list
-  const currentStudent = accessibleStudents.find(s => s.id === selectedStudentId) || accessibleStudents[0];
+  const currentStudent =
+    accessibleStudents.find((s) => s.id === selectedStudentId) ||
+    accessibleStudents[0];
 
-  const [activeTab, setActiveTab] = useState<typeof IEP_TABS[number]>('SMART Goals');
+  const [activeTab, setActiveTab] =
+    useState<(typeof IEP_TABS)[number]>('SMART Goals');
 
   // Load IEP helper
   const loadDefaultIEP = (stud: Student): IEPRecord => ({
@@ -93,47 +101,83 @@ export const IEPPlanView: React.FC = () => {
     directorApprovalStatus: 'Done',
     workflowHistory: [],
     consideration: 'Individualized Special Support (GPK)',
-    primaryClassification: stud.primaryClassification || 'Sensory Processing Sensitivity',
-    currentPlacement: 'General Education Classroom with GPK Shadow (1:1 Support)',
+    primaryClassification:
+      stud.primaryClassification || 'Sensory Processing Sensitivity',
+    currentPlacement:
+      'General Education Classroom with GPK Shadow (1:1 Support)',
     teamMembers: [
-      { id: 'tm1', role: 'GPK Case Manager', name: stud.assignedGPKTeacherName || currentUser.name, initial: 'CM', confirmed: true },
-      { id: 'tm2', role: 'Occupational Therapist', name: 'Dr. Clara Vance, OTR/L', initial: 'CV', confirmed: true },
-      { id: 'tm3', role: 'Grade Teacher', name: 'Sarah Woods', initial: 'SW', confirmed: true },
-      { id: 'tm4', role: 'Special Ed Coordinator', name: 'Ms. Elena Johnson', initial: 'EJ', confirmed: true },
-      { id: 'tm5', role: 'Parents', name: stud.parentGuardianName || 'Parents / Guardians', initial: 'PG', confirmed: true }
+      {
+        id: 'tm1',
+        role: 'GPK Case Manager',
+        name: stud.assignedGPKTeacherName || currentUser.name,
+        initial: 'CM',
+        confirmed: true,
+      },
+      {
+        id: 'tm2',
+        role: 'Occupational Therapist',
+        name: 'Dr. Clara Vance, OTR/L',
+        initial: 'CV',
+        confirmed: true,
+      },
+      {
+        id: 'tm3',
+        role: 'Grade Teacher',
+        name: 'Sarah Woods',
+        initial: 'SW',
+        confirmed: true,
+      },
+      {
+        id: 'tm4',
+        role: 'Special Ed Coordinator',
+        name: 'Ms. Elena Johnson',
+        initial: 'EJ',
+        confirmed: true,
+      },
+      {
+        id: 'tm5',
+        role: 'Parents',
+        name: stud.parentGuardianName || 'Parents / Guardians',
+        initial: 'PG',
+        confirmed: true,
+      },
     ],
     performanceAreas: [
       {
         id: 'pa1',
         name: 'Emotional Self-Regulation',
         category: 'Social/Emotional',
-        strengths: 'Eager to participate, strong visual memory, affectionate with familiar staff.',
-        needs: 'Assistance during unscheduled transitions and auditory overstimulation.',
-        impactOfNeed: 'May become vocal and disengage during abrupt schedule changes.',
+        strengths:
+          'Eager to participate, strong visual memory, affectionate with familiar staff.',
+        needs:
+          'Assistance during unscheduled transitions and auditory overstimulation.',
+        impactOfNeed:
+          'May become vocal and disengage during abrupt schedule changes.',
         informationSource: 'FEDC Observation & SFA Part 1',
         assessmentDate: '2026-10-14',
-        summaryOfResults: 'Tonggak 1 & 2 mastered; emerging Tonggak 3 (Circle Time transitions).'
-      }
+        summaryOfResults:
+          'Tonggak 1 & 2 mastered; emerging Tonggak 3 (Circle Time transitions).',
+      },
     ],
     academicAccommodations: {
       math: 'A',
       science: 'A',
       english: 'A',
       pe: 'M',
-      makerspace: 'A'
+      makerspace: 'A',
     },
     instructionalAccommodations: [
       'Visual first-then routine board',
       'Frequent check-ins during multi-step tasks',
-      'Slant board for handwriting assignments'
+      'Slant board for handwriting assignments',
     ],
     environmentalAccommodations: [
       'Preferential seating away from high-traffic doorways',
-      'Noise-cancelling earmuffs accessible on desk'
+      'Noise-cancelling earmuffs accessible on desk',
     ],
     assessmentAccommodations: [
       'Extended time (1.5x) for written assessments',
-      'Frequent sensory movement breaks'
+      'Frequent sensory movement breaks',
     ],
     goals: [
       {
@@ -141,7 +185,8 @@ export const IEPPlanView: React.FC = () => {
         code: 'GL-001',
         performanceArea: 'Social/Emotional',
         measurableGoal: `${stud.nickname || stud.fullName} will independently request a break or utilize the quiet corner during transitions in 4 out of 5 observed opportunities.`,
-        evaluationMethod: 'Daily GPK observation log and transition rating checklist',
+        evaluationMethod:
+          'Daily GPK observation log and transition rating checklist',
         schedule: 'Weekly',
         targetDate: '2027-02-15',
         active: true,
@@ -149,7 +194,7 @@ export const IEPPlanView: React.FC = () => {
         lastAddressedDate: '2026-10-23',
         lastAddressedWeek: 8,
         lastAddressedRating: 4,
-        timesAddressed: 3
+        timesAddressed: 3,
       },
       {
         id: 'g2',
@@ -164,8 +209,8 @@ export const IEPPlanView: React.FC = () => {
         lastAddressedDate: '2026-10-23',
         lastAddressedWeek: 8,
         lastAddressedRating: 3,
-        timesAddressed: 2
-      }
+        timesAddressed: 2,
+      },
     ],
     serviceSchedule: [
       {
@@ -174,7 +219,7 @@ export const IEPPlanView: React.FC = () => {
         type: '1:1',
         duration: '45 mins / 2x per week',
         frequency: 'Twice Weekly',
-        location: 'Sensory Gym'
+        location: 'Sensory Gym',
       },
       {
         id: 'srv2',
@@ -182,33 +227,40 @@ export const IEPPlanView: React.FC = () => {
         type: '1:1',
         duration: '4 hours / daily',
         frequency: 'Daily',
-        location: 'General Ed Classroom'
-      }
+        location: 'General Ed Classroom',
+      },
     ],
     progressMeasurementMethods: [
       'Weekly GPK IEP Report to parents',
-      'Monthly multidisciplinary team review'
+      'Monthly multidisciplinary team review',
     ],
     parentCommunicationMethods: [
       'Daily digital log via Learnspace Portal',
-      'Termly IEP review conferences'
+      'Termly IEP review conferences',
     ],
-    homePartnershipSupport: 'Reinforce deep-pressure calming strategies at home.',
-    homePartnershipRecommendations: 'Finger-strengthening games with playdough and sensory breaks.',
+    homePartnershipSupport:
+      'Reinforce deep-pressure calming strategies at home.',
+    homePartnershipRecommendations:
+      'Finger-strengthening games with playdough and sensory breaks.',
     parentApproval: {
       agreed: true,
       parentName: stud.parentGuardianName || 'Parents',
-      date: '2026-10-20'
+      date: '2026-10-20',
     },
     createdBy: currentUser.id,
     createdAt: new Date().toISOString(),
     updatedBy: currentUser.id,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   });
 
   const [iep, setIep] = useState<IEPRecord>(() => {
     if (!currentStudent) {
-      return loadDefaultIEP({ id: 'temp', fullName: 'Student', name: 'Student', specialNeedsFlag: true } as any);
+      return loadDefaultIEP({
+        id: 'temp',
+        fullName: 'Student',
+        name: 'Student',
+        specialNeedsFlag: true,
+      } as any);
     }
     const existing = storageService.getIEPRecords(currentStudent.id);
     if (existing.length > 0) return existing[0];
@@ -226,41 +278,74 @@ export const IEPPlanView: React.FC = () => {
     }
   }, [currentStudent?.id]);
 
-  const achievedGoalsCount = iep.goals.filter(g => g.achieved).length;
-  const addressedGoalsCount = iep.goals.filter(g => g.lastAddressedDate || (g.addressedHistory && g.addressedHistory.length > 0)).length;
+  const achievedGoalsCount = iep.goals.filter((g) => g.achieved).length;
+  const addressedGoalsCount = iep.goals.filter(
+    (g) =>
+      g.lastAddressedDate ||
+      (g.addressedHistory && g.addressedHistory.length > 0),
+  ).length;
   const goalProgressAvg = iep.goals.length
     ? Math.round((achievedGoalsCount / iep.goals.length) * 100)
     : 0;
 
   const handleToggleGoalAchieved = (goalId: string) => {
-    if (!isCoordinatorOrLeadership && currentStudent.assignedGPKTeacherId !== currentUser.id && !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)) {
-      showToast('error', 'Unauthorized Access', 'You can only update IEP goals for students assigned to you.');
+    if (
+      !isCoordinatorOrLeadership &&
+      currentStudent.assignedGPKTeacherId !== currentUser.id &&
+      !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)
+    ) {
+      showToast(
+        'error',
+        'Unauthorized Access',
+        'You can only update IEP goals for students assigned to you.',
+      );
       return;
     }
-    setIep(prev => {
-      const updatedGoals = prev.goals.map(g => {
+    setIep((prev) => {
+      const updatedGoals = prev.goals.map((g) => {
         if (g.id === goalId) {
           const nextAchieved = !g.achieved;
           return {
             ...g,
             achieved: nextAchieved,
-            achievedDate: nextAchieved ? (g.achievedDate || new Date().toISOString().split('T')[0]) : undefined,
-            achievedNote: nextAchieved ? (g.achievedNote || 'Mastery criteria achieved in classroom trials.') : undefined
+            achievedDate: nextAchieved
+              ? g.achievedDate || new Date().toISOString().split('T')[0]
+              : undefined,
+            achievedNote: nextAchieved
+              ? g.achievedNote ||
+                'Mastery criteria achieved in classroom trials.'
+              : undefined,
           };
         }
         return g;
       });
-      const updated = { ...prev, goals: updatedGoals, updatedAt: new Date().toISOString() };
+      const updated = {
+        ...prev,
+        goals: updatedGoals,
+        updatedAt: new Date().toISOString(),
+      };
       storageService.saveIEPRecord(updated);
       return updated;
     });
-    showToast('success', 'IEP Goal Status Updated', 'Goal achievement status and date updated in the IEP Plan.');
+    showToast(
+      'success',
+      'IEP Goal Status Updated',
+      'Goal achievement status and date updated in the IEP Plan.',
+    );
     refreshData();
   };
 
   const handleOpenAddGoal = () => {
-    if (!isCoordinatorOrLeadership && currentStudent.assignedGPKTeacherId !== currentUser.id && !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)) {
-      showToast('error', 'Unauthorized Access', 'You can only add IEP goals for students assigned to you.');
+    if (
+      !isCoordinatorOrLeadership &&
+      currentStudent.assignedGPKTeacherId !== currentUser.id &&
+      !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)
+    ) {
+      showToast(
+        'error',
+        'Unauthorized Access',
+        'You can only add IEP goals for students assigned to you.',
+      );
       return;
     }
     setEditingGoal({
@@ -272,14 +357,22 @@ export const IEPPlanView: React.FC = () => {
       schedule: 'Weekly',
       targetDate: '2027-06-01',
       active: true,
-      achieved: false
+      achieved: false,
     });
     setIsEditingNew(true);
   };
 
   const handleOpenEditGoal = (goal: IEPGoal) => {
-    if (!isCoordinatorOrLeadership && currentStudent.assignedGPKTeacherId !== currentUser.id && !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)) {
-      showToast('error', 'Unauthorized Access', 'You can only edit IEP goals for students assigned to you.');
+    if (
+      !isCoordinatorOrLeadership &&
+      currentStudent.assignedGPKTeacherId !== currentUser.id &&
+      !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)
+    ) {
+      showToast(
+        'error',
+        'Unauthorized Access',
+        'You can only edit IEP goals for students assigned to you.',
+      );
       return;
     }
     setEditingGoal({ ...goal });
@@ -288,42 +381,60 @@ export const IEPPlanView: React.FC = () => {
 
   const handleSaveEditedGoal = () => {
     if (!editingGoal || !editingGoal.measurableGoal.trim()) {
-      showToast('error', 'Goal Description Required', 'Please enter a measurable SMART goal statement.');
+      showToast(
+        'error',
+        'Goal Description Required',
+        'Please enter a measurable SMART goal statement.',
+      );
       return;
     }
 
-    setIep(prev => {
+    setIep((prev) => {
       let updatedGoals: IEPGoal[];
       if (isEditingNew) {
         updatedGoals = [...prev.goals, editingGoal];
       } else {
-        updatedGoals = prev.goals.map(g => g.id === editingGoal.id ? editingGoal : g);
+        updatedGoals = prev.goals.map((g) =>
+          g.id === editingGoal.id ? editingGoal : g,
+        );
       }
       const updatedRecord: IEPRecord = {
         ...prev,
         goals: updatedGoals,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
       storageService.saveIEPRecord(updatedRecord);
       return updatedRecord;
     });
 
-    showToast('success', isEditingNew ? 'SMART Goal Added' : 'SMART Goal Updated', `Saved goal ${editingGoal.code} for ${currentStudent.fullName}.`);
+    showToast(
+      'success',
+      isEditingNew ? 'SMART Goal Added' : 'SMART Goal Updated',
+      `Saved goal ${editingGoal.code} for ${currentStudent.fullName}.`,
+    );
     setEditingGoal(null);
     refreshData();
   };
 
   const handleDeleteGoal = (goalId: string) => {
-    if (!isCoordinatorOrLeadership && currentStudent.assignedGPKTeacherId !== currentUser.id && !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)) {
-      showToast('error', 'Unauthorized Access', 'You can only delete IEP goals for students assigned to you.');
+    if (
+      !isCoordinatorOrLeadership &&
+      currentStudent.assignedGPKTeacherId !== currentUser.id &&
+      !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)
+    ) {
+      showToast(
+        'error',
+        'Unauthorized Access',
+        'You can only delete IEP goals for students assigned to you.',
+      );
       return;
     }
-    setIep(prev => {
-      const updatedGoals = prev.goals.filter(g => g.id !== goalId);
+    setIep((prev) => {
+      const updatedGoals = prev.goals.filter((g) => g.id !== goalId);
       const updatedRecord: IEPRecord = {
         ...prev,
         goals: updatedGoals,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
       storageService.saveIEPRecord(updatedRecord);
       return updatedRecord;
@@ -333,16 +444,28 @@ export const IEPPlanView: React.FC = () => {
   };
 
   const handleSaveIEP = () => {
-    if (!isCoordinatorOrLeadership && currentStudent.assignedGPKTeacherId !== currentUser.id && !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)) {
-      showToast('error', 'Unauthorized Access', 'You can only save IEP plans for students assigned to you.');
+    if (
+      !isCoordinatorOrLeadership &&
+      currentStudent.assignedGPKTeacherId !== currentUser.id &&
+      !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)
+    ) {
+      showToast(
+        'error',
+        'Unauthorized Access',
+        'You can only save IEP plans for students assigned to you.',
+      );
       return;
     }
     storageService.saveIEPRecord({
       ...iep,
       studentId: currentStudent.id,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
-    showToast('success', 'IEP Plan Saved', `Updated Individualized Education Program for ${currentStudent.fullName}. All goal dates synchronized.`);
+    showToast(
+      'success',
+      'IEP Plan Saved',
+      `Updated Individualized Education Program for ${currentStudent.fullName}. All goal dates synchronized.`,
+    );
     refreshData();
   };
 
@@ -352,16 +475,24 @@ export const IEPPlanView: React.FC = () => {
 
   if (accessibleStudents.length === 0) {
     return (
-      <div id="iep-restricted-view" className="max-w-3xl mx-auto my-12 bg-white border border-[#EFE7DC] rounded-3xl p-8 text-center space-y-4 shadow-xs">
+      <div
+        id="iep-restricted-view"
+        className="max-w-3xl mx-auto my-12 bg-white border border-[#EFE7DC] rounded-3xl p-8 text-center space-y-4 shadow-xs"
+      >
         <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-800 flex items-center justify-center mx-auto">
           <ShieldCheck className="w-7 h-7" />
         </div>
-        <h2 className="font-heading font-black text-lg text-stone-900">No Special Needs Students Assigned Yet</h2>
+        <h2 className="font-heading font-black text-lg text-stone-900">
+          No Special Needs Students Assigned Yet
+        </h2>
         <p className="text-xs text-stone-600 max-w-md mx-auto leading-relaxed">
-          Special Education and GPK teachers can only access, create, and edit IEP documents for students assigned to their 1:1 / caseload care.
+          Special Education and GPK teachers can only access, create, and edit
+          IEP documents for students assigned to their 1:1 / caseload care.
         </p>
         <p className="text-xs text-stone-500">
-          Please contact the Special Education Coordinator (<strong>Ms. Elena Johnson</strong>) to assign students to your profile.
+          Please contact the Special Education Coordinator (
+          <strong>Ms. Elena Johnson</strong>) to assign students to your
+          profile.
         </p>
       </div>
     );
@@ -375,7 +506,13 @@ export const IEPPlanView: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <ShieldCheck className="w-4 h-4 text-amber-800 shrink-0" />
             <span>
-              <strong>Tied SE Teacher Access:</strong> You are authorized to access, create, and edit IEP documents strictly for your assigned student(s): <strong className="text-amber-950">{accessibleStudents.map(s => s.fullName).join(', ')}</strong>.
+              <strong>Tied SE Teacher Access:</strong> You are authorized to
+              access, create, and edit IEP documents strictly for your assigned
+              student(s):{' '}
+              <strong className="text-amber-950">
+                {accessibleStudents.map((s) => s.fullName).join(', ')}
+              </strong>
+              .
             </span>
           </div>
           <span className="font-black px-2.5 py-1 rounded-lg bg-amber-200/80 text-amber-950 text-[10px] shrink-0">
@@ -410,7 +547,10 @@ export const IEPPlanView: React.FC = () => {
             }`}
           >
             <ListOrdered className="w-4 h-4" />
-            <span>2. IEP Status Tracker ({isCoordinatorOrLeadership ? 'All Students' : 'My Caseload'})</span>
+            <span>
+              2. IEP Status Tracker (
+              {isCoordinatorOrLeadership ? 'All Students' : 'My Caseload'})
+            </span>
           </button>
         </div>
 
@@ -437,7 +577,10 @@ export const IEPPlanView: React.FC = () => {
           <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 print:border-none">
             <div className="flex items-center gap-4">
               <img
-                src={currentStudent.avatarUrl || 'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=120'}
+                src={
+                  currentStudent.avatarUrl ||
+                  'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=120'
+                }
                 alt={currentStudent.fullName}
                 className="w-16 h-16 rounded-2xl object-cover border-2 border-[#EFE7DC] shadow-xs"
               />
@@ -452,7 +595,8 @@ export const IEPPlanView: React.FC = () => {
                   {currentStudent.fullName}
                 </h1>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  Academic Year: <strong>{iep.academicYear}</strong> · Primary Classification: <strong>{iep.primaryClassification}</strong>
+                  Academic Year: <strong>{iep.academicYear}</strong> · Primary
+                  Classification: <strong>{iep.primaryClassification}</strong>
                 </p>
               </div>
             </div>
@@ -461,7 +605,9 @@ export const IEPPlanView: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3">
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
-                  {isCoordinatorOrLeadership ? 'Student Caseload' : 'My Assigned Student'}
+                  {isCoordinatorOrLeadership
+                    ? 'Student Caseload'
+                    : 'My Assigned Student'}
                 </span>
                 <select
                   id="iep-student-select"
@@ -471,8 +617,10 @@ export const IEPPlanView: React.FC = () => {
                   }}
                   className="px-3.5 py-2 text-xs font-bold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-900 focus:outline-hidden"
                 >
-                  {accessibleStudents.map(s => (
-                    <option key={s.id} value={s.id}>{s.fullName} ({s.grade})</option>
+                  {accessibleStudents.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.fullName} ({s.grade})
+                    </option>
                   ))}
                 </select>
               </div>
@@ -503,7 +651,9 @@ export const IEPPlanView: React.FC = () => {
               >
                 {tab}
                 {tab === 'SMART Goals' && (
-                  <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-700'}`}>
+                  <span
+                    className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-700'}`}
+                  >
                     {iep.goals.length}
                   </span>
                 )}
@@ -515,23 +665,33 @@ export const IEPPlanView: React.FC = () => {
           {activeTab === 'Profile & Team' && (
             <div className="space-y-6">
               <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs space-y-4">
-                <h2 className="text-base font-bold text-stone-900">Student IEP Context & Placement</h2>
+                <h2 className="text-base font-bold text-stone-900">
+                  Student IEP Context & Placement
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   <div className="space-y-1">
-                    <label className="font-bold text-stone-700">Special Consideration / Program Type</label>
+                    <label className="font-bold text-stone-700">
+                      Special Consideration / Program Type
+                    </label>
                     <input
                       type="text"
                       value={iep.consideration}
-                      onChange={(e) => setIep({ ...iep, consideration: e.target.value })}
+                      onChange={(e) =>
+                        setIep({ ...iep, consideration: e.target.value })
+                      }
                       className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-stone-700">Educational Placement & Support Level</label>
+                    <label className="font-bold text-stone-700">
+                      Educational Placement & Support Level
+                    </label>
                     <input
                       type="text"
                       value={iep.currentPlacement}
-                      onChange={(e) => setIep({ ...iep, currentPlacement: e.target.value })}
+                      onChange={(e) =>
+                        setIep({ ...iep, currentPlacement: e.target.value })
+                      }
                       className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl"
                     />
                   </div>
@@ -539,16 +699,25 @@ export const IEPPlanView: React.FC = () => {
               </div>
 
               <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs space-y-4">
-                <h2 className="text-base font-bold text-stone-900">Multidisciplinary IEP Team Members</h2>
+                <h2 className="text-base font-bold text-stone-900">
+                  Multidisciplinary IEP Team Members
+                </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {iep.teamMembers.map((tm) => (
-                    <div key={tm.id} className="p-3.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl flex items-center gap-3">
+                    <div
+                      key={tm.id}
+                      className="p-3.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl flex items-center gap-3"
+                    >
                       <div className="w-9 h-9 rounded-xl bg-[#6E161E] text-white flex items-center justify-center font-bold text-xs">
                         {tm.initial}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-xs text-stone-900 truncate">{tm.name}</p>
-                        <p className="text-[11px] text-stone-500 truncate">{tm.role}</p>
+                        <p className="font-bold text-xs text-stone-900 truncate">
+                          {tm.name}
+                        </p>
+                        <p className="text-[11px] text-stone-500 truncate">
+                          {tm.role}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -566,7 +735,8 @@ export const IEPPlanView: React.FC = () => {
                     Present Levels of Academic & Functional Performance (PLAAFP)
                   </h2>
                   <p className="text-xs text-stone-500">
-                    Synthesized from FEDC observations, sensory profiles, and School Function Assessment (SFA).
+                    Synthesized from FEDC observations, sensory profiles, and
+                    School Function Assessment (SFA).
                   </p>
                 </div>
 
@@ -582,16 +752,32 @@ export const IEPPlanView: React.FC = () => {
 
               <div className="space-y-4">
                 {iep.performanceAreas.map((pa) => (
-                  <div key={pa.id} className="p-4 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl space-y-3 text-xs">
+                  <div
+                    key={pa.id}
+                    className="p-4 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl space-y-3 text-xs"
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-stone-900 text-sm">{pa.name}</span>
-                      <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px]">{pa.category}</span>
+                      <span className="font-bold text-stone-900 text-sm">
+                        {pa.name}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px]">
+                        {pa.category}
+                      </span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <p><strong>Strengths:</strong> {pa.strengths}</p>
-                      <p><strong>Needs:</strong> {pa.needs}</p>
-                      <p><strong>Impact of Need:</strong> {pa.impactOfNeed}</p>
-                      <p><strong>Summary of Assessment Results:</strong> {pa.summaryOfResults}</p>
+                      <p>
+                        <strong>Strengths:</strong> {pa.strengths}
+                      </p>
+                      <p>
+                        <strong>Needs:</strong> {pa.needs}
+                      </p>
+                      <p>
+                        <strong>Impact of Need:</strong> {pa.impactOfNeed}
+                      </p>
+                      <p>
+                        <strong>Summary of Assessment Results:</strong>{' '}
+                        {pa.summaryOfResults}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -608,14 +794,17 @@ export const IEPPlanView: React.FC = () => {
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-base font-bold text-stone-900">
-                        Annual SMART Goals & Weekly Monitoring ({iep.goals.length})
+                        Annual SMART Goals & Weekly Monitoring (
+                        {iep.goals.length})
                       </h2>
                       <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
                         {achievedGoalsCount} Mastered / {iep.goals.length} Goals
                       </span>
                     </div>
                     <p className="text-xs text-stone-500 mt-1">
-                      Goals automatically sync with Weekly IEP Reports. When the SE Teacher logs weekly ratings and marks mastery, the last addressed date and achievement records update here.
+                      Goals automatically sync with Weekly IEP Reports. When the
+                      SE Teacher logs weekly ratings and marks mastery, the last
+                      addressed date and achievement records update here.
                     </p>
                   </div>
 
@@ -649,8 +838,12 @@ export const IEPPlanView: React.FC = () => {
                       <Target className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-stone-500 uppercase">Total SMART Goals</span>
-                      <p className="text-base font-black text-stone-900">{iep.goals.length} Active</p>
+                      <span className="text-[10px] font-bold text-stone-500 uppercase">
+                        Total SMART Goals
+                      </span>
+                      <p className="text-base font-black text-stone-900">
+                        {iep.goals.length} Active
+                      </p>
                     </div>
                   </div>
 
@@ -659,8 +852,12 @@ export const IEPPlanView: React.FC = () => {
                       <Clock className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-stone-500 uppercase">Tracked in Weekly Reports</span>
-                      <p className="text-base font-black text-amber-800">{addressedGoalsCount} Addressed</p>
+                      <span className="text-[10px] font-bold text-stone-500 uppercase">
+                        Tracked in Weekly Reports
+                      </span>
+                      <p className="text-base font-black text-amber-800">
+                        {addressedGoalsCount} Addressed
+                      </p>
                     </div>
                   </div>
 
@@ -669,8 +866,12 @@ export const IEPPlanView: React.FC = () => {
                       <Award className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-stone-500 uppercase">Mastery / Achievement</span>
-                      <p className="text-base font-black text-emerald-800">{goalProgressAvg}% Completed</p>
+                      <span className="text-[10px] font-bold text-stone-500 uppercase">
+                        Mastery / Achievement
+                      </span>
+                      <p className="text-base font-black text-emerald-800">
+                        {goalProgressAvg}% Completed
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -680,15 +881,17 @@ export const IEPPlanView: React.FC = () => {
               <div className="space-y-4">
                 {iep.goals.map((goal, gIdx) => {
                   const isExpanded = expandedHistoryGoalId === goal.id;
-                  const hasHistory = Boolean(goal.addressedHistory && goal.addressedHistory.length > 0);
+                  const hasHistory = Boolean(
+                    goal.addressedHistory && goal.addressedHistory.length > 0,
+                  );
 
                   return (
                     <div
                       key={goal.id}
                       id={`iep-goal-card-${goal.id}`}
                       className={`bg-white border rounded-3xl p-6 shadow-xs space-y-4 transition-all ${
-                        goal.achieved 
-                          ? 'border-emerald-200 ring-1 ring-emerald-300/40 bg-linear-to-b from-white to-emerald-50/20' 
+                        goal.achieved
+                          ? 'border-emerald-200 ring-1 ring-emerald-300/40 bg-linear-to-b from-white to-emerald-50/20'
                           : 'border-[#EFE7DC] hover:border-[#6E161E]/30'
                       }`}
                     >
@@ -726,13 +929,15 @@ export const IEPPlanView: React.FC = () => {
                             type="button"
                             onClick={() => handleToggleGoalAchieved(goal.id)}
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
-                              goal.achieved 
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs' 
+                              goal.achieved
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                                 : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-emerald-50 hover:text-emerald-900'
                             }`}
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            {goal.achieved ? '✓ Target Achieved' : 'Mark Achieved'}
+                            {goal.achieved
+                              ? '✓ Target Achieved'
+                              : 'Mark Achieved'}
                           </button>
 
                           <button
@@ -761,7 +966,8 @@ export const IEPPlanView: React.FC = () => {
                           <div className="flex items-center justify-between">
                             <span className="font-bold flex items-center gap-1.5">
                               <Award className="w-4 h-4 text-emerald-700" />
-                              Achieved on: {goal.achievedDate || 'Recent Weekly Log'}
+                              Achieved on:{' '}
+                              {goal.achievedDate || 'Recent Weekly Log'}
                             </span>
                             {goal.achievedInReportId && (
                               <span className="text-[10px] font-mono text-emerald-800 bg-white/70 px-2 py-0.5 rounded-md border border-emerald-200">
@@ -780,16 +986,28 @@ export const IEPPlanView: React.FC = () => {
                       {/* Goal Benchmark Parameters Grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-[#FAF5EF] p-3.5 rounded-2xl border border-[#E8DFC8]">
                         <div>
-                          <span className="font-bold text-stone-500 uppercase text-[10px] block">Evaluation Method</span>
-                          <span className="text-stone-800">{goal.evaluationMethod || 'Observation checklist'}</span>
+                          <span className="font-bold text-stone-500 uppercase text-[10px] block">
+                            Evaluation Method
+                          </span>
+                          <span className="text-stone-800">
+                            {goal.evaluationMethod || 'Observation checklist'}
+                          </span>
                         </div>
                         <div>
-                          <span className="font-bold text-stone-500 uppercase text-[10px] block">Schedule</span>
-                          <span className="text-stone-800">{goal.schedule || 'Weekly'}</span>
+                          <span className="font-bold text-stone-500 uppercase text-[10px] block">
+                            Schedule
+                          </span>
+                          <span className="text-stone-800">
+                            {goal.schedule || 'Weekly'}
+                          </span>
                         </div>
                         <div>
-                          <span className="font-bold text-stone-500 uppercase text-[10px] block">Target Date</span>
-                          <span className="text-[#6E161E] font-bold">{goal.targetDate || 'End of Term'}</span>
+                          <span className="font-bold text-stone-500 uppercase text-[10px] block">
+                            Target Date
+                          </span>
+                          <span className="text-[#6E161E] font-bold">
+                            {goal.targetDate || 'End of Term'}
+                          </span>
                         </div>
                       </div>
 
@@ -800,7 +1018,9 @@ export const IEPPlanView: React.FC = () => {
                             {goal.lastAddressedDate ? (
                               <span className="px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 font-bold flex items-center gap-1.5 text-[11px]">
                                 <Calendar className="w-3.5 h-3.5 text-amber-700" />
-                                Last Addressed: <strong>{goal.lastAddressedDate}</strong> (Week {goal.lastAddressedWeek || 8})
+                                Last Addressed:{' '}
+                                <strong>{goal.lastAddressedDate}</strong> (Week{' '}
+                                {goal.lastAddressedWeek || 8})
                               </span>
                             ) : (
                               <span className="px-2.5 py-1 rounded-xl bg-stone-100 text-stone-600 border border-stone-200 text-[11px]">
@@ -810,7 +1030,8 @@ export const IEPPlanView: React.FC = () => {
 
                             {goal.lastAddressedRating && (
                               <span className="px-2.5 py-1 rounded-xl bg-stone-100 text-stone-800 font-bold text-[11px]">
-                                Latest Weekly Rating: {goal.lastAddressedRating} / 5
+                                Latest Weekly Rating: {goal.lastAddressedRating}{' '}
+                                / 5
                               </span>
                             )}
 
@@ -825,17 +1046,31 @@ export const IEPPlanView: React.FC = () => {
                             {hasHistory && (
                               <button
                                 type="button"
-                                onClick={() => setExpandedHistoryGoalId(isExpanded ? null : goal.id)}
+                                onClick={() =>
+                                  setExpandedHistoryGoalId(
+                                    isExpanded ? null : goal.id,
+                                  )
+                                }
                                 className="text-xs font-bold text-[#6E161E] hover:underline flex items-center gap-1"
                               >
-                                <span>{isExpanded ? 'Hide Addressed History' : `View Addressed History (${goal.addressedHistory?.length})`}</span>
-                                {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                <span>
+                                  {isExpanded
+                                    ? 'Hide Addressed History'
+                                    : `View Addressed History (${goal.addressedHistory?.length})`}
+                                </span>
+                                {isExpanded ? (
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ChevronRight className="w-3.5 h-3.5" />
+                                )}
                               </button>
                             )}
 
                             <button
                               type="button"
-                              onClick={() => navigateToWeeklyReport(currentStudent.id)}
+                              onClick={() =>
+                                navigateToWeeklyReport(currentStudent.id)
+                              }
                               className="text-[11px] font-bold text-stone-600 hover:text-[#6E161E] hover:underline flex items-center gap-1"
                             >
                               <span>Log in Weekly Report</span>
@@ -848,11 +1083,15 @@ export const IEPPlanView: React.FC = () => {
                         {isExpanded && hasHistory && (
                           <div className="bg-[#FAF5EF] rounded-2xl p-3 border border-[#E8DFC8] space-y-2 animate-in fade-in duration-150">
                             <span className="text-[10px] font-black uppercase tracking-wider text-stone-500 block">
-                              Weekly Progress Report Addressed Dates & Observation Log
+                              Weekly Progress Report Addressed Dates &
+                              Observation Log
                             </span>
                             <div className="space-y-1.5">
                               {goal.addressedHistory?.map((log, lIdx) => (
-                                <div key={log.reportId || lIdx} className="bg-white p-2.5 rounded-xl border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                                <div
+                                  key={log.reportId || lIdx}
+                                  className="bg-white p-2.5 rounded-xl border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                                >
                                   <div className="flex items-center gap-2.5">
                                     <span className="px-2 py-0.5 rounded-md bg-[#6E161E] text-white font-bold text-[10px]">
                                       Week {log.weekNumber}
@@ -891,13 +1130,22 @@ export const IEPPlanView: React.FC = () => {
           {activeTab === 'Accommodations & Services' && (
             <div className="space-y-6">
               <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs space-y-4">
-                <h2 className="text-base font-bold text-stone-900">Direct & Related Services Schedule</h2>
+                <h2 className="text-base font-bold text-stone-900">
+                  Direct & Related Services Schedule
+                </h2>
                 <div className="space-y-3">
                   {iep.serviceSchedule.map((srv) => (
-                    <div key={srv.id} className="p-4 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div
+                      key={srv.id}
+                      className="p-4 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                    >
                       <div>
-                        <h3 className="font-bold text-stone-900 text-sm">{srv.serviceName}</h3>
-                        <p className="text-stone-500 mt-0.5">Type: {srv.type} · Location: {srv.location}</p>
+                        <h3 className="font-bold text-stone-900 text-sm">
+                          {srv.serviceName}
+                        </h3>
+                        <p className="text-stone-500 mt-0.5">
+                          Type: {srv.type} · Location: {srv.location}
+                        </p>
                       </div>
                       <div className="text-right font-bold text-[#6E161E] shrink-0">
                         {srv.duration}
@@ -908,18 +1156,28 @@ export const IEPPlanView: React.FC = () => {
               </div>
 
               <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs space-y-4">
-                <h2 className="text-base font-bold text-stone-900">Instructional & Environmental Accommodations</h2>
+                <h2 className="text-base font-bold text-stone-900">
+                  Instructional & Environmental Accommodations
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                   <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-2">
-                    <span className="font-bold text-[#6E161E] uppercase text-[10px] block">Instructional Accommodations</span>
+                    <span className="font-bold text-[#6E161E] uppercase text-[10px] block">
+                      Instructional Accommodations
+                    </span>
                     <ul className="list-disc list-inside space-y-1 text-stone-700">
-                      {iep.instructionalAccommodations.map((acc, i) => <li key={i}>{acc}</li>)}
+                      {iep.instructionalAccommodations.map((acc, i) => (
+                        <li key={i}>{acc}</li>
+                      ))}
                     </ul>
                   </div>
                   <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-2">
-                    <span className="font-bold text-[#6E161E] uppercase text-[10px] block">Environmental Accommodations</span>
+                    <span className="font-bold text-[#6E161E] uppercase text-[10px] block">
+                      Environmental Accommodations
+                    </span>
                     <ul className="list-disc list-inside space-y-1 text-stone-700">
-                      {iep.environmentalAccommodations.map((acc, i) => <li key={i}>{acc}</li>)}
+                      {iep.environmentalAccommodations.map((acc, i) => (
+                        <li key={i}>{acc}</li>
+                      ))}
                     </ul>
                   </div>
                 </div>
@@ -931,36 +1189,51 @@ export const IEPPlanView: React.FC = () => {
           {activeTab === 'Signatures' && (
             <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs space-y-6">
               <div>
-                <h2 className="text-base font-bold text-stone-900">Official Signatures & Approvals</h2>
+                <h2 className="text-base font-bold text-stone-900">
+                  Official Signatures & Approvals
+                </h2>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  Verified parent agreement and multidisciplinary committee approvals.
+                  Verified parent agreement and multidisciplinary committee
+                  approvals.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
                   <ShieldCheck className="w-6 h-6 text-emerald-700 mx-auto" />
-                  <h3 className="text-xs font-bold text-emerald-950">GPK Coordinator</h3>
-                  <p className="text-[11px] text-emerald-800">Signed: {currentUser.name}</p>
+                  <h3 className="text-xs font-bold text-emerald-950">
+                    GPK Coordinator
+                  </h3>
+                  <p className="text-[11px] text-emerald-800">
+                    Signed: {currentUser.name}
+                  </p>
                 </div>
 
                 <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
                   <ShieldCheck className="w-6 h-6 text-emerald-700 mx-auto" />
-                  <h3 className="text-xs font-bold text-emerald-950">School Principal</h3>
-                  <p className="text-[11px] text-emerald-800">Approved for Year 2026–2027</p>
+                  <h3 className="text-xs font-bold text-emerald-950">
+                    School Principal
+                  </h3>
+                  <p className="text-[11px] text-emerald-800">
+                    Approved for Year 2026–2027
+                  </p>
                 </div>
 
                 <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
                   <ShieldCheck className="w-6 h-6 text-emerald-700 mx-auto" />
-                  <h3 className="text-xs font-bold text-emerald-950">Parent Consent Verified</h3>
-                  <p className="text-[11px] text-emerald-800">{iep.parentApproval.parentName} ({iep.parentApproval.date})</p>
+                  <h3 className="text-xs font-bold text-emerald-950">
+                    Parent Consent Verified
+                  </h3>
+                  <p className="text-[11px] text-emerald-800">
+                    {iep.parentApproval.parentName} ({iep.parentApproval.date})
+                  </p>
                 </div>
               </div>
             </div>
           )}
 
           {/* Sticky Bottom Actions */}
-          <div 
+          <div
             id="iep-sticky-bar"
             className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-[#EFE7DC] px-6 py-4 shadow-lg flex items-center justify-between"
           >
@@ -969,7 +1242,8 @@ export const IEPPlanView: React.FC = () => {
               onClick={toggleObservationDrawer}
               className="text-xs font-bold text-[#6E161E] hover:underline flex items-center gap-1.5"
             >
-              <FileText className="w-4 h-4" /> Toggle Observation Reference Drawer
+              <FileText className="w-4 h-4" /> Toggle Observation Reference
+              Drawer
             </button>
 
             <div className="flex items-center gap-3">
@@ -993,10 +1267,12 @@ export const IEPPlanView: React.FC = () => {
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <h3 className="font-heading font-black text-base text-stone-900">
-                {isEditingNew ? 'Add Annual SMART Goal' : `Edit Goal ${editingGoal.code}`}
+                {isEditingNew
+                  ? 'Add Annual SMART Goal'
+                  : `Edit Goal ${editingGoal.code}`}
               </h3>
-              <button 
-                onClick={() => setEditingGoal(null)} 
+              <button
+                onClick={() => setEditingGoal(null)}
                 className="text-stone-400 hover:text-stone-700 font-bold p-1 rounded-lg"
               >
                 ✕
@@ -1010,33 +1286,53 @@ export const IEPPlanView: React.FC = () => {
                   <input
                     type="text"
                     value={editingGoal.code}
-                    onChange={(e) => setEditingGoal({ ...editingGoal, code: e.target.value })}
+                    onChange={(e) =>
+                      setEditingGoal({ ...editingGoal, code: e.target.value })
+                    }
                     className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl font-bold"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-stone-700">Performance Domain Area</label>
+                  <label className="font-bold text-stone-700">
+                    Performance Domain Area
+                  </label>
                   <select
                     value={editingGoal.performanceArea}
-                    onChange={(e) => setEditingGoal({ ...editingGoal, performanceArea: e.target.value })}
+                    onChange={(e) =>
+                      setEditingGoal({
+                        ...editingGoal,
+                        performanceArea: e.target.value,
+                      })
+                    }
                     className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl font-semibold"
                   >
                     <option value="Social/Emotional">Social/Emotional</option>
                     <option value="Motor">Motor / Sensory</option>
-                    <option value="Communication">Communication & Speech</option>
+                    <option value="Communication">
+                      Communication & Speech
+                    </option>
                     <option value="Academic">Academic & Cognitive</option>
-                    <option value="Adaptive/Independence">Adaptive / Daily Living</option>
+                    <option value="Adaptive/Independence">
+                      Adaptive / Daily Living
+                    </option>
                   </select>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-stone-700">Measurable Goal Statement (SMART)</label>
+                <label className="font-bold text-stone-700">
+                  Measurable Goal Statement (SMART)
+                </label>
                 <textarea
                   rows={3}
                   value={editingGoal.measurableGoal}
-                  onChange={(e) => setEditingGoal({ ...editingGoal, measurableGoal: e.target.value })}
+                  onChange={(e) =>
+                    setEditingGoal({
+                      ...editingGoal,
+                      measurableGoal: e.target.value,
+                    })
+                  }
                   placeholder="E.g., Student will independently request a sensory break in 4 out of 5 observed opportunities..."
                   className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl focus:outline-hidden"
                 />
@@ -1044,20 +1340,34 @@ export const IEPPlanView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-bold text-stone-700">Target Completion Date</label>
+                  <label className="font-bold text-stone-700">
+                    Target Completion Date
+                  </label>
                   <input
                     type="date"
                     value={editingGoal.targetDate || ''}
-                    onChange={(e) => setEditingGoal({ ...editingGoal, targetDate: e.target.value })}
+                    onChange={(e) =>
+                      setEditingGoal({
+                        ...editingGoal,
+                        targetDate: e.target.value,
+                      })
+                    }
                     className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-stone-700">Monitoring Schedule</label>
+                  <label className="font-bold text-stone-700">
+                    Monitoring Schedule
+                  </label>
                   <select
                     value={editingGoal.schedule || 'Weekly'}
-                    onChange={(e) => setEditingGoal({ ...editingGoal, schedule: e.target.value })}
+                    onChange={(e) =>
+                      setEditingGoal({
+                        ...editingGoal,
+                        schedule: e.target.value,
+                      })
+                    }
                     className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl font-semibold"
                   >
                     <option value="Weekly">Weekly (GPK Report)</option>
@@ -1069,11 +1379,18 @@ export const IEPPlanView: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-stone-700">Evaluation Method</label>
+                <label className="font-bold text-stone-700">
+                  Evaluation Method
+                </label>
                 <input
                   type="text"
                   value={editingGoal.evaluationMethod || ''}
-                  onChange={(e) => setEditingGoal({ ...editingGoal, evaluationMethod: e.target.value })}
+                  onChange={(e) =>
+                    setEditingGoal({
+                      ...editingGoal,
+                      evaluationMethod: e.target.value,
+                    })
+                  }
                   placeholder="E.g., Weekly GPK observation rubric and anecdotal logs"
                   className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl"
                 />
@@ -1085,33 +1402,54 @@ export const IEPPlanView: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={editingGoal.achieved}
-                    onChange={(e) => setEditingGoal({
-                      ...editingGoal,
-                      achieved: e.target.checked,
-                      achievedDate: e.target.checked ? (editingGoal.achievedDate || new Date().toISOString().split('T')[0]) : undefined
-                    })}
+                    onChange={(e) =>
+                      setEditingGoal({
+                        ...editingGoal,
+                        achieved: e.target.checked,
+                        achievedDate: e.target.checked
+                          ? editingGoal.achievedDate ||
+                            new Date().toISOString().split('T')[0]
+                          : undefined,
+                      })
+                    }
                     className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span className="font-bold text-emerald-950">Mark Goal as Achieved / Mastered</span>
+                  <span className="font-bold text-emerald-950">
+                    Mark Goal as Achieved / Mastered
+                  </span>
                 </label>
 
                 {editingGoal.achieved && (
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <div>
-                      <label className="text-[11px] font-bold text-emerald-900 block">Achieved Date</label>
+                      <label className="text-[11px] font-bold text-emerald-900 block">
+                        Achieved Date
+                      </label>
                       <input
                         type="date"
                         value={editingGoal.achievedDate || ''}
-                        onChange={(e) => setEditingGoal({ ...editingGoal, achievedDate: e.target.value })}
+                        onChange={(e) =>
+                          setEditingGoal({
+                            ...editingGoal,
+                            achievedDate: e.target.value,
+                          })
+                        }
                         className="w-full p-2 bg-white border border-emerald-300 rounded-xl text-xs"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-emerald-900 block">Achievement Notes</label>
+                      <label className="text-[11px] font-bold text-emerald-900 block">
+                        Achievement Notes
+                      </label>
                       <input
                         type="text"
                         value={editingGoal.achievedNote || ''}
-                        onChange={(e) => setEditingGoal({ ...editingGoal, achievedNote: e.target.value })}
+                        onChange={(e) =>
+                          setEditingGoal({
+                            ...editingGoal,
+                            achievedNote: e.target.value,
+                          })
+                        }
                         placeholder="Mastery summary..."
                         className="w-full p-2 bg-white border border-emerald-300 rounded-xl text-xs"
                       />

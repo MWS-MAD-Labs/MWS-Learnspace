@@ -2,21 +2,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
 import { AttendanceRecord, AttendanceStatus, Student } from '../../types';
-import { 
-  Calendar as CalendarIcon, 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
-  Save, 
-  CheckCircle2, 
-  Clock, 
-  HeartCrack, 
-  Plane, 
-  AlertCircle, 
+  Save,
+  CheckCircle2,
+  Clock,
+  HeartCrack,
+  Plane,
+  AlertCircle,
   FileText,
   Search,
   CheckCheck,
-  X
+  X,
 } from 'lucide-react';
 
 interface StatusOptionConfig {
@@ -28,79 +28,96 @@ interface StatusOptionConfig {
 }
 
 const STATUS_CONFIG: Record<AttendanceStatus, StatusOptionConfig> = {
-  PRESENT: { 
-    label: 'Present', 
-    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
+  PRESENT: {
+    label: 'Present',
+    badgeClass:
+      'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
     ringClass: 'ring-emerald-500/40 border-emerald-500',
     icon: CheckCircle2,
-    description: 'On time in class'
+    description: 'On time in class',
   },
-  LATE: { 
-    label: 'Late', 
-    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
+  LATE: {
+    label: 'Late',
+    badgeClass:
+      'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
     ringClass: 'ring-amber-500/40 border-amber-500',
     icon: Clock,
-    description: 'Arrived after bell'
+    description: 'Arrived after bell',
   },
-  SICK: { 
-    label: 'Sick', 
+  SICK: {
+    label: 'Sick',
     badgeClass: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100',
     ringClass: 'ring-rose-500/40 border-rose-500',
     icon: HeartCrack,
-    description: 'Medical / illness'
+    description: 'Medical / illness',
   },
-  HOLIDAY: { 
-    label: 'Holiday', 
+  HOLIDAY: {
+    label: 'Holiday',
     badgeClass: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
     ringClass: 'ring-blue-500/40 border-blue-500',
     icon: Plane,
-    description: 'Approved leave'
+    description: 'Approved leave',
   },
-  ABSENCE: { 
-    label: 'Absence', 
+  ABSENCE: {
+    label: 'Absence',
     badgeClass: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100',
     ringClass: 'ring-red-500/40 border-red-500',
     icon: AlertCircle,
-    description: 'Unexcused absence'
+    description: 'Unexcused absence',
   },
-  EXPLAINED: { 
-    label: 'Explained', 
-    badgeClass: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
+  EXPLAINED: {
+    label: 'Explained',
+    badgeClass:
+      'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
     ringClass: 'ring-purple-500/40 border-purple-500',
     icon: FileText,
-    description: 'Permitted absence'
+    description: 'Permitted absence',
   },
-  UNEXPLAINED: { 
-    label: 'Unexplained', 
-    badgeClass: 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200',
+  UNEXPLAINED: {
+    label: 'Unexplained',
+    badgeClass:
+      'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200',
     ringClass: 'ring-stone-400/40 border-stone-400',
     icon: AlertCircle,
-    description: 'No reason provided'
-  }
+    description: 'No reason provided',
+  },
 };
 
-const AVAILABLE_STATUSES: AttendanceStatus[] = ['PRESENT', 'LATE', 'SICK', 'HOLIDAY', 'ABSENCE', 'EXPLAINED'];
+const AVAILABLE_STATUSES: AttendanceStatus[] = [
+  'PRESENT',
+  'LATE',
+  'SICK',
+  'HOLIDAY',
+  'ABSENCE',
+  'EXPLAINED',
+];
 
 export const AttendanceView: React.FC = () => {
   const { students, currentUser, showToast } = useApp();
   const [selectedDate, setSelectedDate] = useState('2026-10-24');
   const [selectedClass, setSelectedClass] = useState('1-A Sequoia');
   const [searchFilter, setSearchFilter] = useState('');
-  
+
   // Track which student's status popover is currently open
   const [openStudentId, setOpenStudentId] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
   // Available classes extracted from students
-  const classOptions = Array.from(new Set(students.map(s => s.className))).filter(Boolean);
-  if (!classOptions.includes('1-A Sequoia')) classOptions.unshift('1-A Sequoia');
+  const classOptions = Array.from(
+    new Set(students.map((s) => s.className)),
+  ).filter(Boolean);
+  if (!classOptions.includes('1-A Sequoia'))
+    classOptions.unshift('1-A Sequoia');
 
   // Filter students based on selected class and search query
-  const filteredStudents = students.filter(student => {
-    const matchesClass = selectedClass === 'ALL' || student.className === selectedClass;
-    const matchesSearch = !searchFilter || 
+  const filteredStudents = students.filter((student) => {
+    const matchesClass =
+      selectedClass === 'ALL' || student.className === selectedClass;
+    const matchesSearch =
+      !searchFilter ||
       student.fullName.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      (student.nickname && student.nickname.toLowerCase().includes(searchFilter.toLowerCase()));
+      (student.nickname &&
+        student.nickname.toLowerCase().includes(searchFilter.toLowerCase()));
     return matchesClass && matchesSearch;
   });
 
@@ -112,8 +129,10 @@ export const AttendanceView: React.FC = () => {
     const existing = storageService.getAttendanceRecords(selectedDate);
     const map: Record<string, AttendanceRecord> = {};
 
-    students.forEach(stu => {
-      const match = existing.find(e => e.studentId === stu.id && e.date === selectedDate);
+    students.forEach((stu) => {
+      const match = existing.find(
+        (e) => e.studentId === stu.id && e.date === selectedDate,
+      );
       if (match) {
         map[stu.id] = match;
       } else {
@@ -124,7 +143,7 @@ export const AttendanceView: React.FC = () => {
           date: selectedDate,
           status: 'PRESENT',
           className: stu.className,
-          recordedBy: currentUser.id
+          recordedBy: currentUser.id,
         };
       }
     });
@@ -135,7 +154,10 @@ export const AttendanceView: React.FC = () => {
   // Click-outside listener to close popover
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node)
+      ) {
         setOpenStudentId(null);
       }
     };
@@ -149,7 +171,7 @@ export const AttendanceView: React.FC = () => {
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     const currentRec = records[studentId];
-    setRecords(prev => ({
+    setRecords((prev) => ({
       ...prev,
       [studentId]: {
         ...(prev[studentId] || {
@@ -157,60 +179,71 @@ export const AttendanceView: React.FC = () => {
           studentId,
           date: selectedDate,
           className: selectedClass,
-          recordedBy: currentUser.id
+          recordedBy: currentUser.id,
         }),
         status,
-        minutesLate: status === 'LATE' ? (currentRec?.minutesLate || 10) : undefined
-      }
+        minutesLate:
+          status === 'LATE' ? currentRec?.minutesLate || 10 : undefined,
+      },
     }));
   };
 
   const handleMinutesLateChange = (studentId: string, minutes: number) => {
-    setRecords(prev => ({
+    setRecords((prev) => ({
       ...prev,
       [studentId]: {
         ...prev[studentId],
-        minutesLate: minutes
-      }
+        minutesLate: minutes,
+      },
     }));
   };
 
   const handleNotesChange = (studentId: string, notes: string) => {
-    setRecords(prev => ({
+    setRecords((prev) => ({
       ...prev,
       [studentId]: {
         ...prev[studentId],
-        notes
-      }
+        notes,
+      },
     }));
   };
 
   const handleMarkAllPresent = () => {
-    setRecords(prev => {
+    setRecords((prev) => {
       const updated = { ...prev };
-      filteredStudents.forEach(student => {
+      filteredStudents.forEach((student) => {
         updated[student.id] = {
           ...(updated[student.id] || {
             id: `att-${student.id}-${selectedDate}`,
             studentId: student.id,
             date: selectedDate,
             className: student.className,
-            recordedBy: currentUser.id
+            recordedBy: currentUser.id,
           }),
           status: 'PRESENT',
           notes: undefined,
-          minutesLate: undefined
+          minutesLate: undefined,
         };
       });
       return updated;
     });
-    showToast('info', 'All Marked Present', `Set all ${filteredStudents.length} students to Present.`);
+    showToast(
+      'info',
+      'All Marked Present',
+      `Set all ${filteredStudents.length} students to Present.`,
+    );
   };
 
   const handleSaveAttendance = () => {
-    const recordsList: AttendanceRecord[] = Object.values(records) as AttendanceRecord[];
+    const recordsList: AttendanceRecord[] = Object.values(
+      records,
+    ) as AttendanceRecord[];
     storageService.saveAttendance(recordsList);
-    showToast('success', 'Attendance Saved', `Successfully logged attendance for ${recordsList.length} students on ${selectedDate}.`);
+    showToast(
+      'success',
+      'Attendance Saved',
+      `Successfully logged attendance for ${recordsList.length} students on ${selectedDate}.`,
+    );
   };
 
   // Date shifting helpers
@@ -222,25 +255,45 @@ export const AttendanceView: React.FC = () => {
   };
 
   // Summary counts for current filtered students
-  const activeStudentIds = new Set(filteredStudents.map(s => s.id));
-  const allRecordsList: AttendanceRecord[] = Object.values(records) as AttendanceRecord[];
-  const activeRecords = allRecordsList.filter((r: AttendanceRecord) => activeStudentIds.has(r.studentId));
-  
-  const presentCount = activeRecords.filter((r: AttendanceRecord) => (r.status || 'PRESENT') === 'PRESENT').length;
-  const lateCount = activeRecords.filter((r: AttendanceRecord) => r.status === 'LATE').length;
-  const sickCount = activeRecords.filter((r: AttendanceRecord) => r.status === 'SICK').length;
-  const absenceCount = activeRecords.filter((r: AttendanceRecord) => r.status === 'ABSENCE' || r.status === 'UNEXPLAINED').length;
-  const otherCount = activeRecords.filter((r: AttendanceRecord) => r.status === 'EXPLAINED' || r.status === 'HOLIDAY').length;
+  const activeStudentIds = new Set(filteredStudents.map((s) => s.id));
+  const allRecordsList: AttendanceRecord[] = Object.values(
+    records,
+  ) as AttendanceRecord[];
+  const activeRecords = allRecordsList.filter((r: AttendanceRecord) =>
+    activeStudentIds.has(r.studentId),
+  );
 
-  const formattedDisplayDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
+  const presentCount = activeRecords.filter(
+    (r: AttendanceRecord) => (r.status || 'PRESENT') === 'PRESENT',
+  ).length;
+  const lateCount = activeRecords.filter(
+    (r: AttendanceRecord) => r.status === 'LATE',
+  ).length;
+  const sickCount = activeRecords.filter(
+    (r: AttendanceRecord) => r.status === 'SICK',
+  ).length;
+  const absenceCount = activeRecords.filter(
+    (r: AttendanceRecord) =>
+      r.status === 'ABSENCE' || r.status === 'UNEXPLAINED',
+  ).length;
+  const otherCount = activeRecords.filter(
+    (r: AttendanceRecord) => r.status === 'EXPLAINED' || r.status === 'HOLIDAY',
+  ).length;
+
+  const formattedDisplayDate = new Date(
+    selectedDate + 'T00:00:00',
+  ).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
   });
 
   return (
-    <div id="attendance-view-container" className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div
+      id="attendance-view-container"
+      className="space-y-6 max-w-7xl mx-auto pb-12"
+    >
       {/* Header & Controls Bar */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -248,7 +301,9 @@ export const AttendanceView: React.FC = () => {
             <span className="text-xs font-bold uppercase tracking-wider text-[#6E161E] bg-[#6E161E]/10 px-2.5 py-0.5 rounded-full">
               Class Attendance
             </span>
-            <span className="text-xs text-stone-500">Academic Year 2026–2027</span>
+            <span className="text-xs text-stone-500">
+              Academic Year 2026–2027
+            </span>
           </div>
           <h1 className="text-2xl font-black font-heading text-stone-900 mt-1">
             Daily Attendance Roster
@@ -263,8 +318,10 @@ export const AttendanceView: React.FC = () => {
             onChange={(e) => setSelectedClass(e.target.value)}
             className="px-3.5 py-2 text-xs font-bold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-800 focus:outline-hidden focus:ring-2 focus:ring-[#6E161E]/20 cursor-pointer"
           >
-            {classOptions.map(cls => (
-              <option key={cls} value={cls}>Class: {cls}</option>
+            {classOptions.map((cls) => (
+              <option key={cls} value={cls}>
+                Class: {cls}
+              </option>
             ))}
             <option value="ALL">All Classes</option>
           </select>
@@ -323,7 +380,9 @@ export const AttendanceView: React.FC = () => {
           <div className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             <span>Present:</span>
-            <span className="font-extrabold text-emerald-950">{presentCount}</span>
+            <span className="font-extrabold text-emerald-950">
+              {presentCount}
+            </span>
           </div>
           {lateCount > 0 && (
             <div className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl flex items-center gap-1.5">
@@ -343,14 +402,18 @@ export const AttendanceView: React.FC = () => {
             <div className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-800 rounded-xl flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-red-500"></span>
               <span>Absence:</span>
-              <span className="font-extrabold text-red-950">{absenceCount}</span>
+              <span className="font-extrabold text-red-950">
+                {absenceCount}
+              </span>
             </div>
           )}
           {otherCount > 0 && (
             <div className="px-3 py-1.5 bg-purple-50 border border-purple-200 text-purple-800 rounded-xl flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-purple-500"></span>
               <span>Other:</span>
-              <span className="font-extrabold text-purple-950">{otherCount}</span>
+              <span className="font-extrabold text-purple-950">
+                {otherCount}
+              </span>
             </div>
           )}
           <span className="text-stone-400 font-medium text-xs ml-1">
@@ -380,7 +443,7 @@ export const AttendanceView: React.FC = () => {
       </div>
 
       {/* Minimalist Student Grid */}
-      <div 
+      <div
         id="attendance-student-grid"
         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
       >
@@ -396,24 +459,33 @@ export const AttendanceView: React.FC = () => {
               key={student.id}
               id={`attendance-grid-card-${student.id}`}
               className={`relative bg-white border rounded-2xl p-4 flex flex-col items-center text-center transition-all duration-200 shadow-xs hover:shadow-md ${
-                isMenuOpen ? 'border-[#6E161E] ring-2 ring-[#6E161E]/15 z-30' : 'border-[#EFE7DC] hover:border-stone-300'
+                isMenuOpen
+                  ? 'border-[#6E161E] ring-2 ring-[#6E161E]/15 z-30'
+                  : 'border-[#EFE7DC] hover:border-stone-300'
               }`}
             >
               {/* Profile Picture */}
               <div className="relative group">
                 <img
-                  src={student.avatarUrl || 'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=150&auto=format&fit=crop&q=80'}
+                  src={
+                    student.avatarUrl ||
+                    'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=150&auto=format&fit=crop&q=80'
+                  }
                   alt={student.fullName}
                   className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 shadow-xs transition-transform duration-200 group-hover:scale-105 ${config.ringClass}`}
                 />
                 {/* Micro status icon badge on avatar */}
-                <div 
+                <div
                   className={`absolute -bottom-1 -right-1 p-1 rounded-full border-2 border-white shadow-xs ${
-                    currentStatus === 'PRESENT' ? 'bg-emerald-600 text-white' :
-                    currentStatus === 'LATE' ? 'bg-amber-500 text-white' :
-                    currentStatus === 'SICK' ? 'bg-rose-500 text-white' :
-                    currentStatus === 'ABSENCE' ? 'bg-red-600 text-white' :
-                    'bg-purple-600 text-white'
+                    currentStatus === 'PRESENT'
+                      ? 'bg-emerald-600 text-white'
+                      : currentStatus === 'LATE'
+                        ? 'bg-amber-500 text-white'
+                        : currentStatus === 'SICK'
+                          ? 'bg-rose-500 text-white'
+                          : currentStatus === 'ABSENCE'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-purple-600 text-white'
                   }`}
                 >
                   <StatusIcon className="w-3 h-3" />
@@ -422,8 +494,8 @@ export const AttendanceView: React.FC = () => {
 
               {/* Student Name */}
               <div className="mt-3 w-full">
-                <h3 
-                  className="text-sm font-bold text-stone-900 truncate px-1" 
+                <h3
+                  className="text-sm font-bold text-stone-900 truncate px-1"
                   title={student.fullName}
                 >
                   {student.fullName}
@@ -434,16 +506,22 @@ export const AttendanceView: React.FC = () => {
               <div className="mt-3 w-full">
                 <button
                   id={`status-toggle-${student.id}`}
-                  onClick={() => setOpenStudentId(isMenuOpen ? null : student.id)}
+                  onClick={() =>
+                    setOpenStudentId(isMenuOpen ? null : student.id)
+                  }
                   className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 shadow-2xs ${config.badgeClass}`}
                   title="Click to change status"
                 >
                   <StatusIcon className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{config.label}</span>
                   {currentStatus === 'LATE' && rec?.minutesLate && (
-                    <span className="text-[10px] opacity-80">({rec.minutesLate}m)</span>
+                    <span className="text-[10px] opacity-80">
+                      ({rec.minutesLate}m)
+                    </span>
                   )}
-                  <ChevronDown className={`w-3 h-3 shrink-0 opacity-60 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    className={`w-3 h-3 shrink-0 opacity-60 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`}
+                  />
                 </button>
               </div>
 
@@ -456,7 +534,8 @@ export const AttendanceView: React.FC = () => {
                 >
                   <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-100">
                     <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">
-                      Set Status for {student.nickname || student.fullName.split(' ')[0]}
+                      Set Status for{' '}
+                      {student.nickname || student.fullName.split(' ')[0]}
                     </span>
                     <button
                       onClick={() => setOpenStudentId(null)}
@@ -479,13 +558,18 @@ export const AttendanceView: React.FC = () => {
                           id={`select-status-${student.id}-${st.toLowerCase()}`}
                           onClick={() => {
                             handleStatusChange(student.id, st);
-                            if (st !== 'LATE' && st !== 'SICK' && st !== 'ABSENCE' && st !== 'EXPLAINED') {
+                            if (
+                              st !== 'LATE' &&
+                              st !== 'SICK' &&
+                              st !== 'ABSENCE' &&
+                              st !== 'EXPLAINED'
+                            ) {
                               setOpenStudentId(null);
                             }
                           }}
                           className={`flex items-center gap-2 p-2 rounded-xl text-xs font-bold border transition-all text-left ${
-                            isSelected 
-                              ? `${optConfig.badgeClass} ring-2 ring-[#6E161E]/20` 
+                            isSelected
+                              ? `${optConfig.badgeClass} ring-2 ring-[#6E161E]/20`
                               : 'bg-[#FAF6F0] border-transparent hover:border-stone-200 text-stone-700'
                           }`}
                         >
@@ -509,7 +593,12 @@ export const AttendanceView: React.FC = () => {
                           min="1"
                           max="180"
                           value={rec?.minutesLate || 10}
-                          onChange={(e) => handleMinutesLateChange(student.id, parseInt(e.target.value) || 0)}
+                          onChange={(e) =>
+                            handleMinutesLateChange(
+                              student.id,
+                              parseInt(e.target.value) || 0,
+                            )
+                          }
                           className="w-16 px-2 py-0.5 text-xs bg-white border border-amber-300 rounded-lg text-stone-900 font-bold focus:outline-hidden text-right"
                         />
                       </div>
@@ -517,14 +606,19 @@ export const AttendanceView: React.FC = () => {
                         type="text"
                         placeholder="Reason (optional)..."
                         value={rec?.notes || ''}
-                        onChange={(e) => handleNotesChange(student.id, e.target.value)}
+                        onChange={(e) =>
+                          handleNotesChange(student.id, e.target.value)
+                        }
                         className="w-full px-2.5 py-1 text-xs bg-white border border-amber-300 rounded-lg text-stone-800 focus:outline-hidden placeholder-stone-400"
                       />
                     </div>
                   )}
 
                   {/* Contextual input for Sick / Absence / Explained */}
-                  {(currentStatus === 'SICK' || currentStatus === 'ABSENCE' || currentStatus === 'EXPLAINED' || currentStatus === 'HOLIDAY') && (
+                  {(currentStatus === 'SICK' ||
+                    currentStatus === 'ABSENCE' ||
+                    currentStatus === 'EXPLAINED' ||
+                    currentStatus === 'HOLIDAY') && (
                     <div className="mt-2.5 pt-2.5 border-t border-stone-100 bg-stone-50 p-2.5 rounded-xl space-y-1.5">
                       <span className="text-[11px] font-bold text-stone-600 block">
                         Remarks / Reason (Optional):
@@ -533,7 +627,9 @@ export const AttendanceView: React.FC = () => {
                         type="text"
                         placeholder="e.g. Doctor note / Fever / Family event..."
                         value={rec?.notes || ''}
-                        onChange={(e) => handleNotesChange(student.id, e.target.value)}
+                        onChange={(e) =>
+                          handleNotesChange(student.id, e.target.value)
+                        }
                         className="w-full px-2.5 py-1 text-xs bg-white border border-stone-300 rounded-lg text-stone-800 focus:outline-hidden placeholder-stone-400"
                       />
                     </div>
@@ -561,12 +657,17 @@ export const AttendanceView: React.FC = () => {
           <div className="w-12 h-12 rounded-full bg-stone-100 text-stone-400 mx-auto flex items-center justify-center mb-3">
             <Search className="w-6 h-6" />
           </div>
-          <h4 className="text-base font-bold text-stone-900">No students found</h4>
+          <h4 className="text-base font-bold text-stone-900">
+            No students found
+          </h4>
           <p className="text-xs text-stone-500 mt-1">
             No students match your selected class and search filter.
           </p>
           <button
-            onClick={() => { setSelectedClass('ALL'); setSearchFilter(''); }}
+            onClick={() => {
+              setSelectedClass('ALL');
+              setSearchFilter('');
+            }}
             className="mt-4 px-4 py-2 bg-[#6E161E] text-white text-xs font-bold rounded-xl"
           >
             Clear Filters
@@ -576,4 +677,3 @@ export const AttendanceView: React.FC = () => {
     </div>
   );
 };
-

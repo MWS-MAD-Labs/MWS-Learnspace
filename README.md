@@ -21,18 +21,18 @@ Learnspace is an educator portal for academic planning, attendance, special-educ
 
 ## Current technology
 
-| Area | Current implementation |
-| --- | --- |
-| UI | React 19, TypeScript, Vite 6 |
-| Styling | Tailwind CSS 4 |
-| State | React Context and component state |
-| Persistence | Browser `localStorage` via `src/services/storageService.ts` |
-| Authentication | Demo-only user/role switcher |
-| Backend | None currently used |
-| Testing | TypeScript check only |
-| Packaging | No Docker image yet |
+| Area           | Current implementation                                      |
+| -------------- | ----------------------------------------------------------- |
+| UI             | React 19, TypeScript, Vite 6                                |
+| Styling        | Tailwind CSS 4                                              |
+| State          | React Context and component state                           |
+| Persistence    | Browser `localStorage` via `src/services/storageService.ts` |
+| Authentication | Demo-only user/role switcher                                |
+| Backend        | None currently used                                         |
+| Testing        | Vitest and React Testing Library smoke tests                |
+| Packaging      | No Docker image yet                                         |
 
-The package manifest includes some server and Google AI dependencies, but the current source does not use them. There is no active Gemini integration in the application code.
+The package manifest retains Express tooling for the next API workspace milestone, but there is no active backend or Gemini integration in the application code. `metadata.json` remains temporarily as provenance and compatibility metadata for the prototype's Google AI Studio origin; the application does not load it at runtime.
 
 ## Project status
 
@@ -70,26 +70,33 @@ See:
 
 ### Requirements
 
-- Node.js 20 or newer
-- npm 10 or newer
+- Node.js `20.20.2` (pinned in [`.nvmrc`](.nvmrc)); newer compatible LTS releases are also accepted
+- npm `10.8.2` or newer
 
 ### Installation
 
 ```bash
-npm install
+nvm use
+npm ci
 npm run dev
 ```
+
+The repository sets `engine-strict=true`, so npm stops with an understandable engine error when the installed Node.js or npm version is below the supported minimum.
 
 Open <http://localhost:3000>.
 
 ### Available scripts
 
 ```bash
-npm run dev      # Start Vite on 0.0.0.0:3000
-npm run build    # Build the frontend into dist/
-npm run preview  # Preview the production frontend bundle
-npm run lint     # Run the TypeScript no-emit check
-npm run clean    # Remove generated frontend output
+npm run dev           # Start Vite on 0.0.0.0:3000
+npm run build         # Build the frontend into dist/
+npm run preview       # Preview the production frontend bundle
+npm run format        # Format supported repository files
+npm run format:check  # Check formatting without changing files
+npm run lint          # Run ESLint, including React Hooks and unused-import checks
+npm run typecheck     # Run the TypeScript no-emit check
+npm test -- --run     # Run the frontend tests once in jsdom
+npm run clean         # Remove generated frontend output and coverage
 ```
 
 ### Prototype data behavior
@@ -263,15 +270,7 @@ Compliance obligations vary by jurisdiction and organization. Deployment owners 
 
 ## Contributing
 
-Until a formal contribution guide is added:
-
-1. Open an issue describing the change and its data/security impact.
-2. Create a focused branch from `main`.
-3. Add or update tests and documentation.
-4. Run type checking, tests, and the production build.
-5. Submit a pull request using Conventional Commits.
-
-See [`docs/VERSIONING.md`](docs/VERSIONING.md) for commit, release, and migration conventions.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local setup, branch, validation, and pull-request expectations. See [`SECURITY.md`](SECURITY.md) for private vulnerability reporting and [`docs/VERSIONING.md`](docs/VERSIONING.md) for commit, release, and migration conventions.
 
 ## License
 

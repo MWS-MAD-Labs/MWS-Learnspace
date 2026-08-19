@@ -1,21 +1,31 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
-import { BarChart3, TrendingUp, Users, BookOpen, Brain, CheckCircle2 } from 'lucide-react';
+import { Users, BookOpen, Brain } from 'lucide-react';
 
 export const ReportsAnalyticsView: React.FC = () => {
-  const { students, currentUser, navigateToJourneyEditor, navigateToIEP } = useApp();
+  const { students, currentUser, navigateToJourneyEditor, navigateToIEP } =
+    useApp();
 
   const journeys = storageService.getLearningJourneys();
   const iepRecords = storageService.getIEPRecords();
   const fedcRecords = storageService.getFEDCObservations('stu-001');
 
-  const approvedJourneys = journeys.filter(j => j.directorApprovalStatus === 'Done');
-  const inReviewJourneys = journeys.filter(j => j.principalReviewStatus === 'On Progress' || j.directorApprovalStatus === 'On Progress');
-  const draftJourneys = journeys.filter(j => j.draftStatus === 'On Progress');
+  const approvedJourneys = journeys.filter(
+    (j) => j.directorApprovalStatus === 'Done',
+  );
+  const inReviewJourneys = journeys.filter(
+    (j) =>
+      j.principalReviewStatus === 'On Progress' ||
+      j.directorApprovalStatus === 'On Progress',
+  );
+  const draftJourneys = journeys.filter((j) => j.draftStatus === 'On Progress');
 
   return (
-    <div id="reports-analytics-view" className="space-y-6 max-w-7xl mx-auto pb-24">
+    <div
+      id="reports-analytics-view"
+      className="space-y-6 max-w-7xl mx-auto pb-24"
+    >
       {/* Header */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -31,7 +41,8 @@ export const ReportsAnalyticsView: React.FC = () => {
             Reports & Schoolwide Analytics
           </h1>
           <p className="text-xs text-stone-500 mt-0.5">
-            Real-time compliance monitoring across curriculum design, special education milestones, and attendance.
+            Real-time compliance monitoring across curriculum design, special
+            education milestones, and attendance.
           </p>
         </div>
       </div>
@@ -52,35 +63,53 @@ export const ReportsAnalyticsView: React.FC = () => {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-stone-600 font-medium">Approved by Director</span>
-              <span className="font-bold text-emerald-700">{approvedJourneys.length}</span>
+              <span className="text-stone-600 font-medium">
+                Approved by Director
+              </span>
+              <span className="font-bold text-emerald-700">
+                {approvedJourneys.length}
+              </span>
             </div>
             <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
-              <div 
-                className="bg-emerald-600 h-full rounded-full" 
-                style={{ width: `${(approvedJourneys.length / Math.max(1, journeys.length)) * 100}%` }}
+              <div
+                className="bg-emerald-600 h-full rounded-full"
+                style={{
+                  width: `${(approvedJourneys.length / Math.max(1, journeys.length)) * 100}%`,
+                }}
               />
             </div>
 
             <div className="flex items-center justify-between text-xs">
-              <span className="text-stone-600 font-medium">In Review Pipeline</span>
-              <span className="font-bold text-amber-700">{inReviewJourneys.length}</span>
+              <span className="text-stone-600 font-medium">
+                In Review Pipeline
+              </span>
+              <span className="font-bold text-amber-700">
+                {inReviewJourneys.length}
+              </span>
             </div>
             <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
-              <div 
-                className="bg-amber-500 h-full rounded-full" 
-                style={{ width: `${(inReviewJourneys.length / Math.max(1, journeys.length)) * 100}%` }}
+              <div
+                className="bg-amber-500 h-full rounded-full"
+                style={{
+                  width: `${(inReviewJourneys.length / Math.max(1, journeys.length)) * 100}%`,
+                }}
               />
             </div>
 
             <div className="flex items-center justify-between text-xs">
-              <span className="text-stone-600 font-medium">Drafting In Progress</span>
-              <span className="font-bold text-stone-700">{draftJourneys.length}</span>
+              <span className="text-stone-600 font-medium">
+                Drafting In Progress
+              </span>
+              <span className="font-bold text-stone-700">
+                {draftJourneys.length}
+              </span>
             </div>
             <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
-              <div 
-                className="bg-stone-400 h-full rounded-full" 
-                style={{ width: `${(draftJourneys.length / Math.max(1, journeys.length)) * 100}%` }}
+              <div
+                className="bg-stone-400 h-full rounded-full"
+                style={{
+                  width: `${(draftJourneys.length / Math.max(1, journeys.length)) * 100}%`,
+                }}
               />
             </div>
           </div>
@@ -101,8 +130,12 @@ export const ReportsAnalyticsView: React.FC = () => {
           <div className="space-y-3">
             <div className="p-3 bg-[#FAF5EF] rounded-2xl border border-[#E8DFC8] flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-stone-900">Leo M. (GPK Support)</p>
-                <p className="text-[11px] text-stone-500">FEDC Baseline: 54 / 72 Pts</p>
+                <p className="text-xs font-bold text-stone-900">
+                  Leo M. (GPK Support)
+                </p>
+                <p className="text-[11px] text-stone-500">
+                  FEDC Baseline: 54 / 72 Pts
+                </p>
               </div>
               <button
                 onClick={() => navigateToIEP('stu-001')}
@@ -114,8 +147,12 @@ export const ReportsAnalyticsView: React.FC = () => {
 
             <div className="p-3 bg-[#FAF5EF] rounded-2xl border border-[#E8DFC8] flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-stone-900">Maya S. (Speech & Motor)</p>
-                <p className="text-[11px] text-stone-500">SFA Score: Regular Classroom with Assist</p>
+                <p className="text-xs font-bold text-stone-900">
+                  Maya S. (Speech & Motor)
+                </p>
+                <p className="text-[11px] text-stone-500">
+                  SFA Score: Regular Classroom with Assist
+                </p>
               </div>
               <button
                 onClick={() => navigateToIEP('stu-003')}
@@ -142,19 +179,25 @@ export const ReportsAnalyticsView: React.FC = () => {
           <div className="space-y-2">
             <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-emerald-900">Present On-Time</span>
+                <span className="font-bold text-emerald-900">
+                  Present On-Time
+                </span>
                 <span className="font-black text-emerald-900">92%</span>
               </div>
             </div>
             <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-amber-900">Excused & Tardy</span>
+                <span className="font-bold text-amber-900">
+                  Excused & Tardy
+                </span>
                 <span className="font-black text-amber-900">5.5%</span>
               </div>
             </div>
             <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-2xl">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-rose-900">Unexcused Absences</span>
+                <span className="font-bold text-rose-900">
+                  Unexcused Absences
+                </span>
                 <span className="font-black text-rose-900">2.5%</span>
               </div>
             </div>

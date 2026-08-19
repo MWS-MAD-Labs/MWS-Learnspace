@@ -1,35 +1,29 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
-import { LearningJourney, LJReviewStatus, LJApprovalStatus } from '../../types';
+import { LearningJourney } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  CheckCircle2, 
-  RotateCcw, 
-  Edit3, 
+import {
+  Plus,
+  Search,
+  CheckCircle2,
+  RotateCcw,
+  Edit3,
   Eye,
-  Trash2, 
-  MessageSquare, 
-  Sparkles,
-  ArrowRight,
+  Trash2,
+  MessageSquare,
   ShieldCheck,
-  ShieldAlert,
   Lock,
-  Calendar,
   Layers,
-  BookOpen,
   Clock,
   Send,
   AlertCircle,
-  HelpCircle,
-  X
+  X,
 } from 'lucide-react';
 
 export const LearningJourneyStatusTracker: React.FC = () => {
-  const { currentUser, navigateToJourneyEditor, showToast, refreshData } = useApp();
+  const { currentUser, navigateToJourneyEditor, showToast, refreshData } =
+    useApp();
   const [searchFilter, setSearchFilter] = useState('');
   const [unitFilter, setUnitFilter] = useState('All Units');
   const [gradeFilter, setGradeFilter] = useState('All Grades');
@@ -37,12 +31,16 @@ export const LearningJourneyStatusTracker: React.FC = () => {
   const [stageFilter, setStageFilter] = useState('All Stages');
 
   // Review Modal state (for Principal or Director)
-  const [reviewingJourney, setReviewingJourney] = useState<LearningJourney | null>(null);
-  const [reviewAction, setReviewAction] = useState<'Approve' | 'Return'>('Approve');
+  const [reviewingJourney, setReviewingJourney] =
+    useState<LearningJourney | null>(null);
+  const [reviewAction, setReviewAction] = useState<'Approve' | 'Return'>(
+    'Approve',
+  );
   const [reviewComment, setReviewComment] = useState('');
 
   // General Preview Modal state (for any user to view submitted curriculum)
-  const [previewingJourney, setPreviewingJourney] = useState<LearningJourney | null>(null);
+  const [previewingJourney, setPreviewingJourney] =
+    useState<LearningJourney | null>(null);
 
   const journeys = storageService.getLearningJourneys();
 
@@ -53,27 +51,70 @@ export const LearningJourneyStatusTracker: React.FC = () => {
 
   // Filtered Journeys
   const filteredJourneys = useMemo(() => {
-    return journeys.filter(j => {
-      if (searchFilter && !j.title.toLowerCase().includes(searchFilter.toLowerCase()) && !j.subject.toLowerCase().includes(searchFilter.toLowerCase()) && !j.authorName.toLowerCase().includes(searchFilter.toLowerCase())) {
+    return journeys.filter((j) => {
+      if (
+        searchFilter &&
+        !j.title.toLowerCase().includes(searchFilter.toLowerCase()) &&
+        !j.subject.toLowerCase().includes(searchFilter.toLowerCase()) &&
+        !j.authorName.toLowerCase().includes(searchFilter.toLowerCase())
+      ) {
         return false;
       }
       if (unitFilter !== 'All Units' && j.unit !== unitFilter) return false;
       if (gradeFilter !== 'All Grades' && j.grade !== gradeFilter) return false;
-      if (subjectFilter !== 'All Subjects' && j.subject !== subjectFilter) return false;
-      if (stageFilter === 'Draft' && j.draftStatus !== 'On Progress' && j.draftStatus !== 'Not Started') return false;
-      if (stageFilter === 'Principal Review' && (j.principalReviewStatus === 'Not Started' || j.principalReviewStatus === 'Done')) return false;
-      if (stageFilter === 'Director Approval' && (j.directorApprovalStatus === 'Not Started' || j.directorApprovalStatus === 'Done')) return false;
-      if (stageFilter === 'Approved' && j.directorApprovalStatus !== 'Done') return false;
+      if (subjectFilter !== 'All Subjects' && j.subject !== subjectFilter)
+        return false;
+      if (
+        stageFilter === 'Draft' &&
+        j.draftStatus !== 'On Progress' &&
+        j.draftStatus !== 'Not Started'
+      )
+        return false;
+      if (
+        stageFilter === 'Principal Review' &&
+        (j.principalReviewStatus === 'Not Started' ||
+          j.principalReviewStatus === 'Done')
+      )
+        return false;
+      if (
+        stageFilter === 'Director Approval' &&
+        (j.directorApprovalStatus === 'Not Started' ||
+          j.directorApprovalStatus === 'Done')
+      )
+        return false;
+      if (stageFilter === 'Approved' && j.directorApprovalStatus !== 'Done')
+        return false;
       return true;
     });
-  }, [journeys, searchFilter, unitFilter, gradeFilter, subjectFilter, stageFilter]);
+  }, [
+    journeys,
+    searchFilter,
+    unitFilter,
+    gradeFilter,
+    subjectFilter,
+    stageFilter,
+  ]);
 
   // KPI Metrics
   const totalCount = journeys.length;
-  const draftCount = journeys.filter(j => j.draftStatus === 'On Progress' || j.draftStatus === 'Not Started').length;
-  const principalReviewCount = journeys.filter(j => j.draftStatus === 'Done' && (j.principalReviewStatus === 'On Progress' || j.principalReviewStatus === 'Returned')).length;
-  const directorApprovalCount = journeys.filter(j => j.principalReviewStatus === 'Done' && (j.directorApprovalStatus === 'On Progress' || j.directorApprovalStatus === 'Not Started')).length;
-  const approvedCount = journeys.filter(j => j.directorApprovalStatus === 'Done').length;
+  const draftCount = journeys.filter(
+    (j) => j.draftStatus === 'On Progress' || j.draftStatus === 'Not Started',
+  ).length;
+  const principalReviewCount = journeys.filter(
+    (j) =>
+      j.draftStatus === 'Done' &&
+      (j.principalReviewStatus === 'On Progress' ||
+        j.principalReviewStatus === 'Returned'),
+  ).length;
+  const directorApprovalCount = journeys.filter(
+    (j) =>
+      j.principalReviewStatus === 'Done' &&
+      (j.directorApprovalStatus === 'On Progress' ||
+        j.directorApprovalStatus === 'Not Started'),
+  ).length;
+  const approvedCount = journeys.filter(
+    (j) => j.directorApprovalStatus === 'Done',
+  ).length;
 
   // Open Review Dialog
   const handleOpenReview = (journey: LearningJourney) => {
@@ -87,13 +128,21 @@ export const LearningJourneyStatusTracker: React.FC = () => {
 
     // Strict validation
     if (reviewAction === 'Return' && !reviewComment.trim()) {
-      showToast('error', 'Feedback Required', 'Please provide explicit feedback and required revisions for the author.');
+      showToast(
+        'error',
+        'Feedback Required',
+        'Please provide explicit feedback and required revisions for the author.',
+      );
       return;
     }
 
     if (isPrincipal) {
       if (reviewingJourney.draftStatus !== 'Done') {
-        showToast('error', 'Unauthorized Action', 'Journey is still in draft state and has not been submitted.');
+        showToast(
+          'error',
+          'Unauthorized Action',
+          'Journey is still in draft state and has not been submitted.',
+        );
         return;
       }
       storageService.updateWorkflowStage(
@@ -101,22 +150,35 @@ export const LearningJourneyStatusTracker: React.FC = () => {
         'Principal Review',
         reviewAction === 'Approve' ? 'Approved' : 'Returned',
         reviewComment || 'Curriculum unit reviewed and verified by Principal.',
-        currentUser
+        currentUser,
       );
-      showToast('success', `Principal Review: ${reviewAction === 'Approve' ? 'Approved' : 'Returned'}`, `Updated "${reviewingJourney.title}".`);
+      showToast(
+        'success',
+        `Principal Review: ${reviewAction === 'Approve' ? 'Approved' : 'Returned'}`,
+        `Updated "${reviewingJourney.title}".`,
+      );
     } else if (isDirector) {
       if (reviewingJourney.principalReviewStatus !== 'Done') {
-        showToast('error', 'Unauthorized Action', 'Journey must first receive Principal approval before Director sign-off.');
+        showToast(
+          'error',
+          'Unauthorized Action',
+          'Journey must first receive Principal approval before Director sign-off.',
+        );
         return;
       }
       storageService.updateWorkflowStage(
         reviewingJourney.id,
         'Director Approval',
         reviewAction === 'Approve' ? 'Approved' : 'Returned',
-        reviewComment || 'Final governance sign-off completed by Director of Academics.',
-        currentUser
+        reviewComment ||
+          'Final governance sign-off completed by Director of Academics.',
+        currentUser,
       );
-      showToast('success', `Director Approval: ${reviewAction === 'Approve' ? 'Fully Approved' : 'Returned'}`, `Updated "${reviewingJourney.title}".`);
+      showToast(
+        'success',
+        `Director Approval: ${reviewAction === 'Approve' ? 'Fully Approved' : 'Returned'}`,
+        `Updated "${reviewingJourney.title}".`,
+      );
     }
 
     setReviewingJourney(null);
@@ -126,7 +188,11 @@ export const LearningJourneyStatusTracker: React.FC = () => {
   // Delete journey (allowed only for drafts or admin)
   const handleDelete = (id: string, title: string, isLocked: boolean) => {
     if (isLocked) {
-      showToast('error', 'Cannot Delete', 'Journeys submitted for review or approved cannot be deleted.');
+      showToast(
+        'error',
+        'Cannot Delete',
+        'Journeys submitted for review or approved cannot be deleted.',
+      );
       return;
     }
     if (confirm(`Are you sure you want to delete "${title}"?`)) {
@@ -137,7 +203,10 @@ export const LearningJourneyStatusTracker: React.FC = () => {
   };
 
   return (
-    <div id="learning-journey-tracker-view" className="space-y-6 max-w-7xl mx-auto">
+    <div
+      id="learning-journey-tracker-view"
+      className="space-y-6 max-w-7xl mx-auto"
+    >
       {/* Header Bar */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 md:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
@@ -146,7 +215,9 @@ export const LearningJourneyStatusTracker: React.FC = () => {
               <ShieldCheck className="w-3.5 h-3.5" />
               Workflow & Review Tracker
             </span>
-            <span className="text-xs text-stone-500 font-medium">Academic Year 2026–2027</span>
+            <span className="text-xs text-stone-500 font-medium">
+              Academic Year 2026–2027
+            </span>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
               Active User: {currentUser.name} ({currentUser.roleTitle})
             </span>
@@ -155,7 +226,9 @@ export const LearningJourneyStatusTracker: React.FC = () => {
             Learning Journey Status Tracker
           </h1>
           <p className="text-xs md:text-sm text-stone-600 max-w-2xl leading-relaxed">
-            Role-gated curriculum approval pipeline. Principal reviews submitted drafts; Director grants final approval. Submitted and approved journeys are locked against edits.
+            Role-gated curriculum approval pipeline. Principal reviews submitted
+            drafts; Director grants final approval. Submitted and approved
+            journeys are locked against edits.
           </p>
         </div>
 
@@ -164,72 +237,119 @@ export const LearningJourneyStatusTracker: React.FC = () => {
           onClick={() => navigateToJourneyEditor()}
           className="px-5 py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2 shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          + Create Learning Journey
+          <Plus className="w-4 h-4" />+ Create Learning Journey
         </button>
       </div>
 
       {/* KPI Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        <div 
+        <div
           onClick={() => setStageFilter('All Stages')}
           className={`p-4 bg-white border rounded-2xl shadow-xs cursor-pointer transition-all ${
-            stageFilter === 'All Stages' ? 'border-[#6E161E] ring-2 ring-[#6E161E]/10' : 'border-[#EFE7DC] hover:border-stone-300'
+            stageFilter === 'All Stages'
+              ? 'border-[#6E161E] ring-2 ring-[#6E161E]/10'
+              : 'border-[#EFE7DC] hover:border-stone-300'
           }`}
         >
-          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">All Journeys</span>
-          <div className="text-2xl font-black text-stone-900 mt-1">{totalCount}</div>
-          <p className="text-[11px] text-stone-500 mt-0.5">Total curriculum units</p>
+          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">
+            All Journeys
+          </span>
+          <div className="text-2xl font-black text-stone-900 mt-1">
+            {totalCount}
+          </div>
+          <p className="text-[11px] text-stone-500 mt-0.5">
+            Total curriculum units
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Draft')}
           className={`p-4 bg-white border rounded-2xl shadow-xs cursor-pointer transition-all ${
-            stageFilter === 'Draft' ? 'border-amber-500 ring-2 ring-amber-500/10' : 'border-[#EFE7DC] hover:border-stone-300'
+            stageFilter === 'Draft'
+              ? 'border-amber-500 ring-2 ring-amber-500/10'
+              : 'border-[#EFE7DC] hover:border-stone-300'
           }`}
         >
-          <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">1. Draft Phase</span>
-          <div className="text-2xl font-black text-amber-900 mt-1">{draftCount}</div>
-          <p className="text-[11px] text-stone-500 mt-0.5">Authoring & editable</p>
+          <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
+            1. Draft Phase
+          </span>
+          <div className="text-2xl font-black text-amber-900 mt-1">
+            {draftCount}
+          </div>
+          <p className="text-[11px] text-stone-500 mt-0.5">
+            Authoring & editable
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Principal Review')}
           className={`p-4 bg-white border rounded-2xl shadow-xs cursor-pointer transition-all ${
-            stageFilter === 'Principal Review' ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-[#EFE7DC] hover:border-stone-300'
+            stageFilter === 'Principal Review'
+              ? 'border-blue-500 ring-2 ring-blue-500/10'
+              : 'border-[#EFE7DC] hover:border-stone-300'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">2. Principal Review</span>
-            {isPrincipal && <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded">Your Role</span>}
+            <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">
+              2. Principal Review
+            </span>
+            {isPrincipal && (
+              <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded">
+                Your Role
+              </span>
+            )}
           </div>
-          <div className="text-2xl font-black text-blue-900 mt-1">{principalReviewCount}</div>
-          <p className="text-[11px] text-stone-500 mt-0.5">Principal verification</p>
+          <div className="text-2xl font-black text-blue-900 mt-1">
+            {principalReviewCount}
+          </div>
+          <p className="text-[11px] text-stone-500 mt-0.5">
+            Principal verification
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Director Approval')}
           className={`p-4 bg-white border rounded-2xl shadow-xs cursor-pointer transition-all ${
-            stageFilter === 'Director Approval' ? 'border-purple-500 ring-2 ring-purple-500/10' : 'border-[#EFE7DC]'
+            stageFilter === 'Director Approval'
+              ? 'border-purple-500 ring-2 ring-purple-500/10'
+              : 'border-[#EFE7DC]'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-purple-800 uppercase tracking-wider">3. Director Approval</span>
-            {isDirector && <span className="text-[9px] font-bold bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded">Your Role</span>}
+            <span className="text-[11px] font-bold text-purple-800 uppercase tracking-wider">
+              3. Director Approval
+            </span>
+            {isDirector && (
+              <span className="text-[9px] font-bold bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded">
+                Your Role
+              </span>
+            )}
           </div>
-          <div className="text-2xl font-black text-purple-900 mt-1">{directorApprovalCount}</div>
-          <p className="text-[11px] text-stone-500 mt-0.5">Final sign-off queue</p>
+          <div className="text-2xl font-black text-purple-900 mt-1">
+            {directorApprovalCount}
+          </div>
+          <p className="text-[11px] text-stone-500 mt-0.5">
+            Final sign-off queue
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Approved')}
           className={`p-4 bg-white border rounded-2xl shadow-xs cursor-pointer transition-all ${
-            stageFilter === 'Approved' ? 'border-emerald-500 ring-2 ring-emerald-500/10' : 'border-[#EFE7DC]'
+            stageFilter === 'Approved'
+              ? 'border-emerald-500 ring-2 ring-emerald-500/10'
+              : 'border-[#EFE7DC]'
           }`}
         >
-          <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">4. Approved & Live</span>
-          <div className="text-2xl font-black text-emerald-900 mt-1">{approvedCount}</div>
-          <p className="text-[11px] text-stone-500 mt-0.5">Locked active curriculum</p>
+          <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+            4. Approved & Live
+          </span>
+          <div className="text-2xl font-black text-emerald-900 mt-1">
+            {approvedCount}
+          </div>
+          <p className="text-[11px] text-stone-500 mt-0.5">
+            Locked active curriculum
+          </p>
         </div>
       </div>
 
@@ -291,7 +411,10 @@ export const LearningJourneyStatusTracker: React.FC = () => {
       {/* Status Tracker Table */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse" id="learning-journey-tracker-table">
+          <table
+            className="w-full text-left border-collapse"
+            id="learning-journey-tracker-table"
+          >
             <thead>
               <tr className="bg-[#FAF5EF] border-b border-[#EFE7DC] text-[11px] font-bold text-stone-500 uppercase tracking-wider">
                 <th className="py-4 px-6">Learning Journey & Scope</th>
@@ -306,40 +429,49 @@ export const LearningJourneyStatusTracker: React.FC = () => {
             <tbody className="divide-y divide-[#EFE7DC] text-xs text-stone-700">
               {filteredJourneys.map((journey) => {
                 // Strict Role-Based Review Action Authorization
-                const canPrincipalReview = 
-                  isPrincipal && 
-                  journey.draftStatus === 'Done' && 
-                  (journey.principalReviewStatus === 'On Progress' || journey.principalReviewStatus === 'Not Started');
+                const canPrincipalReview =
+                  isPrincipal &&
+                  journey.draftStatus === 'Done' &&
+                  (journey.principalReviewStatus === 'On Progress' ||
+                    journey.principalReviewStatus === 'Not Started');
 
-                const canDirectorApprove = 
-                  isDirector && 
-                  journey.principalReviewStatus === 'Done' && 
-                  (journey.directorApprovalStatus === 'On Progress' || journey.directorApprovalStatus === 'Not Started');
+                const canDirectorApprove =
+                  isDirector &&
+                  journey.principalReviewStatus === 'Done' &&
+                  (journey.directorApprovalStatus === 'On Progress' ||
+                    journey.directorApprovalStatus === 'Not Started');
 
-                const isReviewableByCurrentUser = canPrincipalReview || canDirectorApprove;
+                const isReviewableByCurrentUser =
+                  canPrincipalReview || canDirectorApprove;
 
                 // Locking rules:
                 // If submitted for review or approved, it is locked against edits
-                const isUnderReview = journey.draftStatus === 'Done' && (journey.principalReviewStatus === 'On Progress' || journey.directorApprovalStatus === 'On Progress');
+                const isUnderReview =
+                  journey.draftStatus === 'Done' &&
+                  (journey.principalReviewStatus === 'On Progress' ||
+                    journey.directorApprovalStatus === 'On Progress');
                 const isApproved = journey.directorApprovalStatus === 'Done';
-                const isReturned = journey.principalReviewStatus === 'Returned' || journey.directorApprovalStatus === 'Returned';
+                const isReturned =
+                  journey.principalReviewStatus === 'Returned' ||
+                  journey.directorApprovalStatus === 'Returned';
                 const isLocked = (isUnderReview || isApproved) && !isReturned;
 
                 return (
-                  <tr 
-                    key={journey.id} 
+                  <tr
+                    key={journey.id}
                     id={`journey-row-${journey.id}`}
                     className="hover:bg-[#FAF5EF]/50 transition-colors"
                   >
                     <td className="py-4 px-6">
-                      <div 
+                      <div
                         onClick={() => setPreviewingJourney(journey)}
                         className="font-bold text-stone-900 text-sm hover:text-[#6E161E] cursor-pointer flex items-center gap-1.5"
                       >
                         <span>{journey.title}</span>
                       </div>
                       <div className="text-[11px] text-stone-500 mt-0.5">
-                        {journey.unit} · {journey.grade} · {journey.subject} · {journey.semester}
+                        {journey.unit} · {journey.grade} · {journey.subject} ·{' '}
+                        {journey.semester}
                       </div>
                     </td>
 
@@ -353,7 +485,10 @@ export const LearningJourneyStatusTracker: React.FC = () => {
 
                     <td className="py-4 px-4">
                       <div className="space-y-1">
-                        <StatusBadge status={journey.principalReviewStatus} size="sm" />
+                        <StatusBadge
+                          status={journey.principalReviewStatus}
+                          size="sm"
+                        />
                         {journey.principalReviewStatus === 'Returned' && (
                           <div className="text-[10px] text-rose-700 font-semibold flex items-center gap-1">
                             <MessageSquare className="w-3 h-3" />
@@ -365,7 +500,10 @@ export const LearningJourneyStatusTracker: React.FC = () => {
 
                     <td className="py-4 px-4">
                       <div className="space-y-1">
-                        <StatusBadge status={journey.directorApprovalStatus} size="sm" />
+                        <StatusBadge
+                          status={journey.directorApprovalStatus}
+                          size="sm"
+                        />
                         {journey.directorApprovalStatus === 'Returned' && (
                           <div className="text-[10px] text-rose-700 font-semibold flex items-center gap-1">
                             <MessageSquare className="w-3 h-3" />
@@ -405,7 +543,9 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                             className="px-3 py-1.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
                           >
                             <ShieldCheck className="w-3.5 h-3.5" />
-                            {isPrincipal ? 'Principal Review' : 'Director Approval'}
+                            {isPrincipal
+                              ? 'Principal Review'
+                              : 'Director Approval'}
                           </button>
                         )}
 
@@ -424,20 +564,28 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                           id={`edit-journey-btn-${journey.id}`}
                           onClick={() => navigateToJourneyEditor(journey.id)}
                           className={`p-1.5 rounded-lg transition-colors ${
-                            isLocked 
-                              ? 'text-stone-400 hover:text-stone-600 hover:bg-stone-50' 
+                            isLocked
+                              ? 'text-stone-400 hover:text-stone-600 hover:bg-stone-50'
                               : 'text-[#6E161E] hover:text-[#581117] hover:bg-[#FAF5EF]'
                           }`}
-                          title={isLocked ? 'View Journey (Locked)' : 'Edit Journey'}
+                          title={
+                            isLocked ? 'View Journey (Locked)' : 'Edit Journey'
+                          }
                         >
-                          {isLocked ? <Lock className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                          {isLocked ? (
+                            <Lock className="w-4 h-4" />
+                          ) : (
+                            <Edit3 className="w-4 h-4" />
+                          )}
                         </button>
 
                         {/* Delete Button (Only for unlocked drafts) */}
                         {!isLocked && (
                           <button
                             id={`delete-journey-btn-${journey.id}`}
-                            onClick={() => handleDelete(journey.id, journey.title, isLocked)}
+                            onClick={() =>
+                              handleDelete(journey.id, journey.title, isLocked)
+                            }
                             className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
                             title="Delete Journey"
                           >
@@ -455,9 +603,14 @@ export const LearningJourneyStatusTracker: React.FC = () => {
 
         {/* Footer */}
         <div className="p-4 bg-[#FAF5EF] border-t border-[#EFE7DC] flex flex-col sm:flex-row items-center justify-between text-xs text-stone-500 gap-2">
-          <span>Showing {filteredJourneys.length} of {journeys.length} Learning Journeys</span>
+          <span>
+            Showing {filteredJourneys.length} of {journeys.length} Learning
+            Journeys
+          </span>
           <span className="font-medium text-stone-600">
-            Current simulated role: <strong className="text-[#6E161E]">{currentUser.roleTitle}</strong> (Switch role in top right menu to test approval boundaries)
+            Current simulated role:{' '}
+            <strong className="text-[#6E161E]">{currentUser.roleTitle}</strong>{' '}
+            (Switch role in top right menu to test approval boundaries)
           </span>
         </div>
       </div>
@@ -482,7 +635,9 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-xs font-bold text-[#6E161E] uppercase tracking-wider">
-                    {isPrincipal ? 'Principal Review Studio' : 'Director Governance Sign-off'}
+                    {isPrincipal
+                      ? 'Principal Review Studio'
+                      : 'Director Governance Sign-off'}
                   </span>
                   <h2 className="text-lg font-bold text-stone-900">
                     Review: "{reviewingJourney.title}"
@@ -512,7 +667,8 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                       {reviewingJourney.subject}
                     </span>
                     <span className="text-xs text-stone-500 font-medium">
-                      {reviewingJourney.semester} · {reviewingJourney.academicYear}
+                      {reviewingJourney.semester} ·{' '}
+                      {reviewingJourney.academicYear}
                     </span>
                   </div>
                   <h3 className="text-xl font-black font-heading text-stone-900">
@@ -525,7 +681,10 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                   )}
                   <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-stone-400" />
-                    Authored by <strong className="text-stone-700">{reviewingJourney.authorName}</strong>
+                    Authored by{' '}
+                    <strong className="text-stone-700">
+                      {reviewingJourney.authorName}
+                    </strong>
                   </p>
                 </div>
 
@@ -537,8 +696,8 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                   </span>
 
                   {reviewingJourney.projects.map((proj, idx) => (
-                    <div 
-                      key={proj.id} 
+                    <div
+                      key={proj.id}
                       className="p-4 bg-[#FAF5EF] rounded-2xl border border-[#E8DFC8] space-y-3"
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -546,7 +705,9 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                           <span className="text-[10px] font-bold uppercase tracking-wider text-[#6E161E]">
                             Project {idx + 1}
                           </span>
-                          <h4 className="text-sm font-bold text-stone-900">{proj.title}</h4>
+                          <h4 className="text-sm font-bold text-stone-900">
+                            {proj.title}
+                          </h4>
                         </div>
                         <span className="text-xs font-semibold text-stone-600 bg-white px-2.5 py-1 rounded-lg border border-stone-200 shrink-0">
                           {proj.startMonth} – {proj.endMonth}
@@ -560,12 +721,21 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                       {/* Learning Goals */}
                       {proj.learningGoals?.length > 0 && (
                         <div className="space-y-1.5 pt-1">
-                          <span className="text-[11px] font-bold text-stone-800">Targeted Learning Goals:</span>
+                          <span className="text-[11px] font-bold text-stone-800">
+                            Targeted Learning Goals:
+                          </span>
                           <ul className="space-y-1.5">
                             {proj.learningGoals.map((goal, gi) => (
-                              <li key={goal.id || gi} className="text-xs text-stone-700 flex items-start gap-2 bg-white/80 p-2 rounded-lg border border-stone-200">
-                                <span className="font-bold text-[#6E161E] shrink-0">{gi + 1}.</span>
-                                <span className="leading-snug">{goal.description}</span>
+                              <li
+                                key={goal.id || gi}
+                                className="text-xs text-stone-700 flex items-start gap-2 bg-white/80 p-2 rounded-lg border border-stone-200"
+                              >
+                                <span className="font-bold text-[#6E161E] shrink-0">
+                                  {gi + 1}.
+                                </span>
+                                <span className="leading-snug">
+                                  {goal.description}
+                                </span>
                               </li>
                             ))}
                           </ul>
@@ -575,12 +745,21 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                       {/* Cross Curricular Connections */}
                       {proj.crossCurricularConnections?.length > 0 && (
                         <div className="space-y-1.5 pt-1">
-                          <span className="text-[11px] font-bold text-stone-800">Interdisciplinary Connections:</span>
+                          <span className="text-[11px] font-bold text-stone-800">
+                            Interdisciplinary Connections:
+                          </span>
                           <div className="space-y-1.5">
                             {proj.crossCurricularConnections.map((conn) => (
-                              <div key={conn.id} className="text-xs p-2 rounded-lg bg-amber-50 border border-amber-200">
-                                <strong className="text-amber-900">{conn.subject}: </strong>
-                                <span className="text-amber-800">{conn.description}</span>
+                              <div
+                                key={conn.id}
+                                className="text-xs p-2 rounded-lg bg-amber-50 border border-amber-200"
+                              >
+                                <strong className="text-amber-900">
+                                  {conn.subject}:{' '}
+                                </strong>
+                                <span className="text-amber-800">
+                                  {conn.description}
+                                </span>
                               </div>
                             ))}
                           </div>
@@ -598,13 +777,30 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                     </span>
                     <div className="space-y-2">
                       {reviewingJourney.workflowHistory.map((wf) => (
-                        <div key={wf.id} className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs space-y-1">
+                        <div
+                          key={wf.id}
+                          className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs space-y-1"
+                        >
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-stone-800">
-                              {wf.stage} — <span className={wf.action === 'Approved' ? 'text-emerald-700' : 'text-rose-700'}>{wf.action}</span>
+                              {wf.stage} —{' '}
+                              <span
+                                className={
+                                  wf.action === 'Approved'
+                                    ? 'text-emerald-700'
+                                    : 'text-rose-700'
+                                }
+                              >
+                                {wf.action}
+                              </span>
                             </span>
                             <span className="text-[10px] text-stone-400">
-                              {new Date(wf.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              {new Date(wf.timestamp).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
                             </span>
                           </div>
                           <p className="text-[11px] text-stone-600">
@@ -627,7 +823,9 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                 <div className="p-3.5 bg-blue-50 rounded-2xl border border-blue-200 flex items-start gap-2.5">
                   <AlertCircle className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
                   <div className="text-xs text-blue-900">
-                    <strong className="block font-bold">Reviewer: {currentUser.name}</strong>
+                    <strong className="block font-bold">
+                      Reviewer: {currentUser.name}
+                    </strong>
                     <span>You are acting as {currentUser.roleTitle}.</span>
                   </div>
                 </div>
@@ -649,7 +847,11 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                       }`}
                     >
                       <CheckCircle2 className="w-5 h-5" />
-                      <span>{isPrincipal ? 'Approve & Forward' : 'Grant Final Sign-off'}</span>
+                      <span>
+                        {isPrincipal
+                          ? 'Approve & Forward'
+                          : 'Grant Final Sign-off'}
+                      </span>
                     </button>
 
                     <button
@@ -676,21 +878,39 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       type="button"
-                      onClick={() => setReviewComment(prev => prev ? `${prev} Commend strong cross-curricular interdisciplinary links.` : 'Commend strong cross-curricular interdisciplinary links.')}
+                      onClick={() =>
+                        setReviewComment((prev) =>
+                          prev
+                            ? `${prev} Commend strong cross-curricular interdisciplinary links.`
+                            : 'Commend strong cross-curricular interdisciplinary links.',
+                        )
+                      }
                       className="px-2.5 py-1 bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 text-[11px] rounded-lg transition-colors"
                     >
                       + Commend Connections
                     </button>
                     <button
                       type="button"
-                      onClick={() => setReviewComment(prev => prev ? `${prev} Please add sensory and differentiated accommodations for diverse learners.` : 'Please add sensory and differentiated accommodations for diverse learners.')}
+                      onClick={() =>
+                        setReviewComment((prev) =>
+                          prev
+                            ? `${prev} Please add sensory and differentiated accommodations for diverse learners.`
+                            : 'Please add sensory and differentiated accommodations for diverse learners.',
+                        )
+                      }
                       className="px-2.5 py-1 bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 text-[11px] rounded-lg transition-colors"
                     >
                       + Request Accommodations
                     </button>
                     <button
                       type="button"
-                      onClick={() => setReviewComment(prev => prev ? `${prev} Please adjust project timeline milestones to balance workload.` : 'Please adjust project timeline milestones to balance workload.')}
+                      onClick={() =>
+                        setReviewComment((prev) =>
+                          prev
+                            ? `${prev} Please adjust project timeline milestones to balance workload.`
+                            : 'Please adjust project timeline milestones to balance workload.',
+                        )
+                      }
                       className="px-2.5 py-1 bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 text-[11px] rounded-lg transition-colors"
                     >
                       + Adjust Timeline
@@ -701,8 +921,15 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                 {/* Comments Input */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-stone-800 uppercase tracking-wider flex items-center justify-between">
-                    <span>Feedback & Notes {reviewAction === 'Return' && <span className="text-rose-600">*</span>}</span>
-                    <span className="text-[10px] text-stone-400 font-normal">Visible to author</span>
+                    <span>
+                      Feedback & Notes{' '}
+                      {reviewAction === 'Return' && (
+                        <span className="text-rose-600">*</span>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-stone-400 font-normal">
+                      Visible to author
+                    </span>
                   </label>
                   <textarea
                     id="review-comment-textarea"
@@ -732,7 +959,9 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                     id="submit-review-modal-btn"
                     onClick={handleSubmitReview}
                     className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-xs transition-colors text-white flex items-center gap-1.5 ${
-                      reviewAction === 'Approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                      reviewAction === 'Approve'
+                        ? 'bg-emerald-600 hover:bg-emerald-700'
+                        : 'bg-rose-600 hover:bg-rose-700'
                     }`}
                   >
                     <Send className="w-4 h-4" />
@@ -761,17 +990,22 @@ export const LearningJourneyStatusTracker: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-[#6E161E] bg-[#6E161E]/10 px-2.5 py-0.5 rounded-full">
-                    {previewingJourney.unit} · {previewingJourney.grade} · {previewingJourney.subject}
+                    {previewingJourney.unit} · {previewingJourney.grade} ·{' '}
+                    {previewingJourney.subject}
                   </span>
                   <span className="text-xs text-stone-500 font-medium">
-                    {previewingJourney.semester} · {previewingJourney.academicYear}
+                    {previewingJourney.semester} ·{' '}
+                    {previewingJourney.academicYear}
                   </span>
                 </div>
                 <h2 className="text-2xl font-black font-heading text-stone-900 mt-2">
                   {previewingJourney.title}
                 </h2>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  Author: <strong className="text-stone-700">{previewingJourney.authorName}</strong>
+                  Author:{' '}
+                  <strong className="text-stone-700">
+                    {previewingJourney.authorName}
+                  </strong>
                 </p>
               </div>
               <button
@@ -784,11 +1018,15 @@ export const LearningJourneyStatusTracker: React.FC = () => {
 
             <div className="space-y-4">
               <span className="text-xs font-bold text-stone-900 uppercase tracking-wider">
-                Curriculum Projects Breakdown ({previewingJourney.projects.length})
+                Curriculum Projects Breakdown (
+                {previewingJourney.projects.length})
               </span>
 
               {previewingJourney.projects.map((proj, idx) => (
-                <div key={proj.id} className="p-4 bg-[#FAF5EF] rounded-2xl border border-[#E8DFC8] space-y-3">
+                <div
+                  key={proj.id}
+                  className="p-4 bg-[#FAF5EF] rounded-2xl border border-[#E8DFC8] space-y-3"
+                >
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-stone-900">
                       Project {idx + 1}: {proj.title}
@@ -804,11 +1042,18 @@ export const LearningJourneyStatusTracker: React.FC = () => {
 
                   {proj.learningGoals?.length > 0 && (
                     <div className="pt-2">
-                      <span className="text-xs font-bold text-stone-800">Targeted Learning Goals:</span>
+                      <span className="text-xs font-bold text-stone-800">
+                        Targeted Learning Goals:
+                      </span>
                       <ul className="mt-1 space-y-1.5">
                         {proj.learningGoals.map((g, gi) => (
-                          <li key={g.id} className="text-xs text-stone-700 flex items-start gap-2 bg-white/80 p-2 rounded-lg border border-stone-200">
-                            <span className="font-bold text-[#6E161E]">{gi + 1}.</span>
+                          <li
+                            key={g.id}
+                            className="text-xs text-stone-700 flex items-start gap-2 bg-white/80 p-2 rounded-lg border border-stone-200"
+                          >
+                            <span className="font-bold text-[#6E161E]">
+                              {gi + 1}.
+                            </span>
                             <span>{g.description}</span>
                           </li>
                         ))}
@@ -818,10 +1063,15 @@ export const LearningJourneyStatusTracker: React.FC = () => {
 
                   {proj.crossCurricularConnections?.length > 0 && (
                     <div className="pt-2">
-                      <span className="text-xs font-bold text-stone-800">Cross-Curricular Connections:</span>
+                      <span className="text-xs font-bold text-stone-800">
+                        Cross-Curricular Connections:
+                      </span>
                       <div className="mt-1 space-y-1.5">
                         {proj.crossCurricularConnections.map((c) => (
-                          <div key={c.id} className="text-xs p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900">
+                          <div
+                            key={c.id}
+                            className="text-xs p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900"
+                          >
                             <strong>{c.subject}: </strong>
                             <span>{c.description}</span>
                           </div>

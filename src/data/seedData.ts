@@ -1,17 +1,17 @@
-import { 
-  User, 
-  Student, 
-  LearningJourney, 
-  FEDCMilestone, 
-  SensoryProfileItem, 
-  FEDCObservationRecord, 
-  SensoryProfileRecord, 
-  SFAObservationRecord, 
-  IEPRecord, 
-  IEPReport, 
+import {
+  User,
+  Student,
+  LearningJourney,
+  FEDCMilestone,
+  SensoryProfileItem,
+  FEDCObservationRecord,
+  SensoryProfileRecord,
+  SFAObservationRecord,
+  IEPRecord,
+  IEPReport,
   AttendanceRecord,
   ObservationAssignment,
-  ObservationFormDefinition
+  ObservationFormDefinition,
 } from '../types';
 
 export const SEED_USERS: User[] = [
@@ -21,14 +21,22 @@ export const SEED_USERS: User[] = [
     email: 'e.johnson@learnspace.edu',
     role: 'SPECIAL_ED_TEACHER',
     roleTitle: 'Special Education Coordinator',
-    avatarUrl: 'https://images.unsplash.com/photo-1580894732454-defbe5081b5c?w=150&auto=format&fit=crop&q=80',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1580894732454-defbe5081b5c?w=150&auto=format&fit=crop&q=80',
     unitIds: ['Early Years', 'Elementary', 'Junior High'],
     gradeIds: ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'],
     subjectIds: ['Special Education'],
     isGPK: false,
     isSpecialEdCoordinator: true,
     assignedSpecialNeedsStudentIds: ['stu-001', 'stu-003', 'stu-007'],
-    permissions: ['VIEW_ALL', 'MANAGE_OBSERVATIONS', 'MANAGE_IEP', 'MANAGE_WEEKLY_REPORTS', 'ASSIGN_STAFF', 'REVIEW_IEP']
+    permissions: [
+      'VIEW_ALL',
+      'MANAGE_OBSERVATIONS',
+      'MANAGE_IEP',
+      'MANAGE_WEEKLY_REPORTS',
+      'ASSIGN_STAFF',
+      'REVIEW_IEP',
+    ],
   },
   {
     id: 'usr-gpk-1',
@@ -36,7 +44,8 @@ export const SEED_USERS: User[] = [
     email: 'b.pratama@learnspace.edu',
     role: 'SPECIAL_ED_TEACHER',
     roleTitle: 'Guru Pendamping Khusus (GPK Teacher)',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     unitIds: ['Elementary'],
     gradeIds: ['Grade 1'],
     subjectIds: ['Special Education', 'Inclusion Support'],
@@ -44,7 +53,12 @@ export const SEED_USERS: User[] = [
     isSpecialEdCoordinator: false,
     maxSpecialNeedsStudents: 2,
     assignedSpecialNeedsStudentIds: ['stu-001', 'stu-003'],
-    permissions: ['VIEW_ASSIGNED_SPECIAL_STUDENTS', 'EDIT_ASSIGNED_IEP', 'CREATE_WEEKLY_REPORT', 'VIEW_OBSERVATION_RESULTS']
+    permissions: [
+      'VIEW_ASSIGNED_SPECIAL_STUDENTS',
+      'EDIT_ASSIGNED_IEP',
+      'CREATE_WEEKLY_REPORT',
+      'VIEW_OBSERVATION_RESULTS',
+    ],
   },
   {
     id: 'usr-gpk-2',
@@ -52,7 +66,8 @@ export const SEED_USERS: User[] = [
     email: 's.rahma@learnspace.edu',
     role: 'SPECIAL_ED_TEACHER',
     roleTitle: 'Guru Pendamping Khusus (GPK Teacher)',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
     unitIds: ['Elementary'],
     gradeIds: ['Grade 4'],
     subjectIds: ['Special Education', 'Resource Support'],
@@ -60,7 +75,12 @@ export const SEED_USERS: User[] = [
     isSpecialEdCoordinator: false,
     maxSpecialNeedsStudents: 2,
     assignedSpecialNeedsStudentIds: ['stu-007'],
-    permissions: ['VIEW_ASSIGNED_SPECIAL_STUDENTS', 'EDIT_ASSIGNED_IEP', 'CREATE_WEEKLY_REPORT', 'VIEW_OBSERVATION_RESULTS']
+    permissions: [
+      'VIEW_ASSIGNED_SPECIAL_STUDENTS',
+      'EDIT_ASSIGNED_IEP',
+      'CREATE_WEEKLY_REPORT',
+      'VIEW_OBSERVATION_RESULTS',
+    ],
   },
   {
     id: 'usr-therapist',
@@ -68,14 +88,15 @@ export const SEED_USERS: User[] = [
     email: 'c.vance@learnspace.edu',
     role: 'SPECIALIST',
     roleTitle: 'Occupational Therapist & Specialist',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     unitIds: ['Elementary'],
     gradeIds: ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'],
     subjectIds: ['Occupational Therapy', 'Sensory Integration'],
     isGPK: false,
     isSpecialEdCoordinator: false,
     assignedSpecialNeedsStudentIds: ['stu-001', 'stu-003'],
-    permissions: ['CONDUCT_OBSERVATION', 'INPUT_DIAGNOSTICS']
+    permissions: ['CONDUCT_OBSERVATION', 'INPUT_DIAGNOSTICS'],
   },
   {
     id: 'usr-principal',
@@ -83,11 +104,34 @@ export const SEED_USERS: User[] = [
     email: 's.jenkins@learnspace.edu',
     role: 'PRINCIPAL',
     roleTitle: 'School Principal',
-    avatarUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80',
     unitIds: ['Early Years', 'Elementary', 'Junior High'],
-    gradeIds: ['K1', 'K2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'],
-    subjectIds: ['Physical Education', 'Science', 'Math', 'English', 'Art', 'Social Studies'],
-    permissions: ['VIEW_ALL', 'EDIT_ALL', 'REVIEW_JOURNEY', 'APPROVE_IEP', 'MANAGE_STAFF']
+    gradeIds: [
+      'K1',
+      'K2',
+      'Grade 1',
+      'Grade 2',
+      'Grade 3',
+      'Grade 4',
+      'Grade 5',
+      'Grade 6',
+    ],
+    subjectIds: [
+      'Physical Education',
+      'Science',
+      'Math',
+      'English',
+      'Art',
+      'Social Studies',
+    ],
+    permissions: [
+      'VIEW_ALL',
+      'EDIT_ALL',
+      'REVIEW_JOURNEY',
+      'APPROVE_IEP',
+      'MANAGE_STAFF',
+    ],
   },
   {
     id: 'usr-director',
@@ -95,11 +139,33 @@ export const SEED_USERS: User[] = [
     email: 'j.miller@learnspace.edu',
     role: 'DIRECTOR',
     roleTitle: 'Director of Academics & Governance',
-    avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
     unitIds: ['Early Years', 'Elementary', 'Junior High'],
-    gradeIds: ['K1', 'K2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'],
-    subjectIds: ['Physical Education', 'Science', 'Math', 'English', 'Art', 'Social Studies'],
-    permissions: ['VIEW_ALL', 'APPROVE_JOURNEY', 'APPROVE_IEP', 'GOVERNANCE_REVIEW']
+    gradeIds: [
+      'K1',
+      'K2',
+      'Grade 1',
+      'Grade 2',
+      'Grade 3',
+      'Grade 4',
+      'Grade 5',
+      'Grade 6',
+    ],
+    subjectIds: [
+      'Physical Education',
+      'Science',
+      'Math',
+      'English',
+      'Art',
+      'Social Studies',
+    ],
+    permissions: [
+      'VIEW_ALL',
+      'APPROVE_JOURNEY',
+      'APPROVE_IEP',
+      'GOVERNANCE_REVIEW',
+    ],
   },
   {
     id: 'usr-grade-teacher',
@@ -107,13 +173,25 @@ export const SEED_USERS: User[] = [
     email: 's.woods@learnspace.edu',
     role: 'GRADE_TEACHER',
     roleTitle: 'Grade 1 Homeroom & Science Teacher',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
     unitIds: ['Elementary'],
     gradeIds: ['Grade 1'],
     subjectIds: ['Science', 'Math', 'English'],
     isGPK: false,
-    assignedStudentIds: ['stu-001', 'stu-002', 'stu-003', 'stu-004', 'stu-005', 'stu-006'],
-    permissions: ['TAKE_ATTENDANCE', 'EDIT_OWN_JOURNEY', 'VIEW_ASSIGNED_STUDENTS']
+    assignedStudentIds: [
+      'stu-001',
+      'stu-002',
+      'stu-003',
+      'stu-004',
+      'stu-005',
+      'stu-006',
+    ],
+    permissions: [
+      'TAKE_ATTENDANCE',
+      'EDIT_OWN_JOURNEY',
+      'VIEW_ASSIGNED_STUDENTS',
+    ],
   },
   {
     id: 'usr-subject-teacher',
@@ -121,13 +199,14 @@ export const SEED_USERS: User[] = [
     email: 'm.vance@learnspace.edu',
     role: 'SUBJECT_TEACHER',
     roleTitle: 'Physical Education Specialist',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     unitIds: ['Elementary', 'Junior High'],
     gradeIds: ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'],
     subjectIds: ['Physical Education'],
     isGPK: false,
-    permissions: ['EDIT_OWN_JOURNEY', 'VIEW_SUBJECT_CLASSES']
-  }
+    permissions: ['EDIT_OWN_JOURNEY', 'VIEW_SUBJECT_CLASSES'],
+  },
 ];
 
 export const SEED_STUDENTS: Student[] = [
@@ -147,11 +226,12 @@ export const SEED_STUDENTS: Student[] = [
     address: '454 Oakridge Ave, Riverdale',
     specialNeedsFlag: true,
     active: true,
-    avatarUrl: 'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=150&auto=format&fit=crop&q=80',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=150&auto=format&fit=crop&q=80',
     primaryClassification: 'Autism Spectrum Disorder (ASD)',
     currentPlacement: 'General Ed Classroom with GPK 1:1 Support',
     assignedGPKTeacherId: 'usr-gpk-1',
-    assignedGPKTeacherName: 'Budi Pratama, S.Pd.'
+    assignedGPKTeacherName: 'Budi Pratama, S.Pd.',
   },
   {
     id: 'stu-002',
@@ -169,7 +249,8 @@ export const SEED_STUDENTS: Student[] = [
     address: '112 Pinecrest Blvd, Riverdale',
     specialNeedsFlag: false,
     active: true,
-    avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80'
+    avatarUrl:
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
   },
   {
     id: 'stu-003',
@@ -187,11 +268,12 @@ export const SEED_STUDENTS: Student[] = [
     address: '78 Elmwood Court, Riverdale',
     specialNeedsFlag: true,
     active: true,
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     primaryClassification: 'Sensory Processing & Speech Delay',
     currentPlacement: 'General Ed with GPK Support & Speech Therapy',
     assignedGPKTeacherId: 'usr-gpk-1',
-    assignedGPKTeacherName: 'Budi Pratama, S.Pd.'
+    assignedGPKTeacherName: 'Budi Pratama, S.Pd.',
   },
   {
     id: 'stu-004',
@@ -209,7 +291,8 @@ export const SEED_STUDENTS: Student[] = [
     address: '204 Maple Grove, Riverdale',
     specialNeedsFlag: false,
     active: true,
-    avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80'
+    avatarUrl:
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
   },
   {
     id: 'stu-005',
@@ -227,7 +310,8 @@ export const SEED_STUDENTS: Student[] = [
     address: '530 Hillside Drive, Riverdale',
     specialNeedsFlag: false,
     active: true,
-    avatarUrl: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=150&auto=format&fit=crop&q=80'
+    avatarUrl:
+      'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=150&auto=format&fit=crop&q=80',
   },
   {
     id: 'stu-006',
@@ -245,7 +329,8 @@ export const SEED_STUDENTS: Student[] = [
     address: '320 Cedar Lane, Riverdale',
     specialNeedsFlag: false,
     active: true,
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80'
+    avatarUrl:
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
   },
   {
     id: 'stu-007',
@@ -263,12 +348,14 @@ export const SEED_STUDENTS: Student[] = [
     address: '15 Aspen Court, Riverdale',
     specialNeedsFlag: true,
     active: true,
-    avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    primaryClassification: 'Specific Learning Disability (Dyscalculia & Working Memory)',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    primaryClassification:
+      'Specific Learning Disability (Dyscalculia & Working Memory)',
     currentPlacement: 'Resource Room Support + GPK Shadow',
     assignedGPKTeacherId: 'usr-gpk-2',
-    assignedGPKTeacherName: 'Siti Rahma, S.Pd.'
-  }
+    assignedGPKTeacherName: 'Siti Rahma, S.Pd.',
+  },
 ];
 
 // FEDC Authentic Milestones (6 Tonggak Penting in Indonesian)
@@ -277,147 +364,653 @@ export const FEDC_MILESTONES: FEDCMilestone[] = [
     id: 1,
     title: 'Regulasi Diri dan Minat terhadap Dunia Sekelilingnya',
     subtitle: 'Tonggak 1 (0–3 Bulan): Self-Regulation & Shared Attention',
-    description: 'Anak mampu tetap tenang, menerima rangsangan sensorik dengan nyaman, dan mempertahankan perhatian bersama pada orang lain.',
+    description:
+      'Anak mampu tetap tenang, menerima rangsangan sensorik dengan nyaman, dan mempertahankan perhatian bersama pada orang lain.',
     maxScore: 12,
     items: [
-      { id: 'fedc-1-1', number: '1.1', text: 'Menunjukkan ketenangan dan keteraturan pola tidur/makan serta respon terhadap lingkungan', milestoneId: 1 },
-      { id: 'fedc-1-2', number: '1.2', text: 'Mempertahankan kontak mata dan memperhatikan wajah pengasuh/guru secara bermakna', milestoneId: 1 },
-      { id: 'fedc-1-3', number: '1.3', text: 'Merespon rangsangan suara, sentuhan, dan visual tanpa reaksi hipersensitif yang berlebihan', milestoneId: 1 },
-      { id: 'fedc-1-4', number: '1.4', text: 'Mampu menenangkan diri dengan bantuan pengasuh/guru saat mengalami kecemasan atau frustrasi', milestoneId: 1 }
-    ]
+      {
+        id: 'fedc-1-1',
+        number: '1.1',
+        text: 'Menunjukkan ketenangan dan keteraturan pola tidur/makan serta respon terhadap lingkungan',
+        milestoneId: 1,
+      },
+      {
+        id: 'fedc-1-2',
+        number: '1.2',
+        text: 'Mempertahankan kontak mata dan memperhatikan wajah pengasuh/guru secara bermakna',
+        milestoneId: 1,
+      },
+      {
+        id: 'fedc-1-3',
+        number: '1.3',
+        text: 'Merespon rangsangan suara, sentuhan, dan visual tanpa reaksi hipersensitif yang berlebihan',
+        milestoneId: 1,
+      },
+      {
+        id: 'fedc-1-4',
+        number: '1.4',
+        text: 'Mampu menenangkan diri dengan bantuan pengasuh/guru saat mengalami kecemasan atau frustrasi',
+        milestoneId: 1,
+      },
+    ],
   },
   {
     id: 2,
     title: 'Keakraban (Keterikatan)',
     subtitle: 'Tonggak 2 (2–7 Bulan): Engagement & Relating',
-    description: 'Anak menjalin hubungan hangat, menunjukkan kegembiraan saat berinteraksi, dan mempercayai orang dewasa terdekat.',
+    description:
+      'Anak menjalin hubungan hangat, menunjukkan kegembiraan saat berinteraksi, dan mempercayai orang dewasa terdekat.',
     maxScore: 12,
     items: [
-      { id: 'fedc-2-1', number: '2.1', text: 'Tersenyum secara responsif dan menunjukkan kehangatan emosional pada orang yang dikenalnya', milestoneId: 2 },
-      { id: 'fedc-2-2', number: '2.2', text: 'Mencari interaksi sosial dan menunjukkan ketertarikan aktif pada figur guru/pengasuh', milestoneId: 2 },
-      { id: 'fedc-2-3', number: '2.3', text: 'Merespon ajakan interaksi dengan ekspresi wajah gembira atau gerakan tubuh antusias', milestoneId: 2 },
-      { id: 'fedc-2-4', number: '2.4', text: 'Menunjukkan rasa aman dan nyaman berada dekat dengan guru/pendamping kelas', milestoneId: 2 }
-    ]
+      {
+        id: 'fedc-2-1',
+        number: '2.1',
+        text: 'Tersenyum secara responsif dan menunjukkan kehangatan emosional pada orang yang dikenalnya',
+        milestoneId: 2,
+      },
+      {
+        id: 'fedc-2-2',
+        number: '2.2',
+        text: 'Mencari interaksi sosial dan menunjukkan ketertarikan aktif pada figur guru/pengasuh',
+        milestoneId: 2,
+      },
+      {
+        id: 'fedc-2-3',
+        number: '2.3',
+        text: 'Merespon ajakan interaksi dengan ekspresi wajah gembira atau gerakan tubuh antusias',
+        milestoneId: 2,
+      },
+      {
+        id: 'fedc-2-4',
+        number: '2.4',
+        text: 'Menunjukkan rasa aman dan nyaman berada dekat dengan guru/pendamping kelas',
+        milestoneId: 2,
+      },
+    ],
   },
   {
     id: 3,
     title: 'Komunikasi 2 Arah Bertimbal Balik',
     subtitle: 'Tonggak 3 (3–10 Bulan): Two-Way Purposeful Communication',
-    description: 'Anak memulai dan membalas sinyal sosial/emosional secara berkesinambungan menggunakan gestur, vokal, dan kontak mata.',
+    description:
+      'Anak memulai dan membalas sinyal sosial/emosional secara berkesinambungan menggunakan gestur, vokal, dan kontak mata.',
     maxScore: 12,
     items: [
-      { id: 'fedc-3-1', number: '3.1', text: 'Memulai interaksi timbal balik sederhana melalui gestur (menunjuk, melambaikan tangan)', milestoneId: 3 },
-      { id: 'fedc-3-2', number: '3.2', text: 'Merespon senyuman atau suara guru dengan ekspresi atau vokalisasi balasan', milestoneId: 3 },
-      { id: 'fedc-3-3', number: '3.3', text: 'Menunjukkan siklus interaksi minimal 3-4 putaran bergantian tanpa terputus', milestoneId: 3 },
-      { id: 'fedc-3-4', number: '3.4', text: 'Menggunakan gestur sosial untuk menyatakan keinginan ("mau", "lagi", "tolong")', milestoneId: 3 }
-    ]
+      {
+        id: 'fedc-3-1',
+        number: '3.1',
+        text: 'Memulai interaksi timbal balik sederhana melalui gestur (menunjuk, melambaikan tangan)',
+        milestoneId: 3,
+      },
+      {
+        id: 'fedc-3-2',
+        number: '3.2',
+        text: 'Merespon senyuman atau suara guru dengan ekspresi atau vokalisasi balasan',
+        milestoneId: 3,
+      },
+      {
+        id: 'fedc-3-3',
+        number: '3.3',
+        text: 'Menunjukkan siklus interaksi minimal 3-4 putaran bergantian tanpa terputus',
+        milestoneId: 3,
+      },
+      {
+        id: 'fedc-3-4',
+        number: '3.4',
+        text: 'Menggunakan gestur sosial untuk menyatakan keinginan ("mau", "lagi", "tolong")',
+        milestoneId: 3,
+      },
+    ],
   },
   {
     id: 4,
     title: 'Komunikasi Kompleks',
     subtitle: 'Tonggak 4 (9–18 Bulan): Complex Social Problem Solving',
-    description: 'Anak merangkai banyak gestur dan komunikasi nonverbal/verbal untuk menyelesaikan masalah sosial dan menyatakan maksud terpadu.',
+    description:
+      'Anak merangkai banyak gestur dan komunikasi nonverbal/verbal untuk menyelesaikan masalah sosial dan menyatakan maksud terpadu.',
     maxScore: 12,
     items: [
-      { id: 'fedc-4-1', number: '4.1', text: 'Menggabungkan beberapa gestur berurutan untuk mencapai tujuan bersama guru/teman', milestoneId: 4 },
-      { id: 'fedc-4-2', number: '4.2', text: 'Mampu meniru pola gerak tubuh atau ekspresi kompleks dalam aktivitas bermain terarah', milestoneId: 4 },
-      { id: 'fedc-4-3', number: '4.3', text: 'Menunjukkan negosiasi sederhana (misal mengajak guru ke rak mainan, menunjuk dan meminta)', milestoneId: 4 },
-      { id: 'fedc-4-4', number: '4.4', text: 'Mempertahankan interaksi timbal balik sepanjang 20–30 putaran komunikasi bersambung', milestoneId: 4 }
-    ]
+      {
+        id: 'fedc-4-1',
+        number: '4.1',
+        text: 'Menggabungkan beberapa gestur berurutan untuk mencapai tujuan bersama guru/teman',
+        milestoneId: 4,
+      },
+      {
+        id: 'fedc-4-2',
+        number: '4.2',
+        text: 'Mampu meniru pola gerak tubuh atau ekspresi kompleks dalam aktivitas bermain terarah',
+        milestoneId: 4,
+      },
+      {
+        id: 'fedc-4-3',
+        number: '4.3',
+        text: 'Menunjukkan negosiasi sederhana (misal mengajak guru ke rak mainan, menunjuk dan meminta)',
+        milestoneId: 4,
+      },
+      {
+        id: 'fedc-4-4',
+        number: '4.4',
+        text: 'Mempertahankan interaksi timbal balik sepanjang 20–30 putaran komunikasi bersambung',
+        milestoneId: 4,
+      },
+    ],
   },
   {
     id: 5,
     title: 'Gagasan Emosional',
     subtitle: 'Tonggak 5 (18–30 Bulan): Creating Emotional Ideas & Symbols',
-    description: 'Anak menggunakan kata-kata, simbol, dan permainan pura-pura (pretend play) untuk mengekspresikan ide, perasaan, dan imajinasi.',
+    description:
+      'Anak menggunakan kata-kata, simbol, dan permainan pura-pura (pretend play) untuk mengekspresikan ide, perasaan, dan imajinasi.',
     maxScore: 12,
     items: [
-      { id: 'fedc-5-1', number: '5.1', text: 'Terlibat dalam permainan pura-pura/simbolik (misal menyuapi boneka, mengemudi mobil mainan)', milestoneId: 5 },
-      { id: 'fedc-5-2', number: '5.2', text: 'Mengekspresikan emosi atau kebutuhan menggunakan kata-kata atau frasa bermakna', milestoneId: 5 },
-      { id: 'fedc-5-3', number: '5.3', text: 'Membuat narasi cerita pendek dalam permainan imajinatif bersama guru atau teman', milestoneId: 5 },
-      { id: 'fedc-5-4', number: '5.4', text: 'Mengkomunikasikan perasaan ("aku senang", "takut", "marah") secara verbal atau simbol gambar', milestoneId: 5 }
-    ]
+      {
+        id: 'fedc-5-1',
+        number: '5.1',
+        text: 'Terlibat dalam permainan pura-pura/simbolik (misal menyuapi boneka, mengemudi mobil mainan)',
+        milestoneId: 5,
+      },
+      {
+        id: 'fedc-5-2',
+        number: '5.2',
+        text: 'Mengekspresikan emosi atau kebutuhan menggunakan kata-kata atau frasa bermakna',
+        milestoneId: 5,
+      },
+      {
+        id: 'fedc-5-3',
+        number: '5.3',
+        text: 'Membuat narasi cerita pendek dalam permainan imajinatif bersama guru atau teman',
+        milestoneId: 5,
+      },
+      {
+        id: 'fedc-5-4',
+        number: '5.4',
+        text: 'Mengkomunikasikan perasaan ("aku senang", "takut", "marah") secara verbal atau simbol gambar',
+        milestoneId: 5,
+      },
+    ],
   },
   {
     id: 6,
     title: 'Berpikir Emosional',
     subtitle: 'Tonggak 6 (30–48 Bulan): Emotional Thinking & Logical Bridges',
-    description: 'Anak mampu menghubungkan ide-ide secara logis, memahami sebab-akibat emosional, dan menjawab pertanyaan "mengapa" dan "bagaimana".',
+    description:
+      'Anak mampu menghubungkan ide-ide secara logis, memahami sebab-akibat emosional, dan menjawab pertanyaan "mengapa" dan "bagaimana".',
     maxScore: 12,
     items: [
-      { id: 'fedc-6-1', number: '6.1', text: 'Menghubungkan dua atau lebih ide logis dalam percakapan (misal "Aku pakai jas hujan karena hujan")', milestoneId: 6 },
-      { id: 'fedc-6-2', number: '6.2', text: 'Memahami batasan realitas versus fantasi serta merespon aturan kelas secara fleksibel', milestoneId: 6 },
-      { id: 'fedc-6-3', number: '6.3', text: 'Mampu bernegosiasi dan menyelesaikan konflik kecil dengan solusi verbal bersama teman', milestoneId: 6 },
-      { id: 'fedc-6-4', number: '6.4', text: 'Menjelaskan alasan di balik tindakan atau emosinya sendiri ("Aku sedih karena mainanku jatuh")', milestoneId: 6 }
-    ]
-  }
+      {
+        id: 'fedc-6-1',
+        number: '6.1',
+        text: 'Menghubungkan dua atau lebih ide logis dalam percakapan (misal "Aku pakai jas hujan karena hujan")',
+        milestoneId: 6,
+      },
+      {
+        id: 'fedc-6-2',
+        number: '6.2',
+        text: 'Memahami batasan realitas versus fantasi serta merespon aturan kelas secara fleksibel',
+        milestoneId: 6,
+      },
+      {
+        id: 'fedc-6-3',
+        number: '6.3',
+        text: 'Mampu bernegosiasi dan menyelesaikan konflik kecil dengan solusi verbal bersama teman',
+        milestoneId: 6,
+      },
+      {
+        id: 'fedc-6-4',
+        number: '6.4',
+        text: 'Menjelaskan alasan di balik tindakan atau emosinya sendiri ("Aku sedih karena mainanku jatuh")',
+        milestoneId: 6,
+      },
+    ],
+  },
 ];
 
 // Sensory Profile Authentic 44 Items
 export const SENSORY_PROFILE_ITEMS: SensoryProfileItem[] = [
   // Auditory
-  { id: 'sp-1', number: 1, section: 'Auditory', text: 'Reacts strongly to unexpected or loud noises (e.g., sirens, fire drills, school bell)', quadrant: 'SN', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-2', number: 2, section: 'Auditory', text: 'Holds hands over ears to protect against standard classroom sounds', quadrant: 'AV', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-3', number: 3, section: 'Auditory', text: 'Appears not to hear when spoken to directly in a busy classroom', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-4', number: 4, section: 'Auditory', text: 'Makes repetitive verbal noises, humming, or singing during quiet work time', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-5', number: 5, section: 'Auditory', text: 'Has difficulty working when background music or peer talking is present', quadrant: 'SN', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-6', number: 6, section: 'Auditory', text: 'Struggles to follow multi-step verbal instructions without visual cues', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-7', number: 7, section: 'Auditory', text: 'Enjoys listening to loud sounds or brings ears very close to audio sources', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-8', number: 8, section: 'Auditory', text: 'Is easily startled by ordinary sounds like pencil sharpeners or sliding chairs', quadrant: 'SN', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
+  {
+    id: 'sp-1',
+    number: 1,
+    section: 'Auditory',
+    text: 'Reacts strongly to unexpected or loud noises (e.g., sirens, fire drills, school bell)',
+    quadrant: 'SN',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-2',
+    number: 2,
+    section: 'Auditory',
+    text: 'Holds hands over ears to protect against standard classroom sounds',
+    quadrant: 'AV',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-3',
+    number: 3,
+    section: 'Auditory',
+    text: 'Appears not to hear when spoken to directly in a busy classroom',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-4',
+    number: 4,
+    section: 'Auditory',
+    text: 'Makes repetitive verbal noises, humming, or singing during quiet work time',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-5',
+    number: 5,
+    section: 'Auditory',
+    text: 'Has difficulty working when background music or peer talking is present',
+    quadrant: 'SN',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-6',
+    number: 6,
+    section: 'Auditory',
+    text: 'Struggles to follow multi-step verbal instructions without visual cues',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-7',
+    number: 7,
+    section: 'Auditory',
+    text: 'Enjoys listening to loud sounds or brings ears very close to audio sources',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-8',
+    number: 8,
+    section: 'Auditory',
+    text: 'Is easily startled by ordinary sounds like pencil sharpeners or sliding chairs',
+    quadrant: 'SN',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
 
   // Visual
-  { id: 'sp-9', number: 9, section: 'Visual', text: 'Is bothered by bright sunlight or fluorescent ceiling lights in class', quadrant: 'SN', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-10', number: 10, section: 'Visual', text: 'Misses visual cues on the board or printed worksheets despite good visual acuity', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-11', number: 11, section: 'Visual', text: 'Fascinated by moving objects, reflections, spinning items, or flickering lights', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-12', number: 12, section: 'Visual', text: 'Covers eyes or turns head away when visual displays are crowded or busy', quadrant: 'AV', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-13', number: 13, section: 'Visual', text: 'Has difficulty finding an item in a messy desk, cubby, or backpack', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-14', number: 14, section: 'Visual', text: 'Stares intently at peers, teachers, or classroom decorations instead of task', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-15', number: 15, section: 'Visual', text: 'Squints or rubs eyes during sustained reading or board copying tasks', quadrant: 'SN', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-16', number: 16, section: 'Visual', text: 'Overlooks details in illustrations, charts, or classroom posters', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
+  {
+    id: 'sp-9',
+    number: 9,
+    section: 'Visual',
+    text: 'Is bothered by bright sunlight or fluorescent ceiling lights in class',
+    quadrant: 'SN',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-10',
+    number: 10,
+    section: 'Visual',
+    text: 'Misses visual cues on the board or printed worksheets despite good visual acuity',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-11',
+    number: 11,
+    section: 'Visual',
+    text: 'Fascinated by moving objects, reflections, spinning items, or flickering lights',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-12',
+    number: 12,
+    section: 'Visual',
+    text: 'Covers eyes or turns head away when visual displays are crowded or busy',
+    quadrant: 'AV',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-13',
+    number: 13,
+    section: 'Visual',
+    text: 'Has difficulty finding an item in a messy desk, cubby, or backpack',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-14',
+    number: 14,
+    section: 'Visual',
+    text: 'Stares intently at peers, teachers, or classroom decorations instead of task',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-15',
+    number: 15,
+    section: 'Visual',
+    text: 'Squints or rubs eyes during sustained reading or board copying tasks',
+    quadrant: 'SN',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-16',
+    number: 16,
+    section: 'Visual',
+    text: 'Overlooks details in illustrations, charts, or classroom posters',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
 
   // Touch
-  { id: 'sp-17', number: 17, section: 'Touch', text: 'Withdraws or reacts defensively when lightly touched by peers or teacher', quadrant: 'SN', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-18', number: 18, section: 'Touch', text: 'Dislikes messy tactile media (glue, fingerpaint, clay, wet sand)', quadrant: 'AV', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-19', number: 19, section: 'Touch', text: 'Touches everything and everyone constantly while walking through hallways', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-20', number: 20, section: 'Touch', text: 'Unaware of dirty hands, food on face, or twisted clothing', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-21', number: 21, section: 'Touch', text: 'Rubs or scratches skin, chews shirt collar, or rubs textured surfaces', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-22', number: 22, section: 'Touch', text: 'Avoids standing close to others in lines or circle time due to body proximity', quadrant: 'AV', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-23', number: 23, section: 'Touch', text: 'Shows unusually high tolerance to minor cuts, scrapes, or temperature changes', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-24', number: 24, section: 'Touch', text: 'Prefers wearing specific clothing fabrics or resists wearing shoes/socks', quadrant: 'SN', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
+  {
+    id: 'sp-17',
+    number: 17,
+    section: 'Touch',
+    text: 'Withdraws or reacts defensively when lightly touched by peers or teacher',
+    quadrant: 'SN',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-18',
+    number: 18,
+    section: 'Touch',
+    text: 'Dislikes messy tactile media (glue, fingerpaint, clay, wet sand)',
+    quadrant: 'AV',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-19',
+    number: 19,
+    section: 'Touch',
+    text: 'Touches everything and everyone constantly while walking through hallways',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-20',
+    number: 20,
+    section: 'Touch',
+    text: 'Unaware of dirty hands, food on face, or twisted clothing',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-21',
+    number: 21,
+    section: 'Touch',
+    text: 'Rubs or scratches skin, chews shirt collar, or rubs textured surfaces',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-22',
+    number: 22,
+    section: 'Touch',
+    text: 'Avoids standing close to others in lines or circle time due to body proximity',
+    quadrant: 'AV',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-23',
+    number: 23,
+    section: 'Touch',
+    text: 'Shows unusually high tolerance to minor cuts, scrapes, or temperature changes',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-24',
+    number: 24,
+    section: 'Touch',
+    text: 'Prefers wearing specific clothing fabrics or resists wearing shoes/socks',
+    quadrant: 'SN',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
 
   // Movement
-  { id: 'sp-25', number: 25, section: 'Movement', text: 'Constantly rocks in chair, swings feet, or shifts posture during desk tasks', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-26', number: 26, section: 'Movement', text: 'Avoids playground climbing equipment, swings, or dynamic movement activities', quadrant: 'AV', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-27', number: 27, section: 'Movement', text: 'Bumps into furniture, walls, or peers as if unaware of body position in space', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-28', number: 28, section: 'Movement', text: 'Takes excessive physical risks on playground structures (jumping from high bars)', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-29', number: 29, section: 'Movement', text: 'Becomes anxious when feet leave the floor or when tipped backwards', quadrant: 'SN', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-30', number: 30, section: 'Movement', text: 'Slouches, props head with hands, or leans heavily on desk during seatwork', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-31', number: 31, section: 'Movement', text: 'Twirls, spins body, or runs in circles during outdoor/gym transition times', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-32', number: 32, section: 'Movement', text: 'Struggles with balance during basic PE coordination exercises', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
+  {
+    id: 'sp-25',
+    number: 25,
+    section: 'Movement',
+    text: 'Constantly rocks in chair, swings feet, or shifts posture during desk tasks',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-26',
+    number: 26,
+    section: 'Movement',
+    text: 'Avoids playground climbing equipment, swings, or dynamic movement activities',
+    quadrant: 'AV',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-27',
+    number: 27,
+    section: 'Movement',
+    text: 'Bumps into furniture, walls, or peers as if unaware of body position in space',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-28',
+    number: 28,
+    section: 'Movement',
+    text: 'Takes excessive physical risks on playground structures (jumping from high bars)',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-29',
+    number: 29,
+    section: 'Movement',
+    text: 'Becomes anxious when feet leave the floor or when tipped backwards',
+    quadrant: 'SN',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-30',
+    number: 30,
+    section: 'Movement',
+    text: 'Slouches, props head with hands, or leans heavily on desk during seatwork',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-31',
+    number: 31,
+    section: 'Movement',
+    text: 'Twirls, spins body, or runs in circles during outdoor/gym transition times',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-32',
+    number: 32,
+    section: 'Movement',
+    text: 'Struggles with balance during basic PE coordination exercises',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
 
   // Behavioral
-  { id: 'sp-33', number: 33, section: 'Behavioral', text: 'Has difficulty calming down after lively physical recess or gymnasium games', quadrant: 'SN', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-34', number: 34, section: 'Behavioral', text: 'Shows frustration or shutdown when classroom routine changes unexpectedly', quadrant: 'AV', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-35', number: 35, section: 'Behavioral', text: 'Requires more repetition and prompting than peers to begin classroom assignments', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-36', number: 36, section: 'Behavioral', text: 'Seeks intense oral input (chewing pencils, eraser tops, jacket sleeves)', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-37', number: 37, section: 'Behavioral', text: 'Seems emotionally overwhelmed by noisy group assemblies or cafeteria settings', quadrant: 'AV', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-38', number: 38, section: 'Behavioral', text: 'Misses subtle social cues during cooperative partner games', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-39', number: 39, section: 'Behavioral', text: 'Appears unusually lethargic or sluggish during morning classroom meetings', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-40', number: 40, section: 'Behavioral', text: 'Engages in repetitive hand-flapping or finger tapping when excited or stressed', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-41', number: 41, section: 'Behavioral', text: 'Displays rigid adherence to specific seat assignments or material arrangements', quadrant: 'AV', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' },
-  { id: 'sp-42', number: 42, section: 'Behavioral', text: 'Appears excessively driven, fidgety, and always "on the go"', quadrant: 'SK', schoolFactor: 'School Factor 3', factorLabel: 'SENSORY SEEKING' },
-  { id: 'sp-43', number: 43, section: 'Behavioral', text: 'Slow to respond when called upon during group discussions', quadrant: 'RG', schoolFactor: 'School Factor 2', factorLabel: 'LOW REGISTRATION' },
-  { id: 'sp-44', number: 44, section: 'Behavioral', text: 'Easily distracted by visual and auditory activity outside the classroom window', quadrant: 'SN', schoolFactor: 'School Factor 1', factorLabel: 'SENSORY SENSITIVE' }
+  {
+    id: 'sp-33',
+    number: 33,
+    section: 'Behavioral',
+    text: 'Has difficulty calming down after lively physical recess or gymnasium games',
+    quadrant: 'SN',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-34',
+    number: 34,
+    section: 'Behavioral',
+    text: 'Shows frustration or shutdown when classroom routine changes unexpectedly',
+    quadrant: 'AV',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-35',
+    number: 35,
+    section: 'Behavioral',
+    text: 'Requires more repetition and prompting than peers to begin classroom assignments',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-36',
+    number: 36,
+    section: 'Behavioral',
+    text: 'Seeks intense oral input (chewing pencils, eraser tops, jacket sleeves)',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-37',
+    number: 37,
+    section: 'Behavioral',
+    text: 'Seems emotionally overwhelmed by noisy group assemblies or cafeteria settings',
+    quadrant: 'AV',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-38',
+    number: 38,
+    section: 'Behavioral',
+    text: 'Misses subtle social cues during cooperative partner games',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-39',
+    number: 39,
+    section: 'Behavioral',
+    text: 'Appears unusually lethargic or sluggish during morning classroom meetings',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-40',
+    number: 40,
+    section: 'Behavioral',
+    text: 'Engages in repetitive hand-flapping or finger tapping when excited or stressed',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-41',
+    number: 41,
+    section: 'Behavioral',
+    text: 'Displays rigid adherence to specific seat assignments or material arrangements',
+    quadrant: 'AV',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
+  {
+    id: 'sp-42',
+    number: 42,
+    section: 'Behavioral',
+    text: 'Appears excessively driven, fidgety, and always "on the go"',
+    quadrant: 'SK',
+    schoolFactor: 'School Factor 3',
+    factorLabel: 'SENSORY SEEKING',
+  },
+  {
+    id: 'sp-43',
+    number: 43,
+    section: 'Behavioral',
+    text: 'Slow to respond when called upon during group discussions',
+    quadrant: 'RG',
+    schoolFactor: 'School Factor 2',
+    factorLabel: 'LOW REGISTRATION',
+  },
+  {
+    id: 'sp-44',
+    number: 44,
+    section: 'Behavioral',
+    text: 'Easily distracted by visual and auditory activity outside the classroom window',
+    quadrant: 'SN',
+    schoolFactor: 'School Factor 1',
+    factorLabel: 'SENSORY SENSITIVE',
+  },
 ];
 
 export const SFA_SETTINGS = [
-  { id: 'regularClassroom', title: 'Regular Classroom', description: 'Academic tasks, listening, group work, seating posture' },
-  { id: 'specialEdClassroom', title: 'Special Ed Resource Room', description: 'Targeted individual or small-group instruction' },
-  { id: 'playgroundRecess', title: 'Playground & Recess', description: 'Unstructured play, gross motor activities, peer interaction' },
-  { id: 'transportation', title: 'Transportation & Hallway', description: 'Bus boarding, hallway navigation, stair climbing' },
-  { id: 'bathroomToilet', title: 'Bathroom & Hygiene', description: 'Toileting independence, handwashing, clothing management' },
-  { id: 'mealSnackTime', title: 'Mealtime & Cafeteria', description: 'Self-feeding, beverage management, table manners' },
-  { id: 'transitions', title: 'Transitions & Movement', description: 'Class changes, line-up, changing between stations' }
+  {
+    id: 'regularClassroom',
+    title: 'Regular Classroom',
+    description: 'Academic tasks, listening, group work, seating posture',
+  },
+  {
+    id: 'specialEdClassroom',
+    title: 'Special Ed Resource Room',
+    description: 'Targeted individual or small-group instruction',
+  },
+  {
+    id: 'playgroundRecess',
+    title: 'Playground & Recess',
+    description: 'Unstructured play, gross motor activities, peer interaction',
+  },
+  {
+    id: 'transportation',
+    title: 'Transportation & Hallway',
+    description: 'Bus boarding, hallway navigation, stair climbing',
+  },
+  {
+    id: 'bathroomToilet',
+    title: 'Bathroom & Hygiene',
+    description: 'Toileting independence, handwashing, clothing management',
+  },
+  {
+    id: 'mealSnackTime',
+    title: 'Mealtime & Cafeteria',
+    description: 'Self-feeding, beverage management, table manners',
+  },
+  {
+    id: 'transitions',
+    title: 'Transitions & Movement',
+    description: 'Class changes, line-up, changing between stations',
+  },
 ];
 
 export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
@@ -445,14 +1038,15 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
         userName: 'Coach Marcus Vance',
         userRole: 'Physical Education Specialist',
         timestamp: '2026-08-04T10:30:00Z',
-        comment: 'Curriculum unit ready for Principal review.'
-      }
+        comment: 'Curriculum unit ready for Principal review.',
+      },
     ],
     projects: [
       {
         id: 'p-101',
         title: 'Moving My Body',
-        description: 'Students explore fundamental motor skills, spatial orientation, balance, and cooperative obstacle navigation through structured gross motor play.',
+        description:
+          'Students explore fundamental motor skills, spatial orientation, balance, and cooperative obstacle navigation through structured gross motor play.',
         startMonth: 'August 2026',
         endMonth: 'September 2026',
         startDate: '2026-08-03',
@@ -460,19 +1054,45 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
         color: '#F5B842',
         order: 1,
         crossCurricularConnections: [
-          { id: 'c-1', subject: 'Science', description: 'Exploring the skeletal and muscular systems while observing heart rate changes.' },
-          { id: 'c-2', subject: 'Music', description: 'Moving to rhythmic percussion tempos to practice tempo awareness.' }
+          {
+            id: 'c-1',
+            subject: 'Science',
+            description:
+              'Exploring the skeletal and muscular systems while observing heart rate changes.',
+          },
+          {
+            id: 'c-2',
+            subject: 'Music',
+            description:
+              'Moving to rhythmic percussion tempos to practice tempo awareness.',
+          },
         ],
         learningGoals: [
-          { id: 'g-1', description: 'Demonstrate control and balance when traveling at varied speeds and pathways (zigzag, straight, curved).', order: 1 },
-          { id: 'g-2', description: 'Identify personal space boundaries and maintain safe spacing in gym activities.', order: 2 },
-          { id: 'g-3', description: 'Cooperate with partners during parachute and beanbag relay challenges.', order: 3 }
-        ]
+          {
+            id: 'g-1',
+            description:
+              'Demonstrate control and balance when traveling at varied speeds and pathways (zigzag, straight, curved).',
+            order: 1,
+          },
+          {
+            id: 'g-2',
+            description:
+              'Identify personal space boundaries and maintain safe spacing in gym activities.',
+            order: 2,
+          },
+          {
+            id: 'g-3',
+            description:
+              'Cooperate with partners during parachute and beanbag relay challenges.',
+            order: 3,
+          },
+        ],
       },
       {
         id: 'p-102',
         title: 'Rhythm, Agility & Team Pathways',
-        description: 'Expanding coordination to rhythmic movement, group timing, jump-rope fundamentals, and dynamic agility circuits.',
+        description:
+          'Expanding coordination to rhythmic movement, group timing, jump-rope fundamentals, and dynamic agility circuits.',
         startMonth: 'September 2026',
         endMonth: 'October 2026',
         startDate: '2026-09-21',
@@ -480,18 +1100,33 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
         color: '#E07A5F',
         order: 2,
         crossCurricularConnections: [
-          { id: 'c-3', subject: 'Math', description: 'Counting beats and measuring distances jumped in obstacle courses.' }
+          {
+            id: 'c-3',
+            subject: 'Math',
+            description:
+              'Counting beats and measuring distances jumped in obstacle courses.',
+          },
         ],
         learningGoals: [
-          { id: 'g-4', description: 'Execute basic rhythmic footwork patterns in synchrony with small groups.', order: 1 },
-          { id: 'g-5', description: 'Follow two-part movement rules in relay courses with positive sportsmanship.', order: 2 }
-        ]
-      }
+          {
+            id: 'g-4',
+            description:
+              'Execute basic rhythmic footwork patterns in synchrony with small groups.',
+            order: 1,
+          },
+          {
+            id: 'g-5',
+            description:
+              'Follow two-part movement rules in relay courses with positive sportsmanship.',
+            order: 2,
+          },
+        ],
+      },
     ],
     createdBy: 'usr-subject-teacher',
     createdAt: '2026-08-01T09:00:00Z',
     updatedBy: 'usr-subject-teacher',
-    updatedAt: '2026-08-04T10:30:00Z'
+    updatedAt: '2026-08-04T10:30:00Z',
   },
   {
     id: 'lj-002',
@@ -517,7 +1152,7 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
         userName: 'Sarah Woods',
         userRole: 'Grade 1 Homeroom & Science Teacher',
         timestamp: '2026-08-02T14:15:00Z',
-        comment: 'Initial draft complete with campus garden integration.'
+        comment: 'Initial draft complete with campus garden integration.',
       },
       {
         id: 'wf-3',
@@ -528,14 +1163,16 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
         userName: 'Dr. Sarah Jenkins',
         userRole: 'School Principal',
         timestamp: '2026-08-06T11:00:00Z',
-        comment: 'Excellent cross-curricular integration with Art and Language Arts. Forwarded to Director.'
-      }
+        comment:
+          'Excellent cross-curricular integration with Art and Language Arts. Forwarded to Director.',
+      },
     ],
     projects: [
       {
         id: 'p-201',
         title: 'Sprouts, Seeds & Garden Wonders',
-        description: 'Hands-on plant germination experiments, root structure observations, and creating a classroom herb greenhouse.',
+        description:
+          'Hands-on plant germination experiments, root structure observations, and creating a classroom herb greenhouse.',
         startMonth: 'August 2026',
         endMonth: 'September 2026',
         startDate: '2026-08-10',
@@ -543,19 +1180,38 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
         color: '#81B29A',
         order: 1,
         crossCurricularConnections: [
-          { id: 'c-4', subject: 'Art', description: 'Botanical leaf rubbing and scientific botanical sketching.' },
-          { id: 'c-5', subject: 'Language Arts', description: 'Maintaining a daily seedling observation journal.' }
+          {
+            id: 'c-4',
+            subject: 'Art',
+            description:
+              'Botanical leaf rubbing and scientific botanical sketching.',
+          },
+          {
+            id: 'c-5',
+            subject: 'Language Arts',
+            description: 'Maintaining a daily seedling observation journal.',
+          },
         ],
         learningGoals: [
-          { id: 'g-6', description: 'Identify the four essential requirements for plant growth (sunlight, soil, water, air).', order: 1 },
-          { id: 'g-7', description: 'Record weekly plant height changes on a shared classroom growth chart.', order: 2 }
-        ]
-      }
+          {
+            id: 'g-6',
+            description:
+              'Identify the four essential requirements for plant growth (sunlight, soil, water, air).',
+            order: 1,
+          },
+          {
+            id: 'g-7',
+            description:
+              'Record weekly plant height changes on a shared classroom growth chart.',
+            order: 2,
+          },
+        ],
+      },
     ],
     createdBy: 'usr-grade-teacher',
     createdAt: '2026-08-01T11:00:00Z',
     updatedBy: 'usr-principal',
-    updatedAt: '2026-08-06T11:00:00Z'
+    updatedAt: '2026-08-06T11:00:00Z',
   },
   {
     id: 'lj-003',
@@ -580,7 +1236,7 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
         userId: 'usr-grade-teacher',
         userName: 'Sarah Woods',
         userRole: 'Grade 1 Teacher',
-        timestamp: '2026-08-03T16:00:00Z'
+        timestamp: '2026-08-03T16:00:00Z',
       },
       {
         id: 'wf-5',
@@ -591,14 +1247,16 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
         userName: 'Dr. Sarah Jenkins',
         userRole: 'School Principal',
         timestamp: '2026-08-07T09:20:00Z',
-        comment: 'Please add concrete manipulative activities and accommodations for visual learners in Project 1.'
-      }
+        comment:
+          'Please add concrete manipulative activities and accommodations for visual learners in Project 1.',
+      },
     ],
     projects: [
       {
         id: 'p-301',
         title: 'Number Patterns & Measuring Trails',
-        description: 'Investigating geometric sequences, skip counting with natural objects, and non-standard unit measurements.',
+        description:
+          'Investigating geometric sequences, skip counting with natural objects, and non-standard unit measurements.',
         startMonth: 'August 2026',
         endMonth: 'October 2026',
         startDate: '2026-08-17',
@@ -606,18 +1264,33 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
         color: '#9B5DE5',
         order: 1,
         crossCurricularConnections: [
-          { id: 'c-6', subject: 'Science', description: 'Measuring branch lengths and leaf surface areas in nature walks.' }
+          {
+            id: 'c-6',
+            subject: 'Science',
+            description:
+              'Measuring branch lengths and leaf surface areas in nature walks.',
+          },
         ],
         learningGoals: [
-          { id: 'g-8', description: 'Recognize and extend repeating AB, AAB, and ABC color/shape patterns.', order: 1 },
-          { id: 'g-9', description: 'Compare lengths of common objects using terms longer, shorter, and equal.', order: 2 }
-        ]
-      }
+          {
+            id: 'g-8',
+            description:
+              'Recognize and extend repeating AB, AAB, and ABC color/shape patterns.',
+            order: 1,
+          },
+          {
+            id: 'g-9',
+            description:
+              'Compare lengths of common objects using terms longer, shorter, and equal.',
+            order: 2,
+          },
+        ],
+      },
     ],
     createdBy: 'usr-grade-teacher',
     createdAt: '2026-08-02T10:00:00Z',
     updatedBy: 'usr-principal',
-    updatedAt: '2026-08-07T09:20:00Z'
+    updatedAt: '2026-08-07T09:20:00Z',
   },
   {
     id: 'lj-004',
@@ -638,7 +1311,8 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
       {
         id: 'p-401',
         title: 'Characters & Expressive Voices',
-        description: 'Engaging with interactive picture books, recognizing consonant-vowel-consonant blends, and dramatizing character dialogues.',
+        description:
+          'Engaging with interactive picture books, recognizing consonant-vowel-consonant blends, and dramatizing character dialogues.',
         startMonth: 'September 2026',
         endMonth: 'November 2026',
         startDate: '2026-09-01',
@@ -646,19 +1320,33 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
         color: '#3D5A80',
         order: 1,
         crossCurricularConnections: [
-          { id: 'c-7', subject: 'Drama', description: 'Puppet theatre character reenactments.' }
+          {
+            id: 'c-7',
+            subject: 'Drama',
+            description: 'Puppet theatre character reenactments.',
+          },
         ],
         learningGoals: [
-          { id: 'g-10', description: 'Identify main characters, setting, and key problem in a guided read-aloud.', order: 1 },
-          { id: 'g-11', description: 'Blend and segment 3-letter phonetic words with high confidence.', order: 2 }
-        ]
-      }
+          {
+            id: 'g-10',
+            description:
+              'Identify main characters, setting, and key problem in a guided read-aloud.',
+            order: 1,
+          },
+          {
+            id: 'g-11',
+            description:
+              'Blend and segment 3-letter phonetic words with high confidence.',
+            order: 2,
+          },
+        ],
+      },
     ],
     createdBy: 'usr-grade-teacher',
     createdAt: '2026-08-08T11:30:00Z',
     updatedBy: 'usr-grade-teacher',
-    updatedAt: '2026-08-08T11:30:00Z'
-  }
+    updatedAt: '2026-08-08T11:30:00Z',
+  },
 ];
 
 export const SEED_ATTENDANCE: AttendanceRecord[] = [
@@ -668,7 +1356,7 @@ export const SEED_ATTENDANCE: AttendanceRecord[] = [
     date: '2026-10-24',
     status: 'PRESENT',
     className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher'
+    recordedBy: 'usr-grade-teacher',
   },
   {
     id: 'att-002',
@@ -678,7 +1366,7 @@ export const SEED_ATTENDANCE: AttendanceRecord[] = [
     minutesLate: 15,
     notes: 'Traffic delay on river bridge route',
     className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher'
+    recordedBy: 'usr-grade-teacher',
   },
   {
     id: 'att-003',
@@ -686,7 +1374,7 @@ export const SEED_ATTENDANCE: AttendanceRecord[] = [
     date: '2026-10-24',
     status: 'PRESENT',
     className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher'
+    recordedBy: 'usr-grade-teacher',
   },
   {
     id: 'att-004',
@@ -695,7 +1383,7 @@ export const SEED_ATTENDANCE: AttendanceRecord[] = [
     status: 'SICK',
     notes: 'Parent reported mild fever and rest at home',
     className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher'
+    recordedBy: 'usr-grade-teacher',
   },
   {
     id: 'att-005',
@@ -703,7 +1391,7 @@ export const SEED_ATTENDANCE: AttendanceRecord[] = [
     date: '2026-10-24',
     status: 'PRESENT',
     className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher'
+    recordedBy: 'usr-grade-teacher',
   },
   {
     id: 'att-006',
@@ -711,8 +1399,8 @@ export const SEED_ATTENDANCE: AttendanceRecord[] = [
     date: '2026-10-24',
     status: 'PRESENT',
     className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher'
-  }
+    recordedBy: 'usr-grade-teacher',
+  },
 ];
 
 export const SEED_FEDC_OBSERVATION: FEDCObservationRecord = {
@@ -725,30 +1413,115 @@ export const SEED_FEDC_OBSERVATION: FEDCObservationRecord = {
   observerName: 'Ms. Elena Johnson (Coordinator)',
   status: 'Completed',
   responses: {
-    'fedc-1-1': { itemId: 'fedc-1-1', rating: 'S', score: 3, masteredAge: '2 tahun' },
-    'fedc-1-2': { itemId: 'fedc-1-2', rating: 'S', score: 3, masteredAge: '3 tahun' },
-    'fedc-1-3': { itemId: 'fedc-1-3', rating: 'K', score: 2, masteredAge: '4 tahun' },
-    'fedc-1-4': { itemId: 'fedc-1-4', rating: 'K', score: 2, masteredAge: '5 tahun' },
-    'fedc-2-1': { itemId: 'fedc-2-1', rating: 'S', score: 3, masteredAge: '3 tahun' },
-    'fedc-2-2': { itemId: 'fedc-2-2', rating: 'K', score: 2, masteredAge: '4 tahun' },
-    'fedc-2-3': { itemId: 'fedc-2-3', rating: 'S', score: 3, masteredAge: '3.5 tahun' },
-    'fedc-2-4': { itemId: 'fedc-2-4', rating: 'S', score: 3, masteredAge: '4 tahun' },
-    'fedc-3-1': { itemId: 'fedc-3-1', rating: 'K', score: 2, masteredAge: '5 tahun' },
-    'fedc-3-2': { itemId: 'fedc-3-2', rating: 'K', score: 2, masteredAge: '5 tahun' },
-    'fedc-3-3': { itemId: 'fedc-3-3', rating: 'K', score: 2, masteredAge: '6 tahun' },
-    'fedc-3-4': { itemId: 'fedc-3-4', rating: 'S', score: 3, masteredAge: '4.5 tahun' },
-    'fedc-4-1': { itemId: 'fedc-4-1', rating: 'K', score: 2, masteredAge: '6 tahun' },
+    'fedc-1-1': {
+      itemId: 'fedc-1-1',
+      rating: 'S',
+      score: 3,
+      masteredAge: '2 tahun',
+    },
+    'fedc-1-2': {
+      itemId: 'fedc-1-2',
+      rating: 'S',
+      score: 3,
+      masteredAge: '3 tahun',
+    },
+    'fedc-1-3': {
+      itemId: 'fedc-1-3',
+      rating: 'K',
+      score: 2,
+      masteredAge: '4 tahun',
+    },
+    'fedc-1-4': {
+      itemId: 'fedc-1-4',
+      rating: 'K',
+      score: 2,
+      masteredAge: '5 tahun',
+    },
+    'fedc-2-1': {
+      itemId: 'fedc-2-1',
+      rating: 'S',
+      score: 3,
+      masteredAge: '3 tahun',
+    },
+    'fedc-2-2': {
+      itemId: 'fedc-2-2',
+      rating: 'K',
+      score: 2,
+      masteredAge: '4 tahun',
+    },
+    'fedc-2-3': {
+      itemId: 'fedc-2-3',
+      rating: 'S',
+      score: 3,
+      masteredAge: '3.5 tahun',
+    },
+    'fedc-2-4': {
+      itemId: 'fedc-2-4',
+      rating: 'S',
+      score: 3,
+      masteredAge: '4 tahun',
+    },
+    'fedc-3-1': {
+      itemId: 'fedc-3-1',
+      rating: 'K',
+      score: 2,
+      masteredAge: '5 tahun',
+    },
+    'fedc-3-2': {
+      itemId: 'fedc-3-2',
+      rating: 'K',
+      score: 2,
+      masteredAge: '5 tahun',
+    },
+    'fedc-3-3': {
+      itemId: 'fedc-3-3',
+      rating: 'K',
+      score: 2,
+      masteredAge: '6 tahun',
+    },
+    'fedc-3-4': {
+      itemId: 'fedc-3-4',
+      rating: 'S',
+      score: 3,
+      masteredAge: '4.5 tahun',
+    },
+    'fedc-4-1': {
+      itemId: 'fedc-4-1',
+      rating: 'K',
+      score: 2,
+      masteredAge: '6 tahun',
+    },
     'fedc-4-2': { itemId: 'fedc-4-2', rating: 'T', score: 1, masteredAge: '-' },
-    'fedc-4-3': { itemId: 'fedc-4-3', rating: 'K', score: 2, masteredAge: '6 tahun' },
+    'fedc-4-3': {
+      itemId: 'fedc-4-3',
+      rating: 'K',
+      score: 2,
+      masteredAge: '6 tahun',
+    },
     'fedc-4-4': { itemId: 'fedc-4-4', rating: 'T', score: 1, masteredAge: '-' },
-    'fedc-5-1': { itemId: 'fedc-5-1', rating: 'K', score: 2, masteredAge: '6.5 tahun' },
-    'fedc-5-2': { itemId: 'fedc-5-2', rating: 'K', score: 2, masteredAge: '6 tahun' },
+    'fedc-5-1': {
+      itemId: 'fedc-5-1',
+      rating: 'K',
+      score: 2,
+      masteredAge: '6.5 tahun',
+    },
+    'fedc-5-2': {
+      itemId: 'fedc-5-2',
+      rating: 'K',
+      score: 2,
+      masteredAge: '6 tahun',
+    },
     'fedc-5-3': { itemId: 'fedc-5-3', rating: 'T', score: 1, masteredAge: '-' },
     'fedc-5-4': { itemId: 'fedc-5-4', rating: 'T', score: 1, masteredAge: '-' },
     'fedc-6-1': { itemId: 'fedc-6-1', rating: 'T', score: 1, masteredAge: '-' },
-    'fedc-6-2': { itemId: 'fedc-6-2', rating: 'K', score: 2, masteredAge: '7 tahun' },
+    'fedc-6-2': {
+      itemId: 'fedc-6-2',
+      rating: 'K',
+      score: 2,
+      masteredAge: '7 tahun',
+    },
     'fedc-6-3': { itemId: 'fedc-6-3', rating: 'T', score: 1, masteredAge: '-' },
-    'fedc-6-4': { itemId: 'fedc-6-4', rating: 'T', score: 1, masteredAge: '-' }
+    'fedc-6-4': { itemId: 'fedc-6-4', rating: 'T', score: 1, masteredAge: '-' },
   },
   milestoneScores: {
     1: 10,
@@ -756,13 +1529,14 @@ export const SEED_FEDC_OBSERVATION: FEDCObservationRecord = {
     3: 9,
     4: 6,
     5: 6,
-    6: 5
+    6: 5,
   },
   totalScore: 47,
   maxPossibleScore: 72,
-  notes: 'Leo shows strong self-regulation in structured 1-on-1 settings. Continuous focus is needed on complex social reciprocity (Tonggak 4) and expressing emotional states symbolically (Tonggak 5).',
+  notes:
+    'Leo shows strong self-regulation in structured 1-on-1 settings. Continuous focus is needed on complex social reciprocity (Tonggak 4) and expressing emotional states symbolically (Tonggak 5).',
   createdAt: '2026-10-14T09:00:00Z',
-  updatedAt: '2026-10-14T11:45:00Z'
+  updatedAt: '2026-10-14T11:45:00Z',
 };
 
 // Historical FEDC Observations across prior years for Leo, Elijah, Alex
@@ -778,37 +1552,158 @@ export const SEED_ALL_FEDC_OBSERVATIONS: FEDCObservationRecord[] = [
     observerName: 'Ms. Elena Johnson (Coordinator)',
     status: 'Completed',
     responses: {
-      'fedc-1-1': { itemId: 'fedc-1-1', rating: 'S', score: 3, masteredAge: '2 tahun' },
-      'fedc-1-2': { itemId: 'fedc-1-2', rating: 'K', score: 2, masteredAge: '3 tahun' },
-      'fedc-1-3': { itemId: 'fedc-1-3', rating: 'K', score: 2, masteredAge: '4 tahun' },
-      'fedc-1-4': { itemId: 'fedc-1-4', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-2-1': { itemId: 'fedc-2-1', rating: 'K', score: 2, masteredAge: '3 tahun' },
-      'fedc-2-2': { itemId: 'fedc-2-2', rating: 'K', score: 2, masteredAge: '4 tahun' },
-      'fedc-2-3': { itemId: 'fedc-2-3', rating: 'K', score: 2, masteredAge: '3.5 tahun' },
-      'fedc-2-4': { itemId: 'fedc-2-4', rating: 'K', score: 2, masteredAge: '4 tahun' },
-      'fedc-3-1': { itemId: 'fedc-3-1', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-3-2': { itemId: 'fedc-3-2', rating: 'K', score: 2, masteredAge: '5 tahun' },
-      'fedc-3-3': { itemId: 'fedc-3-3', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-3-4': { itemId: 'fedc-3-4', rating: 'K', score: 2, masteredAge: '4.5 tahun' },
-      'fedc-4-1': { itemId: 'fedc-4-1', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-4-2': { itemId: 'fedc-4-2', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-4-3': { itemId: 'fedc-4-3', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-4-4': { itemId: 'fedc-4-4', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-5-1': { itemId: 'fedc-5-1', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-5-2': { itemId: 'fedc-5-2', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-5-3': { itemId: 'fedc-5-3', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-5-4': { itemId: 'fedc-5-4', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-6-1': { itemId: 'fedc-6-1', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-6-2': { itemId: 'fedc-6-2', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-6-3': { itemId: 'fedc-6-3', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-6-4': { itemId: 'fedc-6-4', rating: 'T', score: 1, masteredAge: '-' }
+      'fedc-1-1': {
+        itemId: 'fedc-1-1',
+        rating: 'S',
+        score: 3,
+        masteredAge: '2 tahun',
+      },
+      'fedc-1-2': {
+        itemId: 'fedc-1-2',
+        rating: 'K',
+        score: 2,
+        masteredAge: '3 tahun',
+      },
+      'fedc-1-3': {
+        itemId: 'fedc-1-3',
+        rating: 'K',
+        score: 2,
+        masteredAge: '4 tahun',
+      },
+      'fedc-1-4': {
+        itemId: 'fedc-1-4',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-2-1': {
+        itemId: 'fedc-2-1',
+        rating: 'K',
+        score: 2,
+        masteredAge: '3 tahun',
+      },
+      'fedc-2-2': {
+        itemId: 'fedc-2-2',
+        rating: 'K',
+        score: 2,
+        masteredAge: '4 tahun',
+      },
+      'fedc-2-3': {
+        itemId: 'fedc-2-3',
+        rating: 'K',
+        score: 2,
+        masteredAge: '3.5 tahun',
+      },
+      'fedc-2-4': {
+        itemId: 'fedc-2-4',
+        rating: 'K',
+        score: 2,
+        masteredAge: '4 tahun',
+      },
+      'fedc-3-1': {
+        itemId: 'fedc-3-1',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-3-2': {
+        itemId: 'fedc-3-2',
+        rating: 'K',
+        score: 2,
+        masteredAge: '5 tahun',
+      },
+      'fedc-3-3': {
+        itemId: 'fedc-3-3',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-3-4': {
+        itemId: 'fedc-3-4',
+        rating: 'K',
+        score: 2,
+        masteredAge: '4.5 tahun',
+      },
+      'fedc-4-1': {
+        itemId: 'fedc-4-1',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-4-2': {
+        itemId: 'fedc-4-2',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-4-3': {
+        itemId: 'fedc-4-3',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-4-4': {
+        itemId: 'fedc-4-4',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-5-1': {
+        itemId: 'fedc-5-1',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-5-2': {
+        itemId: 'fedc-5-2',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-5-3': {
+        itemId: 'fedc-5-3',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-5-4': {
+        itemId: 'fedc-5-4',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-6-1': {
+        itemId: 'fedc-6-1',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-6-2': {
+        itemId: 'fedc-6-2',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-6-3': {
+        itemId: 'fedc-6-3',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-6-4': {
+        itemId: 'fedc-6-4',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
     },
     milestoneScores: { 1: 8, 2: 8, 3: 6, 4: 4, 5: 4, 6: 4 },
     totalScore: 34,
     maxPossibleScore: 72,
-    notes: 'Baseline evaluation at Kindergarten enrollment. Emerging shared attention; requires high scaffolding for 2-way engagement.',
+    notes:
+      'Baseline evaluation at Kindergarten enrollment. Emerging shared attention; requires high scaffolding for 2-way engagement.',
     createdAt: '2025-10-12T09:00:00Z',
-    updatedAt: '2025-10-12T11:45:00Z'
+    updatedAt: '2025-10-12T11:45:00Z',
   },
   {
     id: 'fedc-rec-003-2026',
@@ -820,37 +1715,158 @@ export const SEED_ALL_FEDC_OBSERVATIONS: FEDCObservationRecord[] = [
     observerName: 'Dr. Clara Vance, OTR/L (Occupational Therapist)',
     status: 'Completed',
     responses: {
-      'fedc-1-1': { itemId: 'fedc-1-1', rating: 'S', score: 3, masteredAge: '2 tahun' },
-      'fedc-1-2': { itemId: 'fedc-1-2', rating: 'S', score: 3, masteredAge: '3 tahun' },
-      'fedc-1-3': { itemId: 'fedc-1-3', rating: 'S', score: 3, masteredAge: '4 tahun' },
-      'fedc-1-4': { itemId: 'fedc-1-4', rating: 'K', score: 2, masteredAge: '5 tahun' },
-      'fedc-2-1': { itemId: 'fedc-2-1', rating: 'S', score: 3, masteredAge: '3 tahun' },
-      'fedc-2-2': { itemId: 'fedc-2-2', rating: 'S', score: 3, masteredAge: '4 tahun' },
-      'fedc-2-3': { itemId: 'fedc-2-3', rating: 'S', score: 3, masteredAge: '3.5 tahun' },
-      'fedc-2-4': { itemId: 'fedc-2-4', rating: 'S', score: 3, masteredAge: '4 tahun' },
-      'fedc-3-1': { itemId: 'fedc-3-1', rating: 'S', score: 3, masteredAge: '5 tahun' },
-      'fedc-3-2': { itemId: 'fedc-3-2', rating: 'S', score: 3, masteredAge: '5 tahun' },
-      'fedc-3-3': { itemId: 'fedc-3-3', rating: 'K', score: 2, masteredAge: '6 tahun' },
-      'fedc-3-4': { itemId: 'fedc-3-4', rating: 'S', score: 3, masteredAge: '4.5 tahun' },
-      'fedc-4-1': { itemId: 'fedc-4-1', rating: 'K', score: 2, masteredAge: '6 tahun' },
-      'fedc-4-2': { itemId: 'fedc-4-2', rating: 'K', score: 2, masteredAge: '6 tahun' },
-      'fedc-4-3': { itemId: 'fedc-4-3', rating: 'K', score: 2, masteredAge: '6 tahun' },
-      'fedc-4-4': { itemId: 'fedc-4-4', rating: 'K', score: 2, masteredAge: '6.5 tahun' },
-      'fedc-5-1': { itemId: 'fedc-5-1', rating: 'K', score: 2, masteredAge: '6.5 tahun' },
-      'fedc-5-2': { itemId: 'fedc-5-2', rating: 'K', score: 2, masteredAge: '6 tahun' },
-      'fedc-5-3': { itemId: 'fedc-5-3', rating: 'K', score: 2, masteredAge: '7 tahun' },
-      'fedc-5-4': { itemId: 'fedc-5-4', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-6-1': { itemId: 'fedc-6-1', rating: 'K', score: 2, masteredAge: '7 tahun' },
-      'fedc-6-2': { itemId: 'fedc-6-2', rating: 'K', score: 2, masteredAge: '7 tahun' },
-      'fedc-6-3': { itemId: 'fedc-6-3', rating: 'T', score: 1, masteredAge: '-' },
-      'fedc-6-4': { itemId: 'fedc-6-4', rating: 'T', score: 1, masteredAge: '-' }
+      'fedc-1-1': {
+        itemId: 'fedc-1-1',
+        rating: 'S',
+        score: 3,
+        masteredAge: '2 tahun',
+      },
+      'fedc-1-2': {
+        itemId: 'fedc-1-2',
+        rating: 'S',
+        score: 3,
+        masteredAge: '3 tahun',
+      },
+      'fedc-1-3': {
+        itemId: 'fedc-1-3',
+        rating: 'S',
+        score: 3,
+        masteredAge: '4 tahun',
+      },
+      'fedc-1-4': {
+        itemId: 'fedc-1-4',
+        rating: 'K',
+        score: 2,
+        masteredAge: '5 tahun',
+      },
+      'fedc-2-1': {
+        itemId: 'fedc-2-1',
+        rating: 'S',
+        score: 3,
+        masteredAge: '3 tahun',
+      },
+      'fedc-2-2': {
+        itemId: 'fedc-2-2',
+        rating: 'S',
+        score: 3,
+        masteredAge: '4 tahun',
+      },
+      'fedc-2-3': {
+        itemId: 'fedc-2-3',
+        rating: 'S',
+        score: 3,
+        masteredAge: '3.5 tahun',
+      },
+      'fedc-2-4': {
+        itemId: 'fedc-2-4',
+        rating: 'S',
+        score: 3,
+        masteredAge: '4 tahun',
+      },
+      'fedc-3-1': {
+        itemId: 'fedc-3-1',
+        rating: 'S',
+        score: 3,
+        masteredAge: '5 tahun',
+      },
+      'fedc-3-2': {
+        itemId: 'fedc-3-2',
+        rating: 'S',
+        score: 3,
+        masteredAge: '5 tahun',
+      },
+      'fedc-3-3': {
+        itemId: 'fedc-3-3',
+        rating: 'K',
+        score: 2,
+        masteredAge: '6 tahun',
+      },
+      'fedc-3-4': {
+        itemId: 'fedc-3-4',
+        rating: 'S',
+        score: 3,
+        masteredAge: '4.5 tahun',
+      },
+      'fedc-4-1': {
+        itemId: 'fedc-4-1',
+        rating: 'K',
+        score: 2,
+        masteredAge: '6 tahun',
+      },
+      'fedc-4-2': {
+        itemId: 'fedc-4-2',
+        rating: 'K',
+        score: 2,
+        masteredAge: '6 tahun',
+      },
+      'fedc-4-3': {
+        itemId: 'fedc-4-3',
+        rating: 'K',
+        score: 2,
+        masteredAge: '6 tahun',
+      },
+      'fedc-4-4': {
+        itemId: 'fedc-4-4',
+        rating: 'K',
+        score: 2,
+        masteredAge: '6.5 tahun',
+      },
+      'fedc-5-1': {
+        itemId: 'fedc-5-1',
+        rating: 'K',
+        score: 2,
+        masteredAge: '6.5 tahun',
+      },
+      'fedc-5-2': {
+        itemId: 'fedc-5-2',
+        rating: 'K',
+        score: 2,
+        masteredAge: '6 tahun',
+      },
+      'fedc-5-3': {
+        itemId: 'fedc-5-3',
+        rating: 'K',
+        score: 2,
+        masteredAge: '7 tahun',
+      },
+      'fedc-5-4': {
+        itemId: 'fedc-5-4',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-6-1': {
+        itemId: 'fedc-6-1',
+        rating: 'K',
+        score: 2,
+        masteredAge: '7 tahun',
+      },
+      'fedc-6-2': {
+        itemId: 'fedc-6-2',
+        rating: 'K',
+        score: 2,
+        masteredAge: '7 tahun',
+      },
+      'fedc-6-3': {
+        itemId: 'fedc-6-3',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
+      'fedc-6-4': {
+        itemId: 'fedc-6-4',
+        rating: 'T',
+        score: 1,
+        masteredAge: '-',
+      },
     },
     milestoneScores: { 1: 11, 2: 12, 3: 11, 4: 8, 5: 7, 6: 6 },
     totalScore: 55,
     maxPossibleScore: 72,
-    notes: 'Eli displays strong social engagement with peers and teachers. Working on expressive speech articulation and multi-idea symbolic play.',
+    notes:
+      'Eli displays strong social engagement with peers and teachers. Working on expressive speech articulation and multi-idea symbolic play.',
     createdAt: '2026-10-15T10:00:00Z',
-    updatedAt: '2026-10-15T12:00:00Z'
+    updatedAt: '2026-10-15T12:00:00Z',
   },
   {
     id: 'fedc-rec-007-2026',
@@ -862,38 +1878,159 @@ export const SEED_ALL_FEDC_OBSERVATIONS: FEDCObservationRecord[] = [
     observerName: 'Ms. Elena Johnson (Coordinator)',
     status: 'Completed',
     responses: {
-      'fedc-1-1': { itemId: 'fedc-1-1', rating: 'S', score: 3, masteredAge: '2 tahun' },
-      'fedc-1-2': { itemId: 'fedc-1-2', rating: 'S', score: 3, masteredAge: '3 tahun' },
-      'fedc-1-3': { itemId: 'fedc-1-3', rating: 'S', score: 3, masteredAge: '4 tahun' },
-      'fedc-1-4': { itemId: 'fedc-1-4', rating: 'S', score: 3, masteredAge: '5 tahun' },
-      'fedc-2-1': { itemId: 'fedc-2-1', rating: 'S', score: 3, masteredAge: '3 tahun' },
-      'fedc-2-2': { itemId: 'fedc-2-2', rating: 'S', score: 3, masteredAge: '4 tahun' },
-      'fedc-2-3': { itemId: 'fedc-2-3', rating: 'S', score: 3, masteredAge: '3.5 tahun' },
-      'fedc-2-4': { itemId: 'fedc-2-4', rating: 'S', score: 3, masteredAge: '4 tahun' },
-      'fedc-3-1': { itemId: 'fedc-3-1', rating: 'S', score: 3, masteredAge: '5 tahun' },
-      'fedc-3-2': { itemId: 'fedc-3-2', rating: 'S', score: 3, masteredAge: '5 tahun' },
-      'fedc-3-3': { itemId: 'fedc-3-3', rating: 'S', score: 3, masteredAge: '6 tahun' },
-      'fedc-3-4': { itemId: 'fedc-3-4', rating: 'S', score: 3, masteredAge: '4.5 tahun' },
-      'fedc-4-1': { itemId: 'fedc-4-1', rating: 'S', score: 3, masteredAge: '6 tahun' },
-      'fedc-4-2': { itemId: 'fedc-4-2', rating: 'S', score: 3, masteredAge: '6 tahun' },
-      'fedc-4-3': { itemId: 'fedc-4-3', rating: 'S', score: 3, masteredAge: '6 tahun' },
-      'fedc-4-4': { itemId: 'fedc-4-4', rating: 'S', score: 3, masteredAge: '6.5 tahun' },
-      'fedc-5-1': { itemId: 'fedc-5-1', rating: 'S', score: 3, masteredAge: '6.5 tahun' },
-      'fedc-5-2': { itemId: 'fedc-5-2', rating: 'S', score: 3, masteredAge: '6 tahun' },
-      'fedc-5-3': { itemId: 'fedc-5-3', rating: 'S', score: 3, masteredAge: '7 tahun' },
-      'fedc-5-4': { itemId: 'fedc-5-4', rating: 'K', score: 2, masteredAge: '8 tahun' },
-      'fedc-6-1': { itemId: 'fedc-6-1', rating: 'S', score: 3, masteredAge: '8 tahun' },
-      'fedc-6-2': { itemId: 'fedc-6-2', rating: 'S', score: 3, masteredAge: '8.5 tahun' },
-      'fedc-6-3': { itemId: 'fedc-6-3', rating: 'K', score: 2, masteredAge: '9 tahun' },
-      'fedc-6-4': { itemId: 'fedc-6-4', rating: 'K', score: 2, masteredAge: '9.5 tahun' }
+      'fedc-1-1': {
+        itemId: 'fedc-1-1',
+        rating: 'S',
+        score: 3,
+        masteredAge: '2 tahun',
+      },
+      'fedc-1-2': {
+        itemId: 'fedc-1-2',
+        rating: 'S',
+        score: 3,
+        masteredAge: '3 tahun',
+      },
+      'fedc-1-3': {
+        itemId: 'fedc-1-3',
+        rating: 'S',
+        score: 3,
+        masteredAge: '4 tahun',
+      },
+      'fedc-1-4': {
+        itemId: 'fedc-1-4',
+        rating: 'S',
+        score: 3,
+        masteredAge: '5 tahun',
+      },
+      'fedc-2-1': {
+        itemId: 'fedc-2-1',
+        rating: 'S',
+        score: 3,
+        masteredAge: '3 tahun',
+      },
+      'fedc-2-2': {
+        itemId: 'fedc-2-2',
+        rating: 'S',
+        score: 3,
+        masteredAge: '4 tahun',
+      },
+      'fedc-2-3': {
+        itemId: 'fedc-2-3',
+        rating: 'S',
+        score: 3,
+        masteredAge: '3.5 tahun',
+      },
+      'fedc-2-4': {
+        itemId: 'fedc-2-4',
+        rating: 'S',
+        score: 3,
+        masteredAge: '4 tahun',
+      },
+      'fedc-3-1': {
+        itemId: 'fedc-3-1',
+        rating: 'S',
+        score: 3,
+        masteredAge: '5 tahun',
+      },
+      'fedc-3-2': {
+        itemId: 'fedc-3-2',
+        rating: 'S',
+        score: 3,
+        masteredAge: '5 tahun',
+      },
+      'fedc-3-3': {
+        itemId: 'fedc-3-3',
+        rating: 'S',
+        score: 3,
+        masteredAge: '6 tahun',
+      },
+      'fedc-3-4': {
+        itemId: 'fedc-3-4',
+        rating: 'S',
+        score: 3,
+        masteredAge: '4.5 tahun',
+      },
+      'fedc-4-1': {
+        itemId: 'fedc-4-1',
+        rating: 'S',
+        score: 3,
+        masteredAge: '6 tahun',
+      },
+      'fedc-4-2': {
+        itemId: 'fedc-4-2',
+        rating: 'S',
+        score: 3,
+        masteredAge: '6 tahun',
+      },
+      'fedc-4-3': {
+        itemId: 'fedc-4-3',
+        rating: 'S',
+        score: 3,
+        masteredAge: '6 tahun',
+      },
+      'fedc-4-4': {
+        itemId: 'fedc-4-4',
+        rating: 'S',
+        score: 3,
+        masteredAge: '6.5 tahun',
+      },
+      'fedc-5-1': {
+        itemId: 'fedc-5-1',
+        rating: 'S',
+        score: 3,
+        masteredAge: '6.5 tahun',
+      },
+      'fedc-5-2': {
+        itemId: 'fedc-5-2',
+        rating: 'S',
+        score: 3,
+        masteredAge: '6 tahun',
+      },
+      'fedc-5-3': {
+        itemId: 'fedc-5-3',
+        rating: 'S',
+        score: 3,
+        masteredAge: '7 tahun',
+      },
+      'fedc-5-4': {
+        itemId: 'fedc-5-4',
+        rating: 'K',
+        score: 2,
+        masteredAge: '8 tahun',
+      },
+      'fedc-6-1': {
+        itemId: 'fedc-6-1',
+        rating: 'S',
+        score: 3,
+        masteredAge: '8 tahun',
+      },
+      'fedc-6-2': {
+        itemId: 'fedc-6-2',
+        rating: 'S',
+        score: 3,
+        masteredAge: '8.5 tahun',
+      },
+      'fedc-6-3': {
+        itemId: 'fedc-6-3',
+        rating: 'K',
+        score: 2,
+        masteredAge: '9 tahun',
+      },
+      'fedc-6-4': {
+        itemId: 'fedc-6-4',
+        rating: 'K',
+        score: 2,
+        masteredAge: '9.5 tahun',
+      },
     },
     milestoneScores: { 1: 12, 2: 12, 3: 12, 4: 12, 5: 11, 6: 10 },
     totalScore: 69,
     maxPossibleScore: 72,
-    notes: 'Alex is age-appropriate across social-emotional developmental milestones. Focus remains on dyscalculia accommodations and math working memory strategies.',
+    notes:
+      'Alex is age-appropriate across social-emotional developmental milestones. Focus remains on dyscalculia accommodations and math working memory strategies.',
     createdAt: '2026-10-20T14:00:00Z',
-    updatedAt: '2026-10-20T15:30:00Z'
-  }
+    updatedAt: '2026-10-20T15:30:00Z',
+  },
 ];
 
 export const SEED_SENSORY_PROFILE: SensoryProfileRecord = {
@@ -908,24 +2045,63 @@ export const SEED_SENSORY_PROFILE: SensoryProfileRecord = {
   teacherContactLength: 'Full School Year (7 months)',
   status: 'Completed',
   responses: {
-    'sp-1': 4, 'sp-2': 4, 'sp-3': 3, 'sp-4': 2, 'sp-5': 5, 'sp-6': 3, 'sp-7': 1, 'sp-8': 4,
-    'sp-9': 3, 'sp-10': 2, 'sp-11': 4, 'sp-12': 3, 'sp-13': 2, 'sp-14': 3, 'sp-15': 2, 'sp-16': 2,
-    'sp-17': 4, 'sp-18': 5, 'sp-19': 3, 'sp-20': 2, 'sp-21': 4, 'sp-22': 4, 'sp-23': 2, 'sp-24': 4,
-    'sp-25': 4, 'sp-26': 2, 'sp-27': 3, 'sp-28': 2, 'sp-29': 2, 'sp-30': 3, 'sp-31': 3, 'sp-32': 3,
-    'sp-33': 4, 'sp-34': 5, 'sp-35': 3, 'sp-36': 4, 'sp-37': 5, 'sp-38': 3, 'sp-39': 2, 'sp-40': 4,
-    'sp-41': 4, 'sp-42': 3, 'sp-43': 3, 'sp-44': 4
+    'sp-1': 4,
+    'sp-2': 4,
+    'sp-3': 3,
+    'sp-4': 2,
+    'sp-5': 5,
+    'sp-6': 3,
+    'sp-7': 1,
+    'sp-8': 4,
+    'sp-9': 3,
+    'sp-10': 2,
+    'sp-11': 4,
+    'sp-12': 3,
+    'sp-13': 2,
+    'sp-14': 3,
+    'sp-15': 2,
+    'sp-16': 2,
+    'sp-17': 4,
+    'sp-18': 5,
+    'sp-19': 3,
+    'sp-20': 2,
+    'sp-21': 4,
+    'sp-22': 4,
+    'sp-23': 2,
+    'sp-24': 4,
+    'sp-25': 4,
+    'sp-26': 2,
+    'sp-27': 3,
+    'sp-28': 2,
+    'sp-29': 2,
+    'sp-30': 3,
+    'sp-31': 3,
+    'sp-32': 3,
+    'sp-33': 4,
+    'sp-34': 5,
+    'sp-35': 3,
+    'sp-36': 4,
+    'sp-37': 5,
+    'sp-38': 3,
+    'sp-39': 2,
+    'sp-40': 4,
+    'sp-41': 4,
+    'sp-42': 3,
+    'sp-43': 3,
+    'sp-44': 4,
   },
   sectionScores: {
     auditory: { raw: 26, max: 40 },
     visual: { raw: 21, max: 40 },
     touch: { raw: 28, max: 40 },
     movement: { raw: 22, max: 40 },
-    behavioral: { raw: 40, max: 60 }
+    behavioral: { raw: 40, max: 60 },
   },
   totalRawScore: 137,
-  notes: 'High sensitivity noted in Auditory (Factor 1 - Sensory Sensitive) and Touch. Tactile defensiveness in glue/clay tasks and acoustic overload during cafeteria transitions require designated noise-dampening earmuffs and advance visual schedules.',
+  notes:
+    'High sensitivity noted in Auditory (Factor 1 - Sensory Sensitive) and Touch. Tactile defensiveness in glue/clay tasks and acoustic overload during cafeteria transitions require designated noise-dampening earmuffs and advance visual schedules.',
   createdAt: '2026-10-16T13:00:00Z',
-  updatedAt: '2026-10-16T14:30:00Z'
+  updatedAt: '2026-10-16T14:30:00Z',
 };
 
 export const SEED_ALL_SENSORY_PROFILES: SensoryProfileRecord[] = [
@@ -942,25 +2118,64 @@ export const SEED_ALL_SENSORY_PROFILES: SensoryProfileRecord[] = [
     teacherContactLength: 'Initial Term (3 months)',
     status: 'Completed',
     responses: {
-      'sp-1': 5, 'sp-2': 5, 'sp-3': 4, 'sp-4': 3, 'sp-5': 5, 'sp-6': 4, 'sp-7': 2, 'sp-8': 5,
-      'sp-9': 4, 'sp-10': 3, 'sp-11': 4, 'sp-12': 4, 'sp-13': 3, 'sp-14': 4, 'sp-15': 3, 'sp-16': 3,
-      'sp-17': 5, 'sp-18': 5, 'sp-19': 4, 'sp-20': 3, 'sp-21': 5, 'sp-22': 5, 'sp-23': 3, 'sp-24': 5,
-      'sp-25': 5, 'sp-26': 3, 'sp-27': 4, 'sp-28': 3, 'sp-29': 3, 'sp-30': 4, 'sp-31': 4, 'sp-32': 4,
-      'sp-33': 5, 'sp-34': 5, 'sp-35': 4, 'sp-36': 5, 'sp-37': 5, 'sp-38': 4, 'sp-39': 3, 'sp-40': 5,
-      'sp-41': 5, 'sp-42': 4, 'sp-43': 4, 'sp-44': 5
+      'sp-1': 5,
+      'sp-2': 5,
+      'sp-3': 4,
+      'sp-4': 3,
+      'sp-5': 5,
+      'sp-6': 4,
+      'sp-7': 2,
+      'sp-8': 5,
+      'sp-9': 4,
+      'sp-10': 3,
+      'sp-11': 4,
+      'sp-12': 4,
+      'sp-13': 3,
+      'sp-14': 4,
+      'sp-15': 3,
+      'sp-16': 3,
+      'sp-17': 5,
+      'sp-18': 5,
+      'sp-19': 4,
+      'sp-20': 3,
+      'sp-21': 5,
+      'sp-22': 5,
+      'sp-23': 3,
+      'sp-24': 5,
+      'sp-25': 5,
+      'sp-26': 3,
+      'sp-27': 4,
+      'sp-28': 3,
+      'sp-29': 3,
+      'sp-30': 4,
+      'sp-31': 4,
+      'sp-32': 4,
+      'sp-33': 5,
+      'sp-34': 5,
+      'sp-35': 4,
+      'sp-36': 5,
+      'sp-37': 5,
+      'sp-38': 4,
+      'sp-39': 3,
+      'sp-40': 5,
+      'sp-41': 5,
+      'sp-42': 4,
+      'sp-43': 4,
+      'sp-44': 5,
     },
     sectionScores: {
       auditory: { raw: 32, max: 40 },
       visual: { raw: 26, max: 40 },
       touch: { raw: 34, max: 40 },
       movement: { raw: 28, max: 40 },
-      behavioral: { raw: 48, max: 60 }
+      behavioral: { raw: 48, max: 60 },
     },
     totalRawScore: 168,
-    notes: 'Prior year assessment: Severe hyper-reactivity to sensory input. Sensory accommodations significantly calmed emotional escalation in Year 2.',
+    notes:
+      'Prior year assessment: Severe hyper-reactivity to sensory input. Sensory accommodations significantly calmed emotional escalation in Year 2.',
     createdAt: '2025-10-18T13:00:00Z',
-    updatedAt: '2025-10-18T14:30:00Z'
-  }
+    updatedAt: '2025-10-18T14:30:00Z',
+  },
 ];
 
 export const SEED_SFA_OBSERVATION: SFAObservationRecord = {
@@ -975,14 +2190,30 @@ export const SEED_SFA_OBSERVATION: SFAObservationRecord = {
   status: 'Completed',
   programRecommendation: 'Regular',
   respondents: [
-    { id: 'resp-1', name: 'Ms. Elena Johnson', role: 'Special Education Coordinator', initials: 'EJ' },
-    { id: 'resp-2', name: 'Sarah Woods', role: 'Homeroom Teacher', initials: 'SW' },
-    { id: 'resp-3', name: 'Dr. Clara Vance', role: 'Occupational Therapist', initials: 'CV' }
+    {
+      id: 'resp-1',
+      name: 'Ms. Elena Johnson',
+      role: 'Special Education Coordinator',
+      initials: 'EJ',
+    },
+    {
+      id: 'resp-2',
+      name: 'Sarah Woods',
+      role: 'Homeroom Teacher',
+      initials: 'SW',
+    },
+    {
+      id: 'resp-3',
+      name: 'Dr. Clara Vance',
+      role: 'Occupational Therapist',
+      initials: 'CV',
+    },
   ],
   primaryLanguage: 'English & Japanese (Bilingual home)',
   writingMethod: 'Adaptive pencil grip & slant board',
   mobilityMethod: 'Independent ambulation with visual hallway guides',
-  conditionsAffectingPerformance: 'Sensory overload in crowded areas; expressive communication pacing',
+  conditionsAffectingPerformance:
+    'Sensory overload in crowded areas; expressive communication pacing',
   participationScores: {
     regularClassroom: 4,
     specialEdClassroom: 6,
@@ -990,28 +2221,30 @@ export const SEED_SFA_OBSERVATION: SFAObservationRecord = {
     transportation: 5,
     bathroomToilet: 5,
     transitions: 4,
-    mealSnackTime: 4
+    mealSnackTime: 4,
   },
   participationAverage: 4.57,
-  participationNotes: 'Performs optimally in small group and structured stations; requires proactive 2-minute transitional countdowns during classroom rotations.',
+  participationNotes:
+    'Performs optimally in small group and structured stations; requires proactive 2-minute transitional countdowns during classroom rotations.',
   taskSupports: {
     physicalAssistance: 3,
     physicalAdaptation: 4,
     cognitiveAssistance: 3,
-    cognitiveAdaptation: 3
+    cognitiveAdaptation: 3,
   },
-  taskSupportNotes: 'Benefits significantly from visual checklist schedules, weighted lap pad during table work, and noise-canceling headphones in gym/assembly.',
+  taskSupportNotes:
+    'Benefits significantly from visual checklist schedules, weighted lap pad during table work, and noise-canceling headphones in gym/assembly.',
   activityPerformance: {
-    'travel': 3,
-    'maintaining_posture': 3,
-    'manipulation': 3,
-    'eating_drinking': 4,
-    'hygiene': 4,
-    'clothing_management': 3,
-    'functional_communication': 3,
-    'memory_understanding': 3,
-    'following_social_conventions': 3,
-    'task_behavior_completion': 3
+    travel: 3,
+    maintaining_posture: 3,
+    manipulation: 3,
+    eating_drinking: 4,
+    hygiene: 4,
+    clothing_management: 3,
+    functional_communication: 3,
+    memory_understanding: 3,
+    following_social_conventions: 3,
+    task_behavior_completion: 3,
   },
   adaptations: [
     'Slant board for paper positioning',
@@ -1019,11 +2252,12 @@ export const SEED_SFA_OBSERVATION: SFAObservationRecord = {
     'Visual daily schedule strip at desk',
     'Quiet sensory corner retreat access',
     'Noise-reduction headphones for fire drills and loud assemblies',
-    'Weighted sensory vest during floor circle time (15 min intervals)'
+    'Weighted sensory vest during floor circle time (15 min intervals)',
   ],
-  adaptationsNotes: 'Review adaptations quarterly with Occupational Therapy consultant.',
+  adaptationsNotes:
+    'Review adaptations quarterly with Occupational Therapy consultant.',
   createdAt: '2026-10-18T10:00:00Z',
-  updatedAt: '2026-10-18T12:00:00Z'
+  updatedAt: '2026-10-18T12:00:00Z',
 };
 
 // Observation Assignments (Created & Managed by Special Ed Coordinator)
@@ -1044,10 +2278,11 @@ export const SEED_OBSERVATION_ASSIGNMENTS: ObservationAssignment[] = [
     dueDate: '2026-10-30',
     status: 'Completed',
     priority: 'Routine Annual',
-    notes: 'Annual social-emotional and Greenspan 6 Tonggak milestone evaluation.',
+    notes:
+      'Annual social-emotional and Greenspan 6 Tonggak milestone evaluation.',
     createdAt: '2026-10-01T08:00:00Z',
     completedAt: '2026-10-14T11:45:00Z',
-    recordId: 'fedc-rec-001'
+    recordId: 'fedc-rec-001',
   },
   {
     id: 'oa-002',
@@ -1065,10 +2300,11 @@ export const SEED_OBSERVATION_ASSIGNMENTS: ObservationAssignment[] = [
     dueDate: '2026-11-05',
     status: 'Completed',
     priority: 'Routine Annual',
-    notes: 'Clinical OT evaluation for tactile defensiveness and sensory processing factor update.',
+    notes:
+      'Clinical OT evaluation for tactile defensiveness and sensory processing factor update.',
     createdAt: '2026-10-01T08:30:00Z',
     completedAt: '2026-10-16T14:30:00Z',
-    recordId: 'sp-rec-001'
+    recordId: 'sp-rec-001',
   },
   {
     id: 'oa-003',
@@ -1086,10 +2322,11 @@ export const SEED_OBSERVATION_ASSIGNMENTS: ObservationAssignment[] = [
     dueDate: '2026-11-15',
     status: 'Completed',
     priority: 'Routine Annual',
-    notes: 'Annual FEDC evaluation with focus on communicative cycles and play interaction.',
+    notes:
+      'Annual FEDC evaluation with focus on communicative cycles and play interaction.',
     createdAt: '2026-10-05T09:00:00Z',
     completedAt: '2026-10-15T12:00:00Z',
-    recordId: 'fedc-rec-003-2026'
+    recordId: 'fedc-rec-003-2026',
   },
   {
     id: 'oa-004',
@@ -1107,8 +2344,9 @@ export const SEED_OBSERVATION_ASSIGNMENTS: ObservationAssignment[] = [
     dueDate: '2026-11-28',
     status: 'In Progress',
     priority: 'Routine Annual',
-    notes: 'Evaluate upper-grade classroom task participation and working memory supports.',
-    createdAt: '2026-10-10T11:00:00Z'
+    notes:
+      'Evaluate upper-grade classroom task participation and working memory supports.',
+    createdAt: '2026-10-10T11:00:00Z',
   },
   {
     id: 'oa-005',
@@ -1126,9 +2364,10 @@ export const SEED_OBSERVATION_ASSIGNMENTS: ObservationAssignment[] = [
     dueDate: '2026-12-05',
     status: 'Pending',
     priority: 'Urgent Re-Evaluation',
-    notes: 'Follow-up on sensory motor transitions and sound sensitivity in cafeteria.',
-    createdAt: '2026-10-22T14:15:00Z'
-  }
+    notes:
+      'Follow-up on sensory motor transitions and sound sensitivity in cafeteria.',
+    createdAt: '2026-10-22T14:15:00Z',
+  },
 ];
 
 // Observation Form Definitions
@@ -1138,43 +2377,46 @@ export const SEED_OBSERVATION_FORMS: ObservationFormDefinition[] = [
     type: 'FEDC',
     title: 'FEDC Functional Emotional Developmental Milestones',
     framework: 'Stanley Greenspan DIR/Floortime Model (6 Tonggak Perkembangan)',
-    description: 'Comprehensive developmental rubric measuring emotional self-regulation, reciprocal interaction, social problem-solving, and emotional idea synthesis.',
+    description:
+      'Comprehensive developmental rubric measuring emotional self-regulation, reciprocal interaction, social problem-solving, and emotional idea synthesis.',
     targetAges: 'Age 3–12 (Early Years & Elementary)',
     defaultFrequency: 'Annual (Once per Academic Year)',
     version: '2.4 (Indonesian Edition)',
     itemCount: 24,
     lastUpdated: '2026-08-01',
     updatedBy: 'Ms. Elena Johnson',
-    isActive: true
+    isActive: true,
   },
   {
     id: 'form-sensory-v2',
     type: 'SENSORY_PROFILE',
     title: 'Sensory Profile 2 (School Companion)',
     framework: 'Winnie Dunn Sensory Processing Framework',
-    description: 'Standardized school-environment sensory questionnaire assessing auditory, visual, tactile, movement, and behavioral modulation across 4 quadrants.',
+    description:
+      'Standardized school-environment sensory questionnaire assessing auditory, visual, tactile, movement, and behavioral modulation across 4 quadrants.',
     targetAges: 'Age 3–14 (K–Grade 8)',
     defaultFrequency: 'Annual / Specialist Diagnostic',
     version: '2.1',
     itemCount: 44,
     lastUpdated: '2026-08-10',
     updatedBy: 'Ms. Elena Johnson',
-    isActive: true
+    isActive: true,
   },
   {
     id: 'form-sfa-v1',
     type: 'SFA',
     title: 'School Function Assessment (SFA)',
     framework: 'Coster, DeBaun, Haltiwanger & Mancini',
-    description: 'Multi-disciplinary evaluation measuring participation in 6 school settings, task support requirements, and activity performance in academic and non-academic domains.',
+    description:
+      'Multi-disciplinary evaluation measuring participation in 6 school settings, task support requirements, and activity performance in academic and non-academic domains.',
     targetAges: 'Kindergarten through Grade 6',
     defaultFrequency: 'Annual / Triennial Review',
     version: '1.8',
     itemCount: 32,
     lastUpdated: '2026-07-25',
     updatedBy: 'Ms. Elena Johnson',
-    isActive: true
-  }
+    isActive: true,
+  },
 ];
 
 export const SEED_IEP_RECORD: IEPRecord = {
@@ -1185,9 +2427,11 @@ export const SEED_IEP_RECORD: IEPRecord = {
   semester: 'Semester 1',
   unit: 'Elementary',
   status: 'Approved',
-  consideration: 'Annual Comprehensive IEP Evaluation & Progress Milestone Plan',
+  consideration:
+    'Annual Comprehensive IEP Evaluation & Progress Milestone Plan',
   primaryClassification: 'Autism Spectrum Disorder (ASD)',
-  currentPlacement: 'General Education Grade 1 Classroom with 8 hrs/week Special Education Co-Teaching & Resource Support',
+  currentPlacement:
+    'General Education Grade 1 Classroom with 8 hrs/week Special Education Co-Teaching & Resource Support',
   assignedTeacherId: 'usr-gpk-1',
   assignedTeacherName: 'Budi Pratama, S.Pd.',
   draftStatus: 'SUBMITTED',
@@ -1202,7 +2446,8 @@ export const SEED_IEP_RECORD: IEPRecord = {
       actorName: 'Budi Pratama, S.Pd.',
       actorRole: 'GPK Teacher',
       timestamp: '2026-09-22T08:00:00Z',
-      notes: 'Initial annual IEP draft compiled following term-start observation assessments.'
+      notes:
+        'Initial annual IEP draft compiled following term-start observation assessments.',
     },
     {
       id: 'wf-iep-2',
@@ -1212,7 +2457,8 @@ export const SEED_IEP_RECORD: IEPRecord = {
       actorName: 'Ms. Elena Johnson',
       actorRole: 'Special Education Coordinator',
       timestamp: '2026-09-25T14:30:00Z',
-      notes: 'Reviewed accommodations, goals, and therapy integration. Approved for Director Sign-off.'
+      notes:
+        'Reviewed accommodations, goals, and therapy integration. Approved for Director Sign-off.',
     },
     {
       id: 'wf-iep-3',
@@ -1222,53 +2468,98 @@ export const SEED_IEP_RECORD: IEPRecord = {
       actorName: 'Director Jonathan Miller',
       actorRole: 'Director of Academics & Governance',
       timestamp: '2026-09-28T16:00:00Z',
-      notes: 'Final IEP approved. Resources allocated for GPK support.'
-    }
+      notes: 'Final IEP approved. Resources allocated for GPK support.',
+    },
   ],
   teamMembers: [
-    { id: 'tm-1', role: 'School Principal', name: 'Dr. Sarah Jenkins', initial: 'SJ', confirmed: true },
-    { id: 'tm-2', role: 'Special Education Coordinator', name: 'Ms. Elena Johnson', initial: 'EJ', confirmed: true },
-    { id: 'tm-3', role: 'Grade 1 Homeroom Teacher', name: 'Sarah Woods', initial: 'SW', confirmed: true },
-    { id: 'tm-4', role: 'Occupational Therapist', name: 'Dr. Clara Vance', initial: 'CV', confirmed: true },
-    { id: 'tm-5', role: 'Parents / Guardians', name: 'Kenji & Mei Tanaka', initial: 'KT', confirmed: true }
+    {
+      id: 'tm-1',
+      role: 'School Principal',
+      name: 'Dr. Sarah Jenkins',
+      initial: 'SJ',
+      confirmed: true,
+    },
+    {
+      id: 'tm-2',
+      role: 'Special Education Coordinator',
+      name: 'Ms. Elena Johnson',
+      initial: 'EJ',
+      confirmed: true,
+    },
+    {
+      id: 'tm-3',
+      role: 'Grade 1 Homeroom Teacher',
+      name: 'Sarah Woods',
+      initial: 'SW',
+      confirmed: true,
+    },
+    {
+      id: 'tm-4',
+      role: 'Occupational Therapist',
+      name: 'Dr. Clara Vance',
+      initial: 'CV',
+      confirmed: true,
+    },
+    {
+      id: 'tm-5',
+      role: 'Parents / Guardians',
+      name: 'Kenji & Mei Tanaka',
+      initial: 'KT',
+      confirmed: true,
+    },
   ],
   performanceAreas: [
     {
       id: 'pa-1',
       name: 'Receptive & Expressive Language',
       category: 'Communication',
-      strengths: 'Strong single-word vocabulary recognition, identifies letters, numbers, and colors accurately, responds well to visual icons.',
-      needs: 'Expressing multi-word requests when experiencing frustration, initiating spontaneous verbal exchanges with peers during free play.',
-      impactOfNeed: 'Impacts peer socialization and self-advocacy in unstructured environments.',
-      informationSource: 'Speech-Language Evaluation & FEDC Milestone 3-4 assessment',
-      assessmentProcess: 'Standardized language sampling and classroom observation',
+      strengths:
+        'Strong single-word vocabulary recognition, identifies letters, numbers, and colors accurately, responds well to visual icons.',
+      needs:
+        'Expressing multi-word requests when experiencing frustration, initiating spontaneous verbal exchanges with peers during free play.',
+      impactOfNeed:
+        'Impacts peer socialization and self-advocacy in unstructured environments.',
+      informationSource:
+        'Speech-Language Evaluation & FEDC Milestone 3-4 assessment',
+      assessmentProcess:
+        'Standardized language sampling and classroom observation',
       assessmentDate: '2026-09-12',
-      summaryOfResults: 'Shows 70% receptive accuracy with visual aids; expressive phrases average 2-3 words.'
+      summaryOfResults:
+        'Shows 70% receptive accuracy with visual aids; expressive phrases average 2-3 words.',
     },
     {
       id: 'pa-2',
       name: 'Sensory Processing & Fine Motor Control',
       category: 'Motor',
-      strengths: 'Enjoys structured movement circuits, excels at interlocking block construction and tablet sorting games.',
-      needs: 'Pencil grasp endurance, tolerance of messy tactile art media (glue/paint), coping with high-decibel auditory environments.',
-      impactOfNeed: 'Impacts written task completion speed and sustained focus during art/assembly periods.',
+      strengths:
+        'Enjoys structured movement circuits, excels at interlocking block construction and tablet sorting games.',
+      needs:
+        'Pencil grasp endurance, tolerance of messy tactile art media (glue/paint), coping with high-decibel auditory environments.',
+      impactOfNeed:
+        'Impacts written task completion speed and sustained focus during art/assembly periods.',
       informationSource: 'School Companion Sensory Profile & SFA Report',
       assessmentProcess: 'OT Clinical observation and teacher questionnaire',
       assessmentDate: '2026-09-15',
-      summaryOfResults: 'Displays Factor 1 Sensory Sensitivity in auditory and tactile domains.'
+      summaryOfResults:
+        'Displays Factor 1 Sensory Sensitivity in auditory and tactile domains.',
     },
     {
       id: 'pa-3',
       name: 'Academic Mathematics & Patterning',
       category: 'Academic',
-      strengths: 'Recognizes numbers 1-50, executes 1-to-1 correspondence with counting bears, enjoys digital math puzzles.',
-      needs: 'Translating visual quantity to word problems and sustaining multi-step math workstation tasks independently.',
-      impactOfNeed: 'Requires scaffolded pictorial cues to complete two-step worksheets.',
+      strengths:
+        'Recognizes numbers 1-50, executes 1-to-1 correspondence with counting bears, enjoys digital math puzzles.',
+      needs:
+        'Translating visual quantity to word problems and sustaining multi-step math workstation tasks independently.',
+      impactOfNeed:
+        'Requires scaffolded pictorial cues to complete two-step worksheets.',
       informationSource: 'Grade 1 Math Diagnostic Assessment',
-      assessmentProcess: 'Teacher diagnostic probe and curriculum based assessment',
+      assessmentProcess:
+        'Teacher diagnostic probe and curriculum based assessment',
       assessmentDate: '2026-09-20',
-      summaryOfResults: 'Demonstrates grade-level foundational numeracy with accommodation for verbal reasoning.'
-    }
+      summaryOfResults:
+        'Demonstrates grade-level foundational numeracy with accommodation for verbal reasoning.',
+    },
   ],
   academicAccommodations: {
     math: 'A',
@@ -1277,117 +2568,165 @@ export const SEED_IEP_RECORD: IEPRecord = {
     bahasaIndonesia: 'A',
     pe: 'A',
     makerspace: 'A',
-    religion: 'A'
+    religion: 'A',
   },
   instructionalAccommodations: [
     'Provide visual first-then board for multi-step instructions',
     'Allow extra processing time (5-10 seconds) after asking verbal questions',
     'Break complex assignments into 10-minute focused intervals with scheduled movement breaks',
-    'Pair verbal directions with pictorial flashcards or demonstration'
+    'Pair verbal directions with pictorial flashcards or demonstration',
   ],
   environmentalAccommodations: [
     'Preferential front-row seating away from air conditioning vents and door traffic',
     'Noise-dampening headphones accessible during cafeteria, gym, and assemblies',
-    'Access to calm-down sensory corner with weighted lap cushion'
+    'Access to calm-down sensory corner with weighted lap cushion',
   ],
   assessmentAccommodations: [
     'Oral reading of test directions and math word problems',
     'Extended time (1.5x) for written assessments in a low-distraction setting',
-    'Use of adaptive pencil grip and slant writing board'
+    'Use of adaptive pencil grip and slant writing board',
   ],
   goals: [
     {
       id: 'g-001',
       code: 'GL-001',
       performanceArea: 'Expressive Communication & Self-Advocacy',
-      longTermGoal: 'Leo will communicate basic emotional states and request help independently across all school settings.',
-      shortTermGoal: 'Using a 4-word phrase or communication visual aid to request a break or materials.',
-      measurableGoal: 'When feeling overwhelmed or in need of materials, Leo will independently use a 3- to 4-word verbal sentence or point to his visual choice board (e.g., "I need a break" or "Help with scissors, please") in 4 out of 5 observed opportunities across a 2-week recording period.',
-      strategyActivity: 'Visual schedule prompt, modeled self-advocacy scripts, teacher verbal scaffolding.',
-      learningExpectation: 'Expressive verbal/pictorial request initiated with no more than 1 indirect teacher cue.',
-      learningStrategy: 'Praise and immediate reinforcement upon functional communicative attempt.',
-      evaluationMethod: 'Weekly observation log & IEP weekly progress tracking rubric',
+      longTermGoal:
+        'Leo will communicate basic emotional states and request help independently across all school settings.',
+      shortTermGoal:
+        'Using a 4-word phrase or communication visual aid to request a break or materials.',
+      measurableGoal:
+        'When feeling overwhelmed or in need of materials, Leo will independently use a 3- to 4-word verbal sentence or point to his visual choice board (e.g., "I need a break" or "Help with scissors, please") in 4 out of 5 observed opportunities across a 2-week recording period.',
+      strategyActivity:
+        'Visual schedule prompt, modeled self-advocacy scripts, teacher verbal scaffolding.',
+      learningExpectation:
+        'Expressive verbal/pictorial request initiated with no more than 1 indirect teacher cue.',
+      learningStrategy:
+        'Praise and immediate reinforcement upon functional communicative attempt.',
+      evaluationMethod:
+        'Weekly observation log & IEP weekly progress tracking rubric',
       schedule: 'Weekly',
       targetDate: '2027-02-15',
       active: true,
-      achieved: false
+      achieved: false,
     },
     {
       id: 'g-002',
       code: 'GL-002',
       performanceArea: 'Classroom Transition & Task Initiation',
-      longTermGoal: 'Leo will transition smoothly between academic stations with minimal teacher assistance.',
-      shortTermGoal: 'Transitioning from preferred free play to seatwork within 2 minutes of visual timer alarm.',
-      measurableGoal: 'Given a 2-minute visual sand timer or auditory chime countdown, Leo will put away current materials and transition to his designated desk station within 2 minutes with no more than 1 gentle verbal reminder in 80% of daily transitions over 3 consecutive weeks.',
-      strategyActivity: 'Individual desktop visual timer, transition song cue, and assigned peer transition buddy.',
-      learningExpectation: 'Orderly desk arrival and seated posture ready for instruction.',
+      longTermGoal:
+        'Leo will transition smoothly between academic stations with minimal teacher assistance.',
+      shortTermGoal:
+        'Transitioning from preferred free play to seatwork within 2 minutes of visual timer alarm.',
+      measurableGoal:
+        'Given a 2-minute visual sand timer or auditory chime countdown, Leo will put away current materials and transition to his designated desk station within 2 minutes with no more than 1 gentle verbal reminder in 80% of daily transitions over 3 consecutive weeks.',
+      strategyActivity:
+        'Individual desktop visual timer, transition song cue, and assigned peer transition buddy.',
+      learningExpectation:
+        'Orderly desk arrival and seated posture ready for instruction.',
       learningStrategy: 'Structured routine with predictable transition cues.',
       evaluationMethod: 'Teacher daily tracking log',
       schedule: 'Weekly',
       targetDate: '2027-01-20',
       active: true,
-      achieved: false
+      achieved: false,
     },
     {
       id: 'g-003',
       code: 'GL-003',
       performanceArea: 'Fine Motor & Pencil Grasp Endurance',
-      longTermGoal: 'Leo will develop functional tripod grip and complete handwriting strokes with controlled line accuracy.',
-      shortTermGoal: 'Tracing and writing 10 alphabet letters on lined paper using adaptive pencil grip.',
-      measurableGoal: 'Leo will utilize a modified tripod grip on an adaptive pencil to trace and independently write 10 uppercase and lowercase target letters on wide-ruled primary paper with 80% letter formation legibility over 4 consecutive OT sessions.',
-      strategyActivity: 'Slant board writing, theraputty hand-strengthening warmups, guided sensory tracing.',
-      learningExpectation: 'Consistent pencil control with minimal hand fatigue.',
-      learningStrategy: 'Multi-sensory sand tray tracing followed by paper practice.',
+      longTermGoal:
+        'Leo will develop functional tripod grip and complete handwriting strokes with controlled line accuracy.',
+      shortTermGoal:
+        'Tracing and writing 10 alphabet letters on lined paper using adaptive pencil grip.',
+      measurableGoal:
+        'Leo will utilize a modified tripod grip on an adaptive pencil to trace and independently write 10 uppercase and lowercase target letters on wide-ruled primary paper with 80% letter formation legibility over 4 consecutive OT sessions.',
+      strategyActivity:
+        'Slant board writing, theraputty hand-strengthening warmups, guided sensory tracing.',
+      learningExpectation:
+        'Consistent pencil control with minimal hand fatigue.',
+      learningStrategy:
+        'Multi-sensory sand tray tracing followed by paper practice.',
       evaluationMethod: 'OT work sample evaluation and portfolio rubric',
       schedule: 'Bi-weekly',
       targetDate: '2027-03-30',
       active: true,
-      achieved: false
+      achieved: false,
     },
     {
       id: 'g-004',
       code: 'GL-004',
       performanceArea: 'Social Play & Turn-Taking',
-      longTermGoal: 'Leo will engage in cooperative reciprocal games with peers during indoor recess.',
-      shortTermGoal: 'Taking turns in structured 2-player board games for 5 consecutive rounds.',
-      measurableGoal: 'During guided small group play sessions, Leo will wait for his turn and pass game pieces to a peer during a structured turn-taking game (e.g., Connect 4 or Memory match) for at least 5 consecutive turns with verbal cheer in 4 out of 5 observed sessions.',
-      strategyActivity: 'Teacher-facilitated game circle, visual "My Turn / Your Turn" marker card.',
+      longTermGoal:
+        'Leo will engage in cooperative reciprocal games with peers during indoor recess.',
+      shortTermGoal:
+        'Taking turns in structured 2-player board games for 5 consecutive rounds.',
+      measurableGoal:
+        'During guided small group play sessions, Leo will wait for his turn and pass game pieces to a peer during a structured turn-taking game (e.g., Connect 4 or Memory match) for at least 5 consecutive turns with verbal cheer in 4 out of 5 observed sessions.',
+      strategyActivity:
+        'Teacher-facilitated game circle, visual "My Turn / Your Turn" marker card.',
       learningExpectation: 'Calm waiting behavior and verbal turn passing.',
       learningStrategy: 'Turn marker card passed physically between players.',
       evaluationMethod: 'Recess observation check sheet',
       schedule: 'Weekly',
       targetDate: '2027-04-15',
       active: true,
-      achieved: false
-    }
+      achieved: false,
+    },
   ],
   serviceSchedule: [
-    { id: 'ss-1', serviceName: 'Special Education Resource Room & Co-Teaching', type: '1:1', duration: '45 mins', frequency: '4x per week', location: 'Resource Room 104 & Classroom 1-A', days: 'Mon, Tue, Wed, Thu' },
-    { id: 'ss-2', serviceName: 'Occupational Therapy (OT)', type: '1:1', duration: '30 mins', frequency: '2x per week', location: 'Sensory Integration Therapy Suite', days: 'Tue, Thu' },
-    { id: 'ss-3', serviceName: 'Speech-Language Consultation', type: 'Consultation', duration: '30 mins', frequency: '1x per week', location: 'Speech Lab', days: 'Wednesday' }
+    {
+      id: 'ss-1',
+      serviceName: 'Special Education Resource Room & Co-Teaching',
+      type: '1:1',
+      duration: '45 mins',
+      frequency: '4x per week',
+      location: 'Resource Room 104 & Classroom 1-A',
+      days: 'Mon, Tue, Wed, Thu',
+    },
+    {
+      id: 'ss-2',
+      serviceName: 'Occupational Therapy (OT)',
+      type: '1:1',
+      duration: '30 mins',
+      frequency: '2x per week',
+      location: 'Sensory Integration Therapy Suite',
+      days: 'Tue, Thu',
+    },
+    {
+      id: 'ss-3',
+      serviceName: 'Speech-Language Consultation',
+      type: 'Consultation',
+      duration: '30 mins',
+      frequency: '1x per week',
+      location: 'Speech Lab',
+      days: 'Wednesday',
+    },
   ],
   progressMeasurementMethods: [
     'Weekly IEP progress rubric tracking',
     'Quarterly work sample portfolio analysis',
     'Direct behavioral observational data logs',
-    'Bi-weekly Occupational Therapy progress notes'
+    'Bi-weekly Occupational Therapy progress notes',
   ],
   parentCommunicationMethods: [
     'Weekly digital IEP progress report via portal',
     'Monthly collaborative check-in meeting (In-person / Zoom)',
-    'Daily home-school visual communication notebook'
+    'Daily home-school visual communication notebook',
   ],
-  homePartnershipSupport: 'Parents will implement consistent visual timer routines at home for homework and bedtime transitions. School provides laminated copies of classroom visual schedules and emotion choice boards.',
-  homePartnershipRecommendations: 'Encourage Leo to practice using "I want / I need" phrases when requesting snacks or iPad time rather than leading parents by hand.',
+  homePartnershipSupport:
+    'Parents will implement consistent visual timer routines at home for homework and bedtime transitions. School provides laminated copies of classroom visual schedules and emotion choice boards.',
+  homePartnershipRecommendations:
+    'Encourage Leo to practice using "I want / I need" phrases when requesting snacks or iPad time rather than leading parents by hand.',
   parentApproval: {
     agreed: true,
     parentName: 'Kenji & Mei Tanaka',
-    date: '2026-09-28'
+    date: '2026-09-28',
   },
   createdBy: 'usr-gpk-1',
   createdAt: '2026-09-22T08:00:00Z',
   updatedBy: 'usr-director',
-  updatedAt: '2026-09-28T16:00:00Z'
+  updatedAt: '2026-09-28T16:00:00Z',
 };
 
 export const SEED_IEP_RECORDS: IEPRecord[] = [
@@ -1417,30 +2756,57 @@ export const SEED_IEP_RECORDS: IEPRecord[] = [
         actorName: 'Budi Pratama, S.Pd.',
         actorRole: 'GPK Teacher',
         timestamp: '2026-10-10T10:00:00Z',
-        notes: 'Submitted draft IEP for Elijah focusing on phonemic expansion and sensory calm-down strategies.'
-      }
+        notes:
+          'Submitted draft IEP for Elijah focusing on phonemic expansion and sensory calm-down strategies.',
+      },
     ],
     teamMembers: [
-      { id: 'tm-eli-1', role: 'Special Education Coordinator', name: 'Ms. Elena Johnson', initial: 'EJ', confirmed: true },
-      { id: 'tm-eli-2', role: 'GPK Teacher', name: 'Budi Pratama, S.Pd.', initial: 'BP', confirmed: true },
-      { id: 'tm-eli-3', role: 'Occupational Therapist', name: 'Dr. Clara Vance', initial: 'CV', confirmed: true }
+      {
+        id: 'tm-eli-1',
+        role: 'Special Education Coordinator',
+        name: 'Ms. Elena Johnson',
+        initial: 'EJ',
+        confirmed: true,
+      },
+      {
+        id: 'tm-eli-2',
+        role: 'GPK Teacher',
+        name: 'Budi Pratama, S.Pd.',
+        initial: 'BP',
+        confirmed: true,
+      },
+      {
+        id: 'tm-eli-3',
+        role: 'Occupational Therapist',
+        name: 'Dr. Clara Vance',
+        initial: 'CV',
+        confirmed: true,
+      },
     ],
     performanceAreas: [
       {
         id: 'pa-eli-1',
         name: 'Expressive Phonics & Speech Fluency',
         category: 'Communication',
-        strengths: 'Eager social communicator, excellent listening comprehension.',
-        needs: 'Clear sentence articulation when excited; breath control during multi-clause sentences.',
+        strengths:
+          'Eager social communicator, excellent listening comprehension.',
+        needs:
+          'Clear sentence articulation when excited; breath control during multi-clause sentences.',
         impactOfNeed: 'Affects peer communication clarity in noisy play areas.',
         informationSource: 'Speech Diagnostics',
         assessmentProcess: 'Standard articulation sample',
         assessmentDate: '2026-09-18',
-        summaryOfResults: 'Functional communication score at 75% accuracy.'
-      }
+        summaryOfResults: 'Functional communication score at 75% accuracy.',
+      },
     ],
     academicAccommodations: {
-      math: 'B', science: 'B', english: 'A', bahasaIndonesia: 'A', pe: 'A', makerspace: 'A', religion: 'A'
+      math: 'B',
+      science: 'B',
+      english: 'A',
+      bahasaIndonesia: 'A',
+      pe: 'A',
+      makerspace: 'A',
+      religion: 'A',
     },
     instructionalAccommodations: ['Front row seat', 'Picture prompt cards'],
     environmentalAccommodations: ['Calm corner access'],
@@ -1450,9 +2816,11 @@ export const SEED_IEP_RECORDS: IEPRecord[] = [
         id: 'g-eli-1',
         code: 'GL-ELI-01',
         performanceArea: 'Speech Articulation',
-        longTermGoal: 'Elijah will enunciate 3-syllable words with 85% clarity.',
+        longTermGoal:
+          'Elijah will enunciate 3-syllable words with 85% clarity.',
         shortTermGoal: 'Practicing phoneme blends in morning greeting circle.',
-        measurableGoal: 'Elijah will accurately articulate target phoneme blends in 4 out of 5 guided trials.',
+        measurableGoal:
+          'Elijah will accurately articulate target phoneme blends in 4 out of 5 guided trials.',
         strategyActivity: 'Speech mirror and pacing board',
         learningExpectation: 'Clear verbal greeting to teachers and peers.',
         learningStrategy: 'Immediate verbal and token reinforcement.',
@@ -1460,21 +2828,35 @@ export const SEED_IEP_RECORDS: IEPRecord[] = [
         schedule: 'Weekly',
         targetDate: '2027-01-30',
         active: true,
-        achieved: false
-      }
+        achieved: false,
+      },
     ],
     serviceSchedule: [
-      { id: 'ss-eli-1', serviceName: 'Speech Therapy', type: '1:1', duration: '30 mins', frequency: '2x per week', location: 'Speech Lab', days: 'Mon, Wed' }
+      {
+        id: 'ss-eli-1',
+        serviceName: 'Speech Therapy',
+        type: '1:1',
+        duration: '30 mins',
+        frequency: '2x per week',
+        location: 'Speech Lab',
+        days: 'Mon, Wed',
+      },
     ],
     progressMeasurementMethods: ['Weekly speech rubric'],
     parentCommunicationMethods: ['Bi-weekly progress check-in'],
-    homePartnershipSupport: 'Daily 10-minute bedtime reading aloud with parent phoneme repetition.',
-    homePartnershipRecommendations: 'Praise clear communicative attempts at home.',
-    parentApproval: { agreed: true, parentName: 'Marco & Clara Rossi', date: '2026-10-05' },
+    homePartnershipSupport:
+      'Daily 10-minute bedtime reading aloud with parent phoneme repetition.',
+    homePartnershipRecommendations:
+      'Praise clear communicative attempts at home.',
+    parentApproval: {
+      agreed: true,
+      parentName: 'Marco & Clara Rossi',
+      date: '2026-10-05',
+    },
     createdBy: 'usr-gpk-1',
     createdAt: '2026-10-10T10:00:00Z',
     updatedBy: 'usr-gpk-1',
-    updatedAt: '2026-10-10T10:00:00Z'
+    updatedAt: '2026-10-10T10:00:00Z',
   },
   {
     id: 'iep-2026-007',
@@ -1484,8 +2866,10 @@ export const SEED_IEP_RECORDS: IEPRecord[] = [
     semester: 'Semester 1',
     unit: 'Elementary',
     status: 'Draft',
-    consideration: 'Dyscalculia Scaffold & Math Working Memory Accommodations Plan',
-    primaryClassification: 'Specific Learning Disability (Dyscalculia & Working Memory)',
+    consideration:
+      'Dyscalculia Scaffold & Math Working Memory Accommodations Plan',
+    primaryClassification:
+      'Specific Learning Disability (Dyscalculia & Working Memory)',
     currentPlacement: 'Resource Room Support + GPK Shadow',
     assignedTeacherId: 'usr-gpk-2',
     assignedTeacherName: 'Siti Rahma, S.Pd.',
@@ -1501,63 +2885,104 @@ export const SEED_IEP_RECORDS: IEPRecord[] = [
         actorName: 'Siti Rahma, S.Pd.',
         actorRole: 'GPK Teacher',
         timestamp: '2026-10-12T11:20:00Z',
-        notes: 'Draft started by GPK Teacher Siti Rahma. Aligning math visual manipulatives with Grade 4 syllabus.'
-      }
+        notes:
+          'Draft started by GPK Teacher Siti Rahma. Aligning math visual manipulatives with Grade 4 syllabus.',
+      },
     ],
     teamMembers: [
-      { id: 'tm-alex-1', role: 'Special Education Coordinator', name: 'Ms. Elena Johnson', initial: 'EJ', confirmed: true },
-      { id: 'tm-alex-2', role: 'GPK Teacher', name: 'Siti Rahma, S.Pd.', initial: 'SR', confirmed: true }
+      {
+        id: 'tm-alex-1',
+        role: 'Special Education Coordinator',
+        name: 'Ms. Elena Johnson',
+        initial: 'EJ',
+        confirmed: true,
+      },
+      {
+        id: 'tm-alex-2',
+        role: 'GPK Teacher',
+        name: 'Siti Rahma, S.Pd.',
+        initial: 'SR',
+        confirmed: true,
+      },
     ],
     performanceAreas: [],
-    academicAccommodations: { math: 'A', science: 'B', english: 'A', bahasaIndonesia: 'A', pe: 'A', makerspace: 'A', religion: 'A' },
-    instructionalAccommodations: ['Multiplication reference charts', 'Color-coded calculation worksheets'],
+    academicAccommodations: {
+      math: 'A',
+      science: 'B',
+      english: 'A',
+      bahasaIndonesia: 'A',
+      pe: 'A',
+      makerspace: 'A',
+      religion: 'A',
+    },
+    instructionalAccommodations: [
+      'Multiplication reference charts',
+      'Color-coded calculation worksheets',
+    ],
     environmentalAccommodations: ['Low distraction test room'],
-    assessmentAccommodations: ['Calculator permission for applied math word problems'],
+    assessmentAccommodations: [
+      'Calculator permission for applied math word problems',
+    ],
     goals: [
       {
         id: 'g-alex-1',
         code: 'GL-ALX-01',
         performanceArea: 'Applied Mathematics & Number Sense',
-        longTermGoal: 'Alex will independently use base-10 visual manipulatives and scaffolds for multi-digit addition and subtraction.',
-        shortTermGoal: 'Solving 2-digit addition with regrouping using place-value blocks.',
-        measurableGoal: 'Given visual base-10 block manipulatives and grid paper, Alex will solve 2-digit regrouping addition problems with 80% accuracy across 4 consecutive classroom math sessions.',
-        strategyActivity: 'Visual place value chart, grid organizer, and base-10 blocks.',
-        learningExpectation: 'Accurate column alignment and calculation with minimal hesitation.',
-        learningStrategy: 'Hands-on tactile blocks paired with step-by-step color coded checklist.',
+        longTermGoal:
+          'Alex will independently use base-10 visual manipulatives and scaffolds for multi-digit addition and subtraction.',
+        shortTermGoal:
+          'Solving 2-digit addition with regrouping using place-value blocks.',
+        measurableGoal:
+          'Given visual base-10 block manipulatives and grid paper, Alex will solve 2-digit regrouping addition problems with 80% accuracy across 4 consecutive classroom math sessions.',
+        strategyActivity:
+          'Visual place value chart, grid organizer, and base-10 blocks.',
+        learningExpectation:
+          'Accurate column alignment and calculation with minimal hesitation.',
+        learningStrategy:
+          'Hands-on tactile blocks paired with step-by-step color coded checklist.',
         evaluationMethod: 'Weekly math work sample & probe sheet',
         schedule: 'Weekly',
         targetDate: '2027-02-28',
         active: true,
-        achieved: false
+        achieved: false,
       },
       {
         id: 'g-alex-2',
         code: 'GL-ALX-02',
         performanceArea: 'Math Working Memory & Reference Scaffolding',
-        longTermGoal: 'Alex will reference desktop multiplication charts independently during applied word problem solving.',
-        shortTermGoal: 'Locating correct factor products on a desktop scaffold grid within 15 seconds.',
-        measurableGoal: 'During independent math workstations, Alex will independently reference her desktop multiplication grid to solve 1-step word problems without teacher prompting in 4 out of 5 observed trials.',
-        strategyActivity: 'Laminated desktop math reference board and color-coded highlighter strips.',
-        learningExpectation: 'Independent tool retrieval when encountering complex math operations.',
+        longTermGoal:
+          'Alex will reference desktop multiplication charts independently during applied word problem solving.',
+        shortTermGoal:
+          'Locating correct factor products on a desktop scaffold grid within 15 seconds.',
+        measurableGoal:
+          'During independent math workstations, Alex will independently reference her desktop multiplication grid to solve 1-step word problems without teacher prompting in 4 out of 5 observed trials.',
+        strategyActivity:
+          'Laminated desktop math reference board and color-coded highlighter strips.',
+        learningExpectation:
+          'Independent tool retrieval when encountering complex math operations.',
         learningStrategy: 'Self-monitoring reminder card on desk.',
         evaluationMethod: 'Teacher observation log',
         schedule: 'Bi-weekly',
         targetDate: '2027-04-15',
         active: true,
-        achieved: false
-      }
+        achieved: false,
+      },
     ],
     serviceSchedule: [],
     progressMeasurementMethods: ['Weekly math probe tracking'],
     parentCommunicationMethods: ['Monthly email summary'],
     homePartnershipSupport: 'Support homework using digital visual abacus app.',
     homePartnershipRecommendations: 'Reinforce math positivity at home.',
-    parentApproval: { agreed: false, parentName: 'Eleanor Thorne', date: '2026-10-12' },
+    parentApproval: {
+      agreed: false,
+      parentName: 'Eleanor Thorne',
+      date: '2026-10-12',
+    },
     createdBy: 'usr-gpk-2',
     createdAt: '2026-10-12T11:20:00Z',
     updatedBy: 'usr-gpk-2',
-    updatedAt: '2026-10-12T11:20:00Z'
-  }
+    updatedAt: '2026-10-12T11:20:00Z',
+  },
 ];
 
 export const SEED_WEEKLY_REPORTS: IEPReport[] = [
@@ -1585,7 +3010,8 @@ export const SEED_WEEKLY_REPORTS: IEPReport[] = [
         actorName: 'Budi Pratama, S.Pd.',
         actorRole: 'GPK Teacher',
         timestamp: '2026-11-10T14:30:00Z',
-        notes: 'Week 14 progress logged. Leo showed excellent self-advocacy in math station.'
+        notes:
+          'Week 14 progress logged. Leo showed excellent self-advocacy in math station.',
       },
       {
         id: 'wf-rep-14-2',
@@ -1595,7 +3021,7 @@ export const SEED_WEEKLY_REPORTS: IEPReport[] = [
         actorName: 'Ms. Elena Johnson',
         actorRole: 'Special Education Coordinator',
         timestamp: '2026-11-10T15:15:00Z',
-        notes: 'Reviewed observation ratings. Verified with OT progress notes.'
+        notes: 'Reviewed observation ratings. Verified with OT progress notes.',
       },
       {
         id: 'wf-rep-14-3',
@@ -1605,39 +3031,45 @@ export const SEED_WEEKLY_REPORTS: IEPReport[] = [
         actorName: 'Director Jonathan Miller',
         actorRole: 'Director of Academics & Governance',
         timestamp: '2026-11-10T16:00:00Z',
-        notes: 'Approved and archived.'
-      }
+        notes: 'Approved and archived.',
+      },
     ],
     goalProgress: [
       {
         goalId: 'g-001',
         addressedThisWeek: true,
         rating: 4,
-        notes: 'Used his "I need help" visual card 3 times independently during math group station without teacher prompting.'
+        notes:
+          'Used his "I need help" visual card 3 times independently during math group station without teacher prompting.',
       },
       {
         goalId: 'g-002',
         addressedThisWeek: true,
         rating: 4,
-        notes: 'Responded well to the 2-minute visual sand timer for 4 out of 5 classroom transition periods.'
+        notes:
+          'Responded well to the 2-minute visual sand timer for 4 out of 5 classroom transition periods.',
       },
       {
         goalId: 'g-003',
         addressedThisWeek: true,
         rating: 3,
-        notes: 'Maintained modified tripod grasp during Tuesday OT session; demonstrated improved pressure on slant board.'
+        notes:
+          'Maintained modified tripod grasp during Tuesday OT session; demonstrated improved pressure on slant board.',
       },
       {
         goalId: 'g-004',
         addressedThisWeek: false,
         rating: 3,
-        notes: 'Indoor recess substituted with gym circuit this week; goal will be targeted actively next week.'
-      }
+        notes:
+          'Indoor recess substituted with gym circuit this week; goal will be targeted actively next week.',
+      },
     ],
-    descriptiveObservation: 'Leo had a very productive and positive week. He showed increased willingness to join morning circle when provided his designated weighted lap pad. During Science plant observation, he cooperated nicely with Mia and pointed out plant stem growth with enthusiasm.',
-    homeConnection: 'Keep practicing the visual timer at home when wrapping up evening iPad play. Great job reinforcing verbal "more please" at dinner!',
+    descriptiveObservation:
+      'Leo had a very productive and positive week. He showed increased willingness to join morning circle when provided his designated weighted lap pad. During Science plant observation, he cooperated nicely with Mia and pointed out plant stem growth with enthusiasm.',
+    homeConnection:
+      'Keep practicing the visual timer at home when wrapping up evening iPad play. Great job reinforcing verbal "more please" at dinner!',
     createdAt: '2026-11-10T14:30:00Z',
-    updatedAt: '2026-11-10T16:00:00Z'
+    updatedAt: '2026-11-10T16:00:00Z',
   },
   {
     id: 'wrep-015',
@@ -1663,39 +3095,43 @@ export const SEED_WEEKLY_REPORTS: IEPReport[] = [
         actorName: 'Budi Pratama, S.Pd.',
         actorRole: 'GPK Teacher',
         timestamp: '2026-11-17T14:00:00Z',
-        notes: 'Submitted for weekly coordinator check.'
-      }
+        notes: 'Submitted for weekly coordinator check.',
+      },
     ],
     goalProgress: [
       {
         goalId: 'g-001',
         addressedThisWeek: true,
         rating: 4,
-        notes: 'Requested bathroom break with communication board smoothly.'
+        notes: 'Requested bathroom break with communication board smoothly.',
       },
       {
         goalId: 'g-002',
         addressedThisWeek: true,
         rating: 3,
-        notes: 'Took 3 minutes during morning assembly transition due to sound echoing in gym.'
+        notes:
+          'Took 3 minutes during morning assembly transition due to sound echoing in gym.',
       },
       {
         goalId: 'g-003',
         addressedThisWeek: true,
         rating: 4,
-        notes: 'Completed full letter tracing worksheet with adaptive pencil grip.'
+        notes:
+          'Completed full letter tracing worksheet with adaptive pencil grip.',
       },
       {
         goalId: 'g-004',
         addressedThisWeek: true,
         rating: 3,
-        notes: 'Played Connect 4 with Eli for 3 turns before needing teacher encouragement.'
-      }
+        notes:
+          'Played Connect 4 with Eli for 3 turns before needing teacher encouragement.',
+      },
     ],
-    descriptiveObservation: 'Great participation in literacy phonics workshop. Wore noise headphones willingly during dismissal bus call.',
+    descriptiveObservation:
+      'Great participation in literacy phonics workshop. Wore noise headphones willingly during dismissal bus call.',
     homeConnection: 'Continue sensory calm-down routines after school.',
     createdAt: '2026-11-17T14:00:00Z',
-    updatedAt: '2026-11-17T14:00:00Z'
+    updatedAt: '2026-11-17T14:00:00Z',
   },
   {
     id: 'wrep-eli-014',
@@ -1721,22 +3157,24 @@ export const SEED_WEEKLY_REPORTS: IEPReport[] = [
         actorName: 'Budi Pratama, S.Pd.',
         actorRole: 'GPK Teacher',
         timestamp: '2026-11-10T15:00:00Z',
-        notes: 'Elijah speech practice on target.'
-      }
+        notes: 'Elijah speech practice on target.',
+      },
     ],
     goalProgress: [
       {
         goalId: 'g-eli-1',
         addressedThisWeek: true,
         rating: 4,
-        notes: 'Practiced /th/ and /sh/ sounds during morning circle with great confidence.'
-      }
+        notes:
+          'Practiced /th/ and /sh/ sounds during morning circle with great confidence.',
+      },
     ],
-    descriptiveObservation: 'Elijah was joyful and active. Joined group singing with enthusiastic arm gestures.',
+    descriptiveObservation:
+      'Elijah was joyful and active. Joined group singing with enthusiastic arm gestures.',
     homeConnection: 'Keep up the bedtime story reading aloud!',
     createdAt: '2026-11-10T15:00:00Z',
-    updatedAt: '2026-11-10T15:00:00Z'
-  }
+    updatedAt: '2026-11-10T15:00:00Z',
+  },
 ];
 
 export const SEED_ANNOUNCEMENTS = [
@@ -1745,23 +3183,55 @@ export const SEED_ANNOUNCEMENTS = [
     title: 'Upcoming Curriculum Review & Moderation Workshop',
     date: 'Friday, Nov 14, 2026 · 2:00 PM – 4:30 PM',
     location: 'Academic Auditorium & Live Stream',
-    summary: 'All elementary and junior high faculty are invited to review Term 1 Learning Journeys, align cross-curricular goals, and prepare upcoming semester syllabi.',
-    rsvpStatus: 'Attending' as const
+    summary:
+      'All elementary and junior high faculty are invited to review Term 1 Learning Journeys, align cross-curricular goals, and prepare upcoming semester syllabi.',
+    rsvpStatus: 'Attending' as const,
   },
   {
     id: 'ann-2',
     title: 'Special Education Case Conference & IEP Progress Cycle',
     date: 'Wednesday, Nov 19, 2026 · 3:15 PM',
     location: 'Conference Room 2B',
-    summary: 'Quarterly review of accommodations, occupational therapy goals, and parent feedback for enrolled student support programs.',
-    rsvpStatus: 'Pending' as const
-  }
+    summary:
+      'Quarterly review of accommodations, occupational therapy goals, and parent feedback for enrolled student support programs.',
+    rsvpStatus: 'Pending' as const,
+  },
 ];
 
 export const SEED_SCHEDULE_ITEMS = [
-  { id: 'sch-1', time: '08:00 AM', title: 'Homeroom Attendance & Morning Check-in', room: 'Room 1-A Sequoia', type: 'homeroom' },
-  { id: 'sch-2', time: '09:00 AM', title: 'Science: Plant Ecosystems & Seedling Logs', room: 'Science Lab 2', type: 'academic' },
-  { id: 'sch-3', time: '10:30 AM', title: 'Language Arts & Phonics Reading Stations', room: 'Room 1-A Sequoia', type: 'academic' },
-  { id: 'sch-4', time: '01:15 PM', title: 'Physical Education: Movement Pathways', room: 'Main Gymnasium', type: 'pe' },
-  { id: 'sch-5', time: '02:30 PM', title: 'IEP Progress Review & Special Needs Team Check', room: 'Resource Room 104', type: 'meeting' }
+  {
+    id: 'sch-1',
+    time: '08:00 AM',
+    title: 'Homeroom Attendance & Morning Check-in',
+    room: 'Room 1-A Sequoia',
+    type: 'homeroom',
+  },
+  {
+    id: 'sch-2',
+    time: '09:00 AM',
+    title: 'Science: Plant Ecosystems & Seedling Logs',
+    room: 'Science Lab 2',
+    type: 'academic',
+  },
+  {
+    id: 'sch-3',
+    time: '10:30 AM',
+    title: 'Language Arts & Phonics Reading Stations',
+    room: 'Room 1-A Sequoia',
+    type: 'academic',
+  },
+  {
+    id: 'sch-4',
+    time: '01:15 PM',
+    title: 'Physical Education: Movement Pathways',
+    room: 'Main Gymnasium',
+    type: 'pe',
+  },
+  {
+    id: 'sch-5',
+    time: '02:30 PM',
+    title: 'IEP Progress Review & Special Needs Team Check',
+    room: 'Resource Room 104',
+    type: 'meeting',
+  },
 ];

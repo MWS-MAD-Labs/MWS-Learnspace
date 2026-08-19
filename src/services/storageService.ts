@@ -10,7 +10,7 @@ import {
   AttendanceRecord,
   WorkflowHistoryEntry,
   ObservationAssignment,
-  ObservationFormDefinition
+  ObservationFormDefinition,
 } from '../types';
 
 import {
@@ -24,7 +24,7 @@ import {
   SEED_IEP_RECORDS,
   SEED_WEEKLY_REPORTS,
   SEED_OBSERVATION_ASSIGNMENTS,
-  SEED_OBSERVATION_FORMS
+  SEED_OBSERVATION_FORMS,
 } from '../data/seedData';
 
 const STORAGE_KEYS = {
@@ -39,7 +39,7 @@ const STORAGE_KEYS = {
   IEP_RECORDS: 'mws_iep_records_v2',
   IEP_REPORTS: 'mws_iep_reports_v2',
   OBSERVATION_ASSIGNMENTS: 'mws_observation_assignments_v2',
-  OBSERVATION_FORMS: 'mws_observation_forms_v2'
+  OBSERVATION_FORMS: 'mws_observation_forms_v2',
 };
 
 class StorageService {
@@ -60,34 +60,67 @@ class StorageService {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, SEED_USERS[0].id);
     }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.STUDENTS)) {
-      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(SEED_STUDENTS));
+      localStorage.setItem(
+        STORAGE_KEYS.STUDENTS,
+        JSON.stringify(SEED_STUDENTS),
+      );
     }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.LEARNING_JOURNEYS)) {
-      localStorage.setItem(STORAGE_KEYS.LEARNING_JOURNEYS, JSON.stringify(SEED_LEARNING_JOURNEYS));
+      localStorage.setItem(
+        STORAGE_KEYS.LEARNING_JOURNEYS,
+        JSON.stringify(SEED_LEARNING_JOURNEYS),
+      );
     }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) {
-      localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(SEED_ATTENDANCE));
+      localStorage.setItem(
+        STORAGE_KEYS.ATTENDANCE,
+        JSON.stringify(SEED_ATTENDANCE),
+      );
     }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.FEDC_OBSERVATIONS)) {
-      localStorage.setItem(STORAGE_KEYS.FEDC_OBSERVATIONS, JSON.stringify(SEED_ALL_FEDC_OBSERVATIONS));
+      localStorage.setItem(
+        STORAGE_KEYS.FEDC_OBSERVATIONS,
+        JSON.stringify(SEED_ALL_FEDC_OBSERVATIONS),
+      );
     }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.SENSORY_PROFILES)) {
-      localStorage.setItem(STORAGE_KEYS.SENSORY_PROFILES, JSON.stringify(SEED_ALL_SENSORY_PROFILES));
+      localStorage.setItem(
+        STORAGE_KEYS.SENSORY_PROFILES,
+        JSON.stringify(SEED_ALL_SENSORY_PROFILES),
+      );
     }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.SFA_OBSERVATIONS)) {
-      localStorage.setItem(STORAGE_KEYS.SFA_OBSERVATIONS, JSON.stringify([SEED_SFA_OBSERVATION]));
+      localStorage.setItem(
+        STORAGE_KEYS.SFA_OBSERVATIONS,
+        JSON.stringify([SEED_SFA_OBSERVATION]),
+      );
     }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.IEP_RECORDS)) {
-      localStorage.setItem(STORAGE_KEYS.IEP_RECORDS, JSON.stringify(SEED_IEP_RECORDS));
+      localStorage.setItem(
+        STORAGE_KEYS.IEP_RECORDS,
+        JSON.stringify(SEED_IEP_RECORDS),
+      );
     }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.IEP_REPORTS)) {
-      localStorage.setItem(STORAGE_KEYS.IEP_REPORTS, JSON.stringify(SEED_WEEKLY_REPORTS));
+      localStorage.setItem(
+        STORAGE_KEYS.IEP_REPORTS,
+        JSON.stringify(SEED_WEEKLY_REPORTS),
+      );
     }
-    if (forceReset || !localStorage.getItem(STORAGE_KEYS.OBSERVATION_ASSIGNMENTS)) {
-      localStorage.setItem(STORAGE_KEYS.OBSERVATION_ASSIGNMENTS, JSON.stringify(SEED_OBSERVATION_ASSIGNMENTS));
+    if (
+      forceReset ||
+      !localStorage.getItem(STORAGE_KEYS.OBSERVATION_ASSIGNMENTS)
+    ) {
+      localStorage.setItem(
+        STORAGE_KEYS.OBSERVATION_ASSIGNMENTS,
+        JSON.stringify(SEED_OBSERVATION_ASSIGNMENTS),
+      );
     }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.OBSERVATION_FORMS)) {
-      localStorage.setItem(STORAGE_KEYS.OBSERVATION_FORMS, JSON.stringify(SEED_OBSERVATION_FORMS));
+      localStorage.setItem(
+        STORAGE_KEYS.OBSERVATION_FORMS,
+        JSON.stringify(SEED_OBSERVATION_FORMS),
+      );
     }
 
     this.isInitialized = true;
@@ -111,13 +144,13 @@ class StorageService {
   public getCurrentUser(): User {
     const users = this.getUsers();
     const currentId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID);
-    const found = users.find(u => u.id === currentId);
+    const found = users.find((u) => u.id === currentId);
     return found || users[0] || SEED_USERS[0];
   }
 
   public setCurrentUser(userId: string): User {
     const users = this.getUsers();
-    const found = users.find(u => u.id === userId);
+    const found = users.find((u) => u.id === userId);
     if (found) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, userId);
       return found;
@@ -136,12 +169,12 @@ class StorageService {
   }
 
   public getStudent(id: string): Student | undefined {
-    return this.getStudents().find(s => s.id === id);
+    return this.getStudents().find((s) => s.id === id);
   }
 
   public saveStudent(student: Student): Student {
     const students = this.getStudents();
-    const idx = students.findIndex(s => s.id === student.id);
+    const idx = students.findIndex((s) => s.id === student.id);
     if (idx >= 0) {
       students[idx] = student;
     } else {
@@ -153,42 +186,64 @@ class StorageService {
 
   public getStudentsForUser(user: User): Student[] {
     const students = this.getStudents();
-    if (user.role === 'PRINCIPAL' || user.role === 'DIRECTOR' || user.isSpecialEdCoordinator) {
+    if (
+      user.role === 'PRINCIPAL' ||
+      user.role === 'DIRECTOR' ||
+      user.isSpecialEdCoordinator
+    ) {
       return students;
     }
-    if (user.isGPK || (user.role === 'SPECIAL_ED_TEACHER' && !user.isSpecialEdCoordinator)) {
+    if (
+      user.isGPK ||
+      (user.role === 'SPECIAL_ED_TEACHER' && !user.isSpecialEdCoordinator)
+    ) {
       // Special Education teacher can strictly access only SN students assigned directly to them (1-to-1 or up to 2 students)
-      return students.filter(s => s.specialNeedsFlag && (s.assignedGPKTeacherId === user.id || user.assignedSpecialNeedsStudentIds?.includes(s.id)));
+      return students.filter(
+        (s) =>
+          s.specialNeedsFlag &&
+          (s.assignedGPKTeacherId === user.id ||
+            user.assignedSpecialNeedsStudentIds?.includes(s.id)),
+      );
     }
     if (user.role === 'GRADE_TEACHER') {
-      return students.filter(s => user.gradeIds.includes(s.grade) || user.assignedStudentIds?.includes(s.id));
+      return students.filter(
+        (s) =>
+          user.gradeIds.includes(s.grade) ||
+          user.assignedStudentIds?.includes(s.id),
+      );
     }
     // Specialist / Subject teacher
     return students;
   }
 
-  public assignGPKTeacherToStudent(studentId: string, gpkTeacherId: string, gpkTeacherName: string): boolean {
+  public assignGPKTeacherToStudent(
+    studentId: string,
+    gpkTeacherId: string,
+    gpkTeacherName: string,
+  ): boolean {
     const students = this.getStudents();
     const users = this.getUsers();
-    
+
     // Check if GPK teacher already has 2 students
-    const teacherStudents = students.filter(s => s.assignedGPKTeacherId === gpkTeacherId && s.id !== studentId);
+    const teacherStudents = students.filter(
+      (s) => s.assignedGPKTeacherId === gpkTeacherId && s.id !== studentId,
+    );
     if (teacherStudents.length >= 2) {
       return false; // Max 2 reached
     }
 
-    const sIdx = students.findIndex(s => s.id === studentId);
+    const sIdx = students.findIndex((s) => s.id === studentId);
     if (sIdx >= 0) {
       students[sIdx] = {
         ...students[sIdx],
         assignedGPKTeacherId: gpkTeacherId,
-        assignedGPKTeacherName: gpkTeacherName
+        assignedGPKTeacherName: gpkTeacherName,
       };
       localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
     }
 
     // Update teacher assignedSpecialNeedsStudentIds
-    const uIdx = users.findIndex(u => u.id === gpkTeacherId);
+    const uIdx = users.findIndex((u) => u.id === gpkTeacherId);
     if (uIdx >= 0) {
       const assigned = users[uIdx].assignedSpecialNeedsStudentIds || [];
       if (!assigned.includes(studentId)) {
@@ -211,28 +266,34 @@ class StorageService {
   }
 
   public getLearningJourney(id: string): LearningJourney | undefined {
-    return this.getLearningJourneys().find(lj => lj.id === id);
+    return this.getLearningJourneys().find((lj) => lj.id === id);
   }
 
   public saveLearningJourney(journey: LearningJourney): LearningJourney {
     const journeys = this.getLearningJourneys();
-    const index = journeys.findIndex(j => j.id === journey.id);
+    const index = journeys.findIndex((j) => j.id === journey.id);
     if (index >= 0) {
       journeys[index] = { ...journey, updatedAt: new Date().toISOString() };
     } else {
       journeys.unshift({
         ...journey,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
     }
-    localStorage.setItem(STORAGE_KEYS.LEARNING_JOURNEYS, JSON.stringify(journeys));
+    localStorage.setItem(
+      STORAGE_KEYS.LEARNING_JOURNEYS,
+      JSON.stringify(journeys),
+    );
     return journey;
   }
 
   public deleteLearningJourney(id: string): boolean {
-    const journeys = this.getLearningJourneys().filter(j => j.id !== id);
-    localStorage.setItem(STORAGE_KEYS.LEARNING_JOURNEYS, JSON.stringify(journeys));
+    const journeys = this.getLearningJourneys().filter((j) => j.id !== id);
+    localStorage.setItem(
+      STORAGE_KEYS.LEARNING_JOURNEYS,
+      JSON.stringify(journeys),
+    );
     return true;
   }
 
@@ -241,7 +302,7 @@ class StorageService {
     stage: 'Draft' | 'Principal Review' | 'Director Approval',
     action: 'Submitted' | 'Returned' | 'Approved' | 'Updated',
     comment: string,
-    user: User
+    user: User,
   ): LearningJourney | undefined {
     const journey = this.getLearningJourney(journeyId);
     if (!journey) return undefined;
@@ -250,16 +311,24 @@ class StorageService {
       id: `wf-${Date.now()}`,
       stage,
       action,
-      status: action === 'Returned' ? 'Returned' : action === 'Approved' ? 'Done' : 'On Progress',
+      status:
+        action === 'Returned'
+          ? 'Returned'
+          : action === 'Approved'
+            ? 'Done'
+            : 'On Progress',
       userId: user.id,
       userName: user.name,
       userRole: user.roleTitle,
       timestamp: new Date().toISOString(),
-      comment
+      comment,
     };
 
     const updated = { ...journey };
-    updated.workflowHistory = [historyEntry, ...(updated.workflowHistory || [])];
+    updated.workflowHistory = [
+      historyEntry,
+      ...(updated.workflowHistory || []),
+    ];
 
     if (stage === 'Draft') {
       if (action === 'Submitted') {
@@ -285,15 +354,20 @@ class StorageService {
   }
 
   // Attendance
-  public getAttendanceRecords(date?: string, className?: string): AttendanceRecord[] {
+  public getAttendanceRecords(
+    date?: string,
+    className?: string,
+  ): AttendanceRecord[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
-      let records: AttendanceRecord[] = data ? JSON.parse(data) : SEED_ATTENDANCE;
+      let records: AttendanceRecord[] = data
+        ? JSON.parse(data)
+        : SEED_ATTENDANCE;
       if (date) {
-        records = records.filter(r => r.date === date);
+        records = records.filter((r) => r.date === date);
       }
       if (className) {
-        records = records.filter(r => r.className === className);
+        records = records.filter((r) => r.className === className);
       }
       return records;
     } catch {
@@ -305,8 +379,10 @@ class StorageService {
     const existing = this.getAttendanceRecords();
     const updated = [...existing];
 
-    records.forEach(newRec => {
-      const idx = updated.findIndex(r => r.studentId === newRec.studentId && r.date === newRec.date);
+    records.forEach((newRec) => {
+      const idx = updated.findIndex(
+        (r) => r.studentId === newRec.studentId && r.date === newRec.date,
+      );
       if (idx >= 0) {
         updated[idx] = newRec;
       } else {
@@ -321,9 +397,11 @@ class StorageService {
   public getFEDCObservations(studentId?: string): FEDCObservationRecord[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.FEDC_OBSERVATIONS);
-      let records: FEDCObservationRecord[] = data ? JSON.parse(data) : SEED_ALL_FEDC_OBSERVATIONS;
+      let records: FEDCObservationRecord[] = data
+        ? JSON.parse(data)
+        : SEED_ALL_FEDC_OBSERVATIONS;
       if (studentId) {
-        records = records.filter(r => r.studentId === studentId);
+        records = records.filter((r) => r.studentId === studentId);
       }
       return records;
     } catch {
@@ -331,13 +409,19 @@ class StorageService {
     }
   }
 
-  public saveFEDCObservation(record: FEDCObservationRecord): FEDCObservationRecord {
+  public saveFEDCObservation(
+    record: FEDCObservationRecord,
+  ): FEDCObservationRecord {
     const list = this.getFEDCObservations();
-    const idx = list.findIndex(r => r.id === record.id);
+    const idx = list.findIndex((r) => r.id === record.id);
     if (idx >= 0) {
       list[idx] = { ...record, updatedAt: new Date().toISOString() };
     } else {
-      list.unshift({ ...record, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      list.unshift({
+        ...record,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
     }
     localStorage.setItem(STORAGE_KEYS.FEDC_OBSERVATIONS, JSON.stringify(list));
     return record;
@@ -347,9 +431,11 @@ class StorageService {
   public getSensoryProfiles(studentId?: string): SensoryProfileRecord[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SENSORY_PROFILES);
-      let records: SensoryProfileRecord[] = data ? JSON.parse(data) : SEED_ALL_SENSORY_PROFILES;
+      let records: SensoryProfileRecord[] = data
+        ? JSON.parse(data)
+        : SEED_ALL_SENSORY_PROFILES;
       if (studentId) {
-        records = records.filter(r => r.studentId === studentId);
+        records = records.filter((r) => r.studentId === studentId);
       }
       return records;
     } catch {
@@ -357,13 +443,19 @@ class StorageService {
     }
   }
 
-  public saveSensoryProfile(record: SensoryProfileRecord): SensoryProfileRecord {
+  public saveSensoryProfile(
+    record: SensoryProfileRecord,
+  ): SensoryProfileRecord {
     const list = this.getSensoryProfiles();
-    const idx = list.findIndex(r => r.id === record.id);
+    const idx = list.findIndex((r) => r.id === record.id);
     if (idx >= 0) {
       list[idx] = { ...record, updatedAt: new Date().toISOString() };
     } else {
-      list.unshift({ ...record, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      list.unshift({
+        ...record,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
     }
     localStorage.setItem(STORAGE_KEYS.SENSORY_PROFILES, JSON.stringify(list));
     return record;
@@ -373,9 +465,11 @@ class StorageService {
   public getSFAObservations(studentId?: string): SFAObservationRecord[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SFA_OBSERVATIONS);
-      let records: SFAObservationRecord[] = data ? JSON.parse(data) : [SEED_SFA_OBSERVATION];
+      let records: SFAObservationRecord[] = data
+        ? JSON.parse(data)
+        : [SEED_SFA_OBSERVATION];
       if (studentId) {
-        records = records.filter(r => r.studentId === studentId);
+        records = records.filter((r) => r.studentId === studentId);
       }
       return records;
     } catch {
@@ -383,25 +477,35 @@ class StorageService {
     }
   }
 
-  public saveSFAObservation(record: SFAObservationRecord): SFAObservationRecord {
+  public saveSFAObservation(
+    record: SFAObservationRecord,
+  ): SFAObservationRecord {
     const list = this.getSFAObservations();
-    const idx = list.findIndex(r => r.id === record.id);
+    const idx = list.findIndex((r) => r.id === record.id);
     if (idx >= 0) {
       list[idx] = { ...record, updatedAt: new Date().toISOString() };
     } else {
-      list.unshift({ ...record, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      list.unshift({
+        ...record,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
     }
     localStorage.setItem(STORAGE_KEYS.SFA_OBSERVATIONS, JSON.stringify(list));
     return record;
   }
 
   // Observation Assignments (Coordinator Feature)
-  public getObservationAssignments(studentId?: string): ObservationAssignment[] {
+  public getObservationAssignments(
+    studentId?: string,
+  ): ObservationAssignment[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.OBSERVATION_ASSIGNMENTS);
-      let list: ObservationAssignment[] = data ? JSON.parse(data) : SEED_OBSERVATION_ASSIGNMENTS;
+      let list: ObservationAssignment[] = data
+        ? JSON.parse(data)
+        : SEED_OBSERVATION_ASSIGNMENTS;
       if (studentId) {
-        list = list.filter(a => a.studentId === studentId);
+        list = list.filter((a) => a.studentId === studentId);
       }
       return list;
     } catch {
@@ -409,25 +513,33 @@ class StorageService {
     }
   }
 
-  public saveObservationAssignment(assignment: ObservationAssignment): ObservationAssignment {
+  public saveObservationAssignment(
+    assignment: ObservationAssignment,
+  ): ObservationAssignment {
     const list = this.getObservationAssignments();
-    const idx = list.findIndex(a => a.id === assignment.id);
+    const idx = list.findIndex((a) => a.id === assignment.id);
     if (idx >= 0) {
       list[idx] = assignment;
     } else {
       list.unshift({
         ...assignment,
         id: assignment.id || `oa-${Date.now()}`,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
     }
-    localStorage.setItem(STORAGE_KEYS.OBSERVATION_ASSIGNMENTS, JSON.stringify(list));
+    localStorage.setItem(
+      STORAGE_KEYS.OBSERVATION_ASSIGNMENTS,
+      JSON.stringify(list),
+    );
     return assignment;
   }
 
   public deleteObservationAssignment(id: string): boolean {
-    const list = this.getObservationAssignments().filter(a => a.id !== id);
-    localStorage.setItem(STORAGE_KEYS.OBSERVATION_ASSIGNMENTS, JSON.stringify(list));
+    const list = this.getObservationAssignments().filter((a) => a.id !== id);
+    localStorage.setItem(
+      STORAGE_KEYS.OBSERVATION_ASSIGNMENTS,
+      JSON.stringify(list),
+    );
     return true;
   }
 
@@ -441,31 +553,44 @@ class StorageService {
     }
   }
 
-  public saveObservationForm(form: ObservationFormDefinition): ObservationFormDefinition {
+  public saveObservationForm(
+    form: ObservationFormDefinition,
+  ): ObservationFormDefinition {
     const list = this.getObservationForms();
-    const idx = list.findIndex(f => f.id === form.id);
+    const idx = list.findIndex((f) => f.id === form.id);
     if (idx >= 0) {
-      list[idx] = { ...form, lastUpdated: new Date().toISOString().split('T')[0] };
+      list[idx] = {
+        ...form,
+        lastUpdated: new Date().toISOString().split('T')[0],
+      };
     } else {
-      list.push({ ...form, id: form.id || `form-${Date.now()}`, lastUpdated: new Date().toISOString().split('T')[0] });
+      list.push({
+        ...form,
+        id: form.id || `form-${Date.now()}`,
+        lastUpdated: new Date().toISOString().split('T')[0],
+      });
     }
     localStorage.setItem(STORAGE_KEYS.OBSERVATION_FORMS, JSON.stringify(list));
     return form;
   }
 
   // IEP Records
-  public syncIEPGoalsWithWeeklyReports(studentId: string): IEPRecord | undefined {
+  public syncIEPGoalsWithWeeklyReports(
+    studentId: string,
+  ): IEPRecord | undefined {
     try {
       const recordsData = localStorage.getItem(STORAGE_KEYS.IEP_RECORDS);
-      let records: IEPRecord[] = recordsData ? JSON.parse(recordsData) : SEED_IEP_RECORDS;
-      const iepIdx = records.findIndex(r => r.studentId === studentId);
+      const records: IEPRecord[] = recordsData
+        ? JSON.parse(recordsData)
+        : SEED_IEP_RECORDS;
+      const iepIdx = records.findIndex((r) => r.studentId === studentId);
       if (iepIdx < 0) return undefined;
 
       const iep = records[iepIdx];
       const reports = this.getIEPReports(studentId);
 
       // Deep sync each goal
-      iep.goals = iep.goals.map(goal => {
+      iep.goals = iep.goals.map((goal) => {
         // Find all weekly reports where this goal was addressed
         const matchingWeeklyLogs: {
           reportId: string;
@@ -477,11 +602,14 @@ class StorageService {
           markedAchieved?: boolean;
         }[] = [];
 
-        reports.forEach(rep => {
+        reports.forEach((rep) => {
           if (!rep.goalProgress) return;
-          const gp = rep.goalProgress.find(p => p.goalId === goal.id);
+          const gp = rep.goalProgress.find((p) => p.goalId === goal.id);
           if (gp && gp.addressedThisWeek) {
-            const logDate = rep.weekEnd || rep.weekStart || (rep.updatedAt ? rep.updatedAt.split('T')[0] : '2026-11-10');
+            const logDate =
+              rep.weekEnd ||
+              rep.weekStart ||
+              (rep.updatedAt ? rep.updatedAt.split('T')[0] : '2026-11-10');
             matchingWeeklyLogs.push({
               reportId: rep.id,
               weekNumber: rep.weekNumber,
@@ -489,7 +617,7 @@ class StorageService {
               date: logDate,
               rating: gp.rating,
               notes: gp.notes,
-              markedAchieved: Boolean(gp.markedAchievedThisWeek)
+              markedAchieved: Boolean(gp.markedAchievedThisWeek),
             });
           }
         });
@@ -517,11 +645,20 @@ class StorageService {
         // Check if marked achieved in any weekly report
         for (const rep of reports) {
           if (!rep.goalProgress) continue;
-          const gp = rep.goalProgress.find(p => p.goalId === goal.id);
+          const gp = rep.goalProgress.find((p) => p.goalId === goal.id);
           if (gp && gp.markedAchievedThisWeek) {
             achieved = true;
-            achievedDate = gp.achievedDate || rep.weekEnd || rep.weekStart || achievedDate || new Date().toISOString().split('T')[0];
-            achievedNote = gp.achievedNote || gp.notes || achievedNote || 'Mastered in weekly observation log.';
+            achievedDate =
+              gp.achievedDate ||
+              rep.weekEnd ||
+              rep.weekStart ||
+              achievedDate ||
+              new Date().toISOString().split('T')[0];
+            achievedNote =
+              gp.achievedNote ||
+              gp.notes ||
+              achievedNote ||
+              'Mastered in weekly observation log.';
             achievedInReportId = rep.id;
             break;
           }
@@ -537,7 +674,7 @@ class StorageService {
           achieved,
           achievedDate,
           achievedNote,
-          achievedInReportId
+          achievedInReportId,
         };
       });
 
@@ -554,7 +691,7 @@ class StorageService {
       const data = localStorage.getItem(STORAGE_KEYS.IEP_RECORDS);
       let records: IEPRecord[] = data ? JSON.parse(data) : SEED_IEP_RECORDS;
       if (studentId) {
-        records = records.filter(r => r.studentId === studentId);
+        records = records.filter((r) => r.studentId === studentId);
       }
       return records;
     } catch {
@@ -563,22 +700,26 @@ class StorageService {
   }
 
   public getIEPRecord(id: string): IEPRecord | undefined {
-    return this.getIEPRecords().find(r => r.id === id);
+    return this.getIEPRecords().find((r) => r.id === id);
   }
 
   public saveIEPRecord(record: IEPRecord): IEPRecord {
     const list = this.getIEPRecords();
-    const idx = list.findIndex(r => r.id === record.id);
+    const idx = list.findIndex((r) => r.id === record.id);
     if (idx >= 0) {
       list[idx] = { ...record, updatedAt: new Date().toISOString() };
     } else {
-      list.unshift({ ...record, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      list.unshift({
+        ...record,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
     }
     localStorage.setItem(STORAGE_KEYS.IEP_RECORDS, JSON.stringify(list));
-    
+
     // Sync with weekly reports
     this.syncIEPGoalsWithWeeklyReports(record.studentId);
-    
+
     const updated = this.getIEPRecord(record.id);
     return updated || record;
   }
@@ -588,7 +729,7 @@ class StorageService {
     fieldOrStage: string,
     statusOrAction: string,
     userOrNotes: User | string,
-    notesOrUser?: string | User
+    notesOrUser?: string | User,
   ): IEPRecord | undefined {
     const iep = this.getIEPRecord(iepId);
     if (!iep) return undefined;
@@ -596,26 +737,50 @@ class StorageService {
     let user: User;
     let notes: string = '';
 
-    if (typeof userOrNotes === 'object' && userOrNotes !== null && 'id' in userOrNotes) {
+    if (
+      typeof userOrNotes === 'object' &&
+      userOrNotes !== null &&
+      'id' in userOrNotes
+    ) {
       user = userOrNotes as User;
       notes = typeof notesOrUser === 'string' ? notesOrUser : '';
     } else {
-      user = (notesOrUser as User) || ({ id: 'usr-unknown', name: 'Staff User', roleTitle: 'Staff' } as User);
+      user =
+        (notesOrUser as User) ||
+        ({ id: 'usr-unknown', name: 'Staff User', roleTitle: 'Staff' } as User);
       notes = typeof userOrNotes === 'string' ? userOrNotes : '';
     }
 
-    const stageNormalized = 
-      fieldOrStage === 'draftStatus' || fieldOrStage === 'DRAFT' ? 'DRAFT' :
-      fieldOrStage === 'coordinatorReviewStatus' || fieldOrStage === 'COORDINATOR_REVIEW' ? 'COORDINATOR_REVIEW' :
-      'DIRECTOR_APPROVAL';
+    const stageNormalized =
+      fieldOrStage === 'draftStatus' || fieldOrStage === 'DRAFT'
+        ? 'DRAFT'
+        : fieldOrStage === 'coordinatorReviewStatus' ||
+            fieldOrStage === 'COORDINATOR_REVIEW'
+          ? 'COORDINATOR_REVIEW'
+          : 'DIRECTOR_APPROVAL';
 
-    const isApproveOrDone = statusOrAction === 'Done' || statusOrAction === 'APPROVED' || statusOrAction === 'Approved';
-    const isReturn = statusOrAction === 'Returned' || statusOrAction === 'RETURNED';
+    const isApproveOrDone =
+      statusOrAction === 'Done' ||
+      statusOrAction === 'APPROVED' ||
+      statusOrAction === 'Approved';
+    const isReturn =
+      statusOrAction === 'Returned' || statusOrAction === 'RETURNED';
 
     const historyEntry: WorkflowHistoryEntry = {
       id: `wf-iep-${Date.now()}`,
-      stage: stageNormalized === 'DRAFT' ? 'Draft' : stageNormalized === 'COORDINATOR_REVIEW' ? 'Coordinator Review' : 'Director Approval',
-      action: isApproveOrDone ? (stageNormalized === 'DRAFT' ? 'Submitted' : 'Approved') : isReturn ? 'Returned' : 'Updated',
+      stage:
+        stageNormalized === 'DRAFT'
+          ? 'Draft'
+          : stageNormalized === 'COORDINATOR_REVIEW'
+            ? 'Coordinator Review'
+            : 'Director Approval',
+      action: isApproveOrDone
+        ? stageNormalized === 'DRAFT'
+          ? 'Submitted'
+          : 'Approved'
+        : isReturn
+          ? 'Returned'
+          : 'Updated',
       status: statusOrAction,
       userId: user.id,
       userName: user.name,
@@ -625,12 +790,12 @@ class StorageService {
       actorRole: user.roleTitle,
       timestamp: new Date().toISOString(),
       notes: notes,
-      comment: notes
+      comment: notes,
     };
 
     const updated: IEPRecord = {
       ...iep,
-      workflowHistory: [historyEntry, ...(iep.workflowHistory || [])]
+      workflowHistory: [historyEntry, ...(iep.workflowHistory || [])],
     };
 
     if (stageNormalized === 'DRAFT') {
@@ -667,7 +832,7 @@ class StorageService {
       const data = localStorage.getItem(STORAGE_KEYS.IEP_REPORTS);
       let reports: IEPReport[] = data ? JSON.parse(data) : SEED_WEEKLY_REPORTS;
       if (studentId) {
-        reports = reports.filter(r => r.studentId === studentId);
+        reports = reports.filter((r) => r.studentId === studentId);
       }
       return reports;
     } catch {
@@ -676,16 +841,20 @@ class StorageService {
   }
 
   public getIEPReport(id: string): IEPReport | undefined {
-    return this.getIEPReports().find(r => r.id === id);
+    return this.getIEPReports().find((r) => r.id === id);
   }
 
   public saveIEPReport(report: IEPReport): IEPReport {
     const list = this.getIEPReports();
-    const idx = list.findIndex(r => r.id === report.id);
+    const idx = list.findIndex((r) => r.id === report.id);
     if (idx >= 0) {
       list[idx] = { ...report, updatedAt: new Date().toISOString() };
     } else {
-      list.unshift({ ...report, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      list.unshift({
+        ...report,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
     }
     localStorage.setItem(STORAGE_KEYS.IEP_REPORTS, JSON.stringify(list));
 
@@ -700,7 +869,7 @@ class StorageService {
     fieldOrStage: string,
     statusOrAction: string,
     userOrNotes: User | string,
-    notesOrUser?: string | User
+    notesOrUser?: string | User,
   ): IEPReport | undefined {
     const report = this.getIEPReport(reportId);
     if (!report) return undefined;
@@ -708,26 +877,50 @@ class StorageService {
     let user: User;
     let notes: string = '';
 
-    if (typeof userOrNotes === 'object' && userOrNotes !== null && 'id' in userOrNotes) {
+    if (
+      typeof userOrNotes === 'object' &&
+      userOrNotes !== null &&
+      'id' in userOrNotes
+    ) {
       user = userOrNotes as User;
       notes = typeof notesOrUser === 'string' ? notesOrUser : '';
     } else {
-      user = (notesOrUser as User) || ({ id: 'usr-unknown', name: 'Staff User', roleTitle: 'Staff' } as User);
+      user =
+        (notesOrUser as User) ||
+        ({ id: 'usr-unknown', name: 'Staff User', roleTitle: 'Staff' } as User);
       notes = typeof userOrNotes === 'string' ? userOrNotes : '';
     }
 
-    const stageNormalized = 
-      fieldOrStage === 'draftStatus' || fieldOrStage === 'DRAFT' ? 'DRAFT' :
-      fieldOrStage === 'coordinatorReviewStatus' || fieldOrStage === 'COORDINATOR_REVIEW' ? 'COORDINATOR_REVIEW' :
-      'DIRECTOR_APPROVAL';
+    const stageNormalized =
+      fieldOrStage === 'draftStatus' || fieldOrStage === 'DRAFT'
+        ? 'DRAFT'
+        : fieldOrStage === 'coordinatorReviewStatus' ||
+            fieldOrStage === 'COORDINATOR_REVIEW'
+          ? 'COORDINATOR_REVIEW'
+          : 'DIRECTOR_APPROVAL';
 
-    const isApproveOrDone = statusOrAction === 'Done' || statusOrAction === 'APPROVED' || statusOrAction === 'Approved';
-    const isReturn = statusOrAction === 'Returned' || statusOrAction === 'RETURNED';
+    const isApproveOrDone =
+      statusOrAction === 'Done' ||
+      statusOrAction === 'APPROVED' ||
+      statusOrAction === 'Approved';
+    const isReturn =
+      statusOrAction === 'Returned' || statusOrAction === 'RETURNED';
 
     const historyEntry: WorkflowHistoryEntry = {
       id: `wf-rep-${Date.now()}`,
-      stage: stageNormalized === 'DRAFT' ? 'Draft' : stageNormalized === 'COORDINATOR_REVIEW' ? 'Coordinator Review' : 'Director Approval',
-      action: isApproveOrDone ? (stageNormalized === 'DRAFT' ? 'Submitted' : 'Approved') : isReturn ? 'Returned' : 'Updated',
+      stage:
+        stageNormalized === 'DRAFT'
+          ? 'Draft'
+          : stageNormalized === 'COORDINATOR_REVIEW'
+            ? 'Coordinator Review'
+            : 'Director Approval',
+      action: isApproveOrDone
+        ? stageNormalized === 'DRAFT'
+          ? 'Submitted'
+          : 'Approved'
+        : isReturn
+          ? 'Returned'
+          : 'Updated',
       status: statusOrAction,
       userId: user.id,
       userName: user.name,
@@ -737,12 +930,12 @@ class StorageService {
       actorRole: user.roleTitle,
       timestamp: new Date().toISOString(),
       notes: notes,
-      comment: notes
+      comment: notes,
     };
 
     const updated: IEPReport = {
       ...report,
-      workflowHistory: [historyEntry, ...(report.workflowHistory || [])]
+      workflowHistory: [historyEntry, ...(report.workflowHistory || [])],
     };
 
     if (stageNormalized === 'DRAFT') {

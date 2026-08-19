@@ -1,36 +1,38 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
-import { SFAObservationRecord, SFARespondent } from '../../types';
-import { 
-  FileText, 
-  Save, 
-  CheckCircle2, 
-  Plus, 
-  Trash2, 
-  Activity, 
-  ChevronRight, 
-  Sparkles,
-  ArrowRight
-} from 'lucide-react';
+import { SFAObservationRecord } from '../../types';
+import { Save, CheckCircle2, ArrowRight } from 'lucide-react';
 
-const SFA_TABS = ['Student Info', 'Part 1: Participation', 'Part 2: Task Supports', 'Part 3: Activity Performance', 'Adaptations Checklist', 'Score Summary'] as const;
+const SFA_TABS = [
+  'Student Info',
+  'Part 1: Participation',
+  'Part 2: Task Supports',
+  'Part 3: Activity Performance',
+  'Adaptations Checklist',
+  'Score Summary',
+] as const;
 
 export const SFAObservationView: React.FC = () => {
-  const { 
-    selectedStudentId, 
-    setSelectedStudentId, 
-    students, 
-    currentUser, 
+  const {
+    selectedStudentId,
+    setSelectedStudentId,
+    students,
+    currentUser,
     showToast,
     refreshData,
-    navigateToIEP 
+    navigateToIEP,
   } = useApp();
 
-  const specialStudents = students.filter(s => s.specialNeedsFlag);
-  const currentStudent = students.find(s => s.id === selectedStudentId) || specialStudents[0] || students[0];
+  const specialStudents = students.filter((s) => s.specialNeedsFlag);
+  const currentStudent =
+    students.find((s) => s.id === selectedStudentId) ||
+    specialStudents[0] ||
+    students[0];
 
-  const [activeTab, setActiveTab] = useState<typeof SFA_TABS[number]>('Part 1: Participation');
+  const [activeTab, setActiveTab] = useState<(typeof SFA_TABS)[number]>(
+    'Part 1: Participation',
+  );
 
   const [record, setRecord] = useState<SFAObservationRecord>(() => {
     const existing = storageService.getSFAObservations(currentStudent.id);
@@ -48,7 +50,12 @@ export const SFAObservationView: React.FC = () => {
       status: 'Draft',
       programRecommendation: 'Regular',
       respondents: [
-        { id: 'r1', name: currentUser.name, role: currentUser.roleTitle, initials: 'SW' }
+        {
+          id: 'r1',
+          name: currentUser.name,
+          role: currentUser.roleTitle,
+          initials: 'SW',
+        },
       ],
       primaryLanguage: 'English & Japanese',
       writingMethod: 'Slant board & adaptive grip',
@@ -61,70 +68,80 @@ export const SFAObservationView: React.FC = () => {
         transportation: 5,
         bathroomToilet: 5,
         transitions: 4,
-        mealSnackTime: 4
+        mealSnackTime: 4,
       },
       participationAverage: 4.57,
       taskSupports: {
         physicalAssistance: 3,
         physicalAdaptation: 4,
         cognitiveAssistance: 3,
-        cognitiveAdaptation: 3
+        cognitiveAdaptation: 3,
       },
       activityPerformance: {
-        'travel': 3,
-        'maintaining_posture': 3,
-        'manipulation': 3,
-        'eating_drinking': 4,
-        'hygiene': 4,
-        'clothing_management': 3,
-        'functional_communication': 3,
-        'memory_understanding': 3,
-        'following_social_conventions': 3,
-        'task_behavior_completion': 3
+        travel: 3,
+        maintaining_posture: 3,
+        manipulation: 3,
+        eating_drinking: 4,
+        hygiene: 4,
+        clothing_management: 3,
+        functional_communication: 3,
+        memory_understanding: 3,
+        following_social_conventions: 3,
+        task_behavior_completion: 3,
       },
       adaptations: [
         'Slant board for paper positioning',
         'Visual daily schedule strip at desk',
-        'Noise-reduction headphones for fire drills'
+        'Noise-reduction headphones for fire drills',
       ],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
   });
 
-  const handleParticipationScoreChange = (key: keyof SFAObservationRecord['participationScores'], score: number) => {
+  const handleParticipationScoreChange = (
+    key: keyof SFAObservationRecord['participationScores'],
+    score: number,
+  ) => {
     const updated = {
       ...record.participationScores,
-      [key]: score
+      [key]: score,
     };
-    const scores = Object.values(updated).filter((v): v is number => typeof v === 'number');
-    const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    const scores = Object.values(updated).filter(
+      (v): v is number => typeof v === 'number',
+    );
+    const avg = scores.length
+      ? scores.reduce((a, b) => a + b, 0) / scores.length
+      : 0;
 
-    setRecord(prev => ({
+    setRecord((prev) => ({
       ...prev,
       participationScores: updated,
-      participationAverage: parseFloat(avg.toFixed(2))
+      participationAverage: parseFloat(avg.toFixed(2)),
     }));
   };
 
-  const handleTaskSupportChange = (key: keyof SFAObservationRecord['taskSupports'], score: number) => {
-    setRecord(prev => ({
+  const handleTaskSupportChange = (
+    key: keyof SFAObservationRecord['taskSupports'],
+    score: number,
+  ) => {
+    setRecord((prev) => ({
       ...prev,
       taskSupports: {
         ...prev.taskSupports,
-        [key]: score
-      }
+        [key]: score,
+      },
     }));
   };
 
   const handleToggleAdaptation = (adaptation: string) => {
-    setRecord(prev => {
+    setRecord((prev) => {
       const exists = prev.adaptations.includes(adaptation);
       return {
         ...prev,
-        adaptations: exists 
-          ? prev.adaptations.filter(a => a !== adaptation)
-          : [...prev.adaptations, adaptation]
+        adaptations: exists
+          ? prev.adaptations.filter((a) => a !== adaptation)
+          : [...prev.adaptations, adaptation],
       };
     });
   };
@@ -134,21 +151,31 @@ export const SFAObservationView: React.FC = () => {
       ...record,
       studentId: currentStudent.id,
       status: isCompleted ? 'Completed' : 'Draft',
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     storageService.saveSFAObservation(updated);
     setRecord(updated);
-    showToast('success', isCompleted ? 'SFA Assessment Completed' : 'SFA Draft Saved', `Saved School Function Assessment for ${currentStudent.fullName}.`);
+    showToast(
+      'success',
+      isCompleted ? 'SFA Assessment Completed' : 'SFA Draft Saved',
+      `Saved School Function Assessment for ${currentStudent.fullName}.`,
+    );
     refreshData();
   };
 
   return (
-    <div id="sfa-observation-view" className="space-y-6 max-w-6xl mx-auto pb-24">
+    <div
+      id="sfa-observation-view"
+      className="space-y-6 max-w-6xl mx-auto pb-24"
+    >
       {/* Student & Observer Header */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <img
-            src={currentStudent.avatarUrl || 'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=120'}
+            src={
+              currentStudent.avatarUrl ||
+              'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=120'
+            }
             alt={currentStudent.fullName}
             className="w-14 h-14 rounded-2xl object-cover border-2 border-[#EFE7DC] shadow-xs"
           />
@@ -165,7 +192,11 @@ export const SFAObservationView: React.FC = () => {
               {currentStudent.fullName}
             </h1>
             <p className="text-xs text-stone-500 mt-0.5">
-              Grade: {currentStudent.grade} · Coordinator: {record.coordinatorName} · Avg Participation: <strong className="text-stone-900">{record.participationAverage.toFixed(1)}/6.0</strong>
+              Grade: {currentStudent.grade} · Coordinator:{' '}
+              {record.coordinatorName} · Avg Participation:{' '}
+              <strong className="text-stone-900">
+                {record.participationAverage.toFixed(1)}/6.0
+              </strong>
             </p>
           </div>
         </div>
@@ -186,8 +217,10 @@ export const SFAObservationView: React.FC = () => {
               }}
               className="px-3.5 py-2 text-xs font-bold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-900 focus:outline-hidden"
             >
-              {specialStudents.map(s => (
-                <option key={s.id} value={s.id}>{s.fullName} ({s.grade})</option>
+              {specialStudents.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.fullName} ({s.grade})
+                </option>
               ))}
             </select>
           </div>
@@ -223,31 +256,67 @@ export const SFAObservationView: React.FC = () => {
               Classroom & School Environment Participation Ratings
             </h2>
             <p className="text-xs text-stone-500 mt-1">
-              1 = Participation extremely limited · 4 = Moderate participation with cues · 6 = Full independent participation
+              1 = Participation extremely limited · 4 = Moderate participation
+              with cues · 6 = Full independent participation
             </p>
           </div>
 
           <div className="space-y-3">
             {[
-              { key: 'regularClassroom', label: '1. Regular Classroom Setting (Math, Language Arts, Group Discussions)' },
-              { key: 'specialEdClassroom', label: '2. Special Education Resource Room / Co-Teaching Stations' },
-              { key: 'playgroundRecess', label: '3. Playground / Recess & Outdoor Play' },
-              { key: 'transportation', label: '4. Transportation (Arrival, Departure, Hallway Transits)' },
-              { key: 'bathroomToilet', label: '5. Bathroom & Personal Hygiene Routines' },
-              { key: 'transitions', label: '6. Classroom Stations & Activity Transitions' },
-              { key: 'mealSnackTime', label: '7. Mealtime / Cafeteria & Snack Routines' }
+              {
+                key: 'regularClassroom',
+                label:
+                  '1. Regular Classroom Setting (Math, Language Arts, Group Discussions)',
+              },
+              {
+                key: 'specialEdClassroom',
+                label:
+                  '2. Special Education Resource Room / Co-Teaching Stations',
+              },
+              {
+                key: 'playgroundRecess',
+                label: '3. Playground / Recess & Outdoor Play',
+              },
+              {
+                key: 'transportation',
+                label:
+                  '4. Transportation (Arrival, Departure, Hallway Transits)',
+              },
+              {
+                key: 'bathroomToilet',
+                label: '5. Bathroom & Personal Hygiene Routines',
+              },
+              {
+                key: 'transitions',
+                label: '6. Classroom Stations & Activity Transitions',
+              },
+              {
+                key: 'mealSnackTime',
+                label: '7. Mealtime / Cafeteria & Snack Routines',
+              },
             ].map((setting) => {
-              const currentScore = (record.participationScores as any)[setting.key] || 1;
+              const currentScore =
+                (record.participationScores as any)[setting.key] || 1;
 
               return (
-                <div key={setting.key} className="p-4 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <span className="text-xs font-semibold text-stone-900">{setting.label}</span>
+                <div
+                  key={setting.key}
+                  className="p-4 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <span className="text-xs font-semibold text-stone-900">
+                    {setting.label}
+                  </span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {[1, 2, 3, 4, 5, 6].map((score) => (
                       <button
                         key={score}
                         type="button"
-                        onClick={() => handleParticipationScoreChange(setting.key as any, score)}
+                        onClick={() =>
+                          handleParticipationScoreChange(
+                            setting.key as any,
+                            score,
+                          )
+                        }
                         className={`w-9 h-8 rounded-lg text-xs font-bold border transition-all ${
                           currentScore === score
                             ? 'bg-[#6E161E] text-white border-[#6E161E] shadow-xs'
@@ -275,19 +344,24 @@ export const SFAObservationView: React.FC = () => {
               Assistance & Adaptations Levels (1–4 Scale)
             </h2>
             <p className="text-xs text-stone-500 mt-1">
-              1 = Extensive support · 2 = Moderate support · 3 = Minimal support · 4 = No support needed
+              1 = Extensive support · 2 = Moderate support · 3 = Minimal support
+              · 4 = No support needed
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl space-y-3">
-              <span className="text-xs font-bold text-stone-900">Physical Tasks - Assistance Level</span>
+              <span className="text-xs font-bold text-stone-900">
+                Physical Tasks - Assistance Level
+              </span>
               <div className="flex items-center gap-2">
                 {[1, 2, 3, 4].map((v) => (
                   <button
                     key={v}
                     type="button"
-                    onClick={() => handleTaskSupportChange('physicalAssistance', v)}
+                    onClick={() =>
+                      handleTaskSupportChange('physicalAssistance', v)
+                    }
                     className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
                       record.taskSupports.physicalAssistance === v
                         ? 'bg-[#6E161E] text-white border-[#6E161E]'
@@ -301,13 +375,17 @@ export const SFAObservationView: React.FC = () => {
             </div>
 
             <div className="p-5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl space-y-3">
-              <span className="text-xs font-bold text-stone-900">Physical Tasks - Adaptations Level</span>
+              <span className="text-xs font-bold text-stone-900">
+                Physical Tasks - Adaptations Level
+              </span>
               <div className="flex items-center gap-2">
                 {[1, 2, 3, 4].map((v) => (
                   <button
                     key={v}
                     type="button"
-                    onClick={() => handleTaskSupportChange('physicalAdaptation', v)}
+                    onClick={() =>
+                      handleTaskSupportChange('physicalAdaptation', v)
+                    }
                     className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
                       record.taskSupports.physicalAdaptation === v
                         ? 'bg-[#6E161E] text-white border-[#6E161E]'
@@ -321,13 +399,17 @@ export const SFAObservationView: React.FC = () => {
             </div>
 
             <div className="p-5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl space-y-3">
-              <span className="text-xs font-bold text-stone-900">Cognitive Tasks - Assistance Level</span>
+              <span className="text-xs font-bold text-stone-900">
+                Cognitive Tasks - Assistance Level
+              </span>
               <div className="flex items-center gap-2">
                 {[1, 2, 3, 4].map((v) => (
                   <button
                     key={v}
                     type="button"
-                    onClick={() => handleTaskSupportChange('cognitiveAssistance', v)}
+                    onClick={() =>
+                      handleTaskSupportChange('cognitiveAssistance', v)
+                    }
                     className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
                       record.taskSupports.cognitiveAssistance === v
                         ? 'bg-[#6E161E] text-white border-[#6E161E]'
@@ -341,13 +423,17 @@ export const SFAObservationView: React.FC = () => {
             </div>
 
             <div className="p-5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl space-y-3">
-              <span className="text-xs font-bold text-stone-900">Cognitive Tasks - Adaptations Level</span>
+              <span className="text-xs font-bold text-stone-900">
+                Cognitive Tasks - Adaptations Level
+              </span>
               <div className="flex items-center gap-2">
                 {[1, 2, 3, 4].map((v) => (
                   <button
                     key={v}
                     type="button"
-                    onClick={() => handleTaskSupportChange('cognitiveAdaptation', v)}
+                    onClick={() =>
+                      handleTaskSupportChange('cognitiveAdaptation', v)
+                    }
                     className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
                       record.taskSupports.cognitiveAdaptation === v
                         ? 'bg-[#6E161E] text-white border-[#6E161E]'
@@ -383,7 +469,7 @@ export const SFAObservationView: React.FC = () => {
               'Noise-reduction headphones for fire drills and loud assemblies',
               'Weighted sensory vest during floor circle time (15 min intervals)',
               'Individual visual first-then transition card',
-              'Raised-line handwriting worksheets'
+              'Raised-line handwriting worksheets',
             ].map((adapt) => {
               const isChecked = record.adaptations.includes(adapt);
 
@@ -411,20 +497,34 @@ export const SFAObservationView: React.FC = () => {
         </div>
       )}
 
-      {(activeTab === 'Student Info' || activeTab === 'Part 3: Activity Performance' || activeTab === 'Score Summary') && (
+      {(activeTab === 'Student Info' ||
+        activeTab === 'Part 3: Activity Performance' ||
+        activeTab === 'Score Summary') && (
         <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs space-y-4">
-          <h2 className="text-base font-bold text-stone-900">{activeTab} Summary</h2>
+          <h2 className="text-base font-bold text-stone-900">
+            {activeTab} Summary
+          </h2>
           <div className="p-4 bg-[#FAF5EF] rounded-2xl border border-[#E8DFC8] space-y-2 text-xs text-stone-700">
-            <p><strong>Primary Language:</strong> {record.primaryLanguage}</p>
-            <p><strong>Writing Method:</strong> {record.writingMethod}</p>
-            <p><strong>Conditions Affecting Performance:</strong> {record.conditionsAffectingPerformance}</p>
-            <p><strong>Participation Score Average:</strong> {record.participationAverage.toFixed(2)} / 6.0</p>
+            <p>
+              <strong>Primary Language:</strong> {record.primaryLanguage}
+            </p>
+            <p>
+              <strong>Writing Method:</strong> {record.writingMethod}
+            </p>
+            <p>
+              <strong>Conditions Affecting Performance:</strong>{' '}
+              {record.conditionsAffectingPerformance}
+            </p>
+            <p>
+              <strong>Participation Score Average:</strong>{' '}
+              {record.participationAverage.toFixed(2)} / 6.0
+            </p>
           </div>
         </div>
       )}
 
       {/* Sticky Bottom Actions */}
-      <div 
+      <div
         id="sfa-sticky-bar"
         className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-[#EFE7DC] px-6 py-4 shadow-lg flex items-center justify-between"
       >

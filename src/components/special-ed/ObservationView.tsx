@@ -1,94 +1,109 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
-import { Student, ObservationAssignment } from '../../types';
+import { ObservationAssignment } from '../../types';
 import { ObservationHistoryViewer } from './ObservationHistoryViewer';
 import { CoordinatorObservationManager } from './CoordinatorObservationManager';
 import { FEDCObservationView } from './FEDCObservationView';
 import { SensoryProfileView } from './SensoryProfileView';
 import { SFAObservationView } from './SFAObservationView';
-import { 
-  Brain, 
-  Activity, 
-  FileText, 
-  Users, 
-  ChevronRight, 
-  Calendar, 
-  History, 
-  Edit3, 
+import {
+  Brain,
+  Activity,
+  FileText,
+  Users,
+  ChevronRight,
+  History,
+  Edit3,
   FileSignature,
   ClipboardList,
-  Sparkles,
-  ShieldCheck,
-  CheckCircle2,
   Clock,
   AlertCircle,
-  Award,
-  Info
+  Info,
 } from 'lucide-react';
 
 export const ObservationView: React.FC = () => {
-  const { 
-    currentUser, 
-    students, 
-    selectedStudentId, 
+  const {
+    currentUser,
+    students,
+    selectedStudentId,
     setSelectedStudentId,
     specialEdSubTab,
     setSpecialEdSubTab,
     navigateToIEP,
-    setActiveTab
+    setActiveTab,
   } = useApp();
 
   // Strict role check: Special Ed Coordinator and School Leadership (Principal, Director)
-  const isCoordinatorOrLeadership = 
-    Boolean(currentUser.isSpecialEdCoordinator) || 
-    currentUser.role === 'PRINCIPAL' || 
+  const isCoordinatorOrLeadership =
+    Boolean(currentUser.isSpecialEdCoordinator) ||
+    currentUser.role === 'PRINCIPAL' ||
     currentUser.role === 'DIRECTOR';
-
-  // If coordinator or leadership, show the full CoordinatorObservationManager
-  if (isCoordinatorOrLeadership) {
-    return <CoordinatorObservationManager />;
-  }
 
   // --- GPK Teacher / Specialist Teacher Workspace ---
 
   // Find students assigned to this GPK teacher (strictly max 2 students per school policy)
   const assignedStudents = students.filter(
-    s => s.assignedGPKTeacherId === currentUser.id || currentUser.assignedSpecialNeedsStudentIds?.includes(s.id)
+    (s) =>
+      s.assignedGPKTeacherId === currentUser.id ||
+      currentUser.assignedSpecialNeedsStudentIds?.includes(s.id),
   );
 
   // If the user has assigned students, ensure a valid chosen student is selected
   const [chosenStudentId, setChosenStudentId] = useState<string>(() => {
     if (assignedStudents.length > 0) {
-      if (selectedStudentId && assignedStudents.some(s => s.id === selectedStudentId)) {
+      if (
+        selectedStudentId &&
+        assignedStudents.some((s) => s.id === selectedStudentId)
+      ) {
         return selectedStudentId;
       }
       return assignedStudents[0].id;
     }
-    return selectedStudentId || (students.find(s => s.specialNeedsFlag)?.id ?? students[0]?.id ?? '');
+    return (
+      selectedStudentId ||
+      (students.find((s) => s.specialNeedsFlag)?.id ?? students[0]?.id ?? '')
+    );
   });
 
   // Mode toggle for GPK: 'RESULTS' (Observation Results & History Timeline) or 'ACTIVE_FORM' (Conduct Observation)
-  const [viewMode, setViewMode] = useState<'RESULTS' | 'ACTIVE_FORM'>('RESULTS');
+  const [viewMode, setViewMode] = useState<'RESULTS' | 'ACTIVE_FORM'>(
+    'RESULTS',
+  );
 
   // Auto-sync if student changes
   useEffect(() => {
-    if (assignedStudents.length > 0 && !assignedStudents.some(s => s.id === chosenStudentId)) {
+    if (
+      assignedStudents.length > 0 &&
+      !assignedStudents.some((s) => s.id === chosenStudentId)
+    ) {
       setChosenStudentId(assignedStudents[0].id);
       setSelectedStudentId(assignedStudents[0].id);
     }
   }, [currentUser.id, assignedStudents.length]);
 
+  // Hooks must run consistently before selecting the role-specific view.
+  if (isCoordinatorOrLeadership) {
+    return <CoordinatorObservationManager />;
+  }
+
   // Active student for GPK view
-  const currentStudent = students.find(s => s.id === chosenStudentId) || assignedStudents[0] || students[0];
+  const currentStudent =
+    students.find((s) => s.id === chosenStudentId) ||
+    assignedStudents[0] ||
+    students[0];
 
   // Fetch observation assignments delegated by Coordinator to this teacher or for this student
   const allAssignments = storageService.getObservationAssignments();
   const myAssignments = allAssignments.filter(
-    a => a.assignedToUserId === currentUser.id || (currentStudent && a.studentId === currentStudent.id)
+    (a) =>
+      a.assignedToUserId === currentUser.id ||
+      (currentStudent && a.studentId === currentStudent.id),
   );
 
-  const pendingAssignments = myAssignments.filter(a => a.status !== 'Completed' && a.status !== 'COMPLETED');
+  const pendingAssignments = myAssignments.filter(
+    (a) => a.status !== 'Completed' && a.status !== 'COMPLETED',
+  );
 
   // Quick action: start an assigned instrument
   const handleStartAssignedInstrument = (assignment: ObservationAssignment) => {
@@ -101,16 +116,22 @@ export const ObservationView: React.FC = () => {
   };
 
   return (
-    <div id="gpk-observation-view-container" className="space-y-6 max-w-6xl mx-auto">
+    <div
+      id="gpk-observation-view-container"
+      className="space-y-6 max-w-6xl mx-auto"
+    >
       {/* GPK Header Banner */}
       <div className="bg-white border border-[#EFE7DC] rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-[#6E161E] text-white uppercase tracking-wider">
-              {currentUser.isGPK ? 'GPK Teacher Workspace' : 'Specialist Workspace'}
+              {currentUser.isGPK
+                ? 'GPK Teacher Workspace'
+                : 'Specialist Workspace'}
             </span>
             <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-[#F5B842]/20 text-[#8F5900] border border-[#F5B842]/40">
-              Caseload: {assignedStudents.length}/2 Students Assigned (Max Limit)
+              Caseload: {assignedStudents.length}/2 Students Assigned (Max
+              Limit)
             </span>
           </div>
           <h2 className="font-heading font-black text-xl text-stone-900">
@@ -119,7 +140,9 @@ export const ObservationView: React.FC = () => {
           <p className="text-xs text-stone-600 flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-stone-400 shrink-0" />
             <span>
-              Welcome, <strong>{currentUser.name}</strong>. Review longitudinal observation history and record in-class evaluations for your assigned student(s).
+              Welcome, <strong>{currentUser.name}</strong>. Review longitudinal
+              observation history and record in-class evaluations for your
+              assigned student(s).
             </span>
           </p>
         </div>
@@ -161,7 +184,8 @@ export const ObservationView: React.FC = () => {
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-700" />
               <h3 className="font-bold text-xs text-amber-950 uppercase tracking-wide">
-                Coordinator Assigned Diagnostic Tasks ({pendingAssignments.length} Pending)
+                Coordinator Assigned Diagnostic Tasks (
+                {pendingAssignments.length} Pending)
               </h3>
             </div>
             <span className="text-[11px] text-amber-800 font-medium">
@@ -170,8 +194,8 @@ export const ObservationView: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {pendingAssignments.map(assignment => (
-              <div 
+            {pendingAssignments.map((assignment) => (
+              <div
                 key={assignment.id}
                 className="bg-white/90 rounded-xl p-3 border border-amber-200 flex items-center justify-between gap-3"
               >
@@ -180,10 +204,13 @@ export const ObservationView: React.FC = () => {
                     <span className="px-2 py-0.5 rounded text-[10px] font-black bg-[#6E161E] text-white">
                       {assignment.instrumentType}
                     </span>
-                    <strong className="text-xs font-bold text-stone-900">{assignment.studentName}</strong>
+                    <strong className="text-xs font-bold text-stone-900">
+                      {assignment.studentName}
+                    </strong>
                   </div>
                   <p className="text-[11px] text-stone-500">
-                    Due: <strong>{assignment.dueDate}</strong> · {assignment.notes || 'Routine observation'}
+                    Due: <strong>{assignment.dueDate}</strong> ·{' '}
+                    {assignment.notes || 'Routine observation'}
                   </p>
                 </div>
 
@@ -208,14 +235,16 @@ export const ObservationView: React.FC = () => {
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-[#6E161E]" />
               <span className="text-xs font-bold text-stone-700">
-                {assignedStudents.length === 1 ? 'Your Assigned Special Needs Student:' : 'Select Assigned Student (Caseload 2/2):'}
+                {assignedStudents.length === 1
+                  ? 'Your Assigned Special Needs Student:'
+                  : 'Select Assigned Student (Caseload 2/2):'}
               </span>
             </div>
 
             {/* If 2 students assigned, show switcher tabs */}
             {assignedStudents.length > 1 && (
               <div className="flex items-center gap-2">
-                {assignedStudents.map(student => {
+                {assignedStudents.map((student) => {
                   const isSelected = currentStudent?.id === student.id;
                   return (
                     <button
@@ -232,7 +261,10 @@ export const ObservationView: React.FC = () => {
                       }`}
                     >
                       <img
-                        src={student.avatarUrl || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=40'}
+                        src={
+                          student.avatarUrl ||
+                          'https://images.unsplash.com/photo-1544717305-2782549b5136?w=40'
+                        }
                         alt={student.name}
                         className="w-5 h-5 rounded-full object-cover border border-white"
                       />
@@ -249,7 +281,10 @@ export const ObservationView: React.FC = () => {
             <div className="bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <img
-                  src={currentStudent.avatarUrl || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=60'}
+                  src={
+                    currentStudent.avatarUrl ||
+                    'https://images.unsplash.com/photo-1544717305-2782549b5136?w=60'
+                  }
                   alt={currentStudent.name}
                   className="w-11 h-11 rounded-xl object-cover border-2 border-white shadow-xs"
                 />
@@ -266,7 +301,8 @@ export const ObservationView: React.FC = () => {
                     <span>NISN: {currentStudent.nisn}</span>
                     <span>•</span>
                     <span className="font-medium text-amber-900 bg-amber-100/60 px-1.5 py-0.2 rounded">
-                      {currentStudent.primaryDiagnosis || 'Special Needs Support'}
+                      {currentStudent.primaryDiagnosis ||
+                        'Special Needs Support'}
                     </span>
                   </div>
                 </div>
@@ -304,9 +340,13 @@ export const ObservationView: React.FC = () => {
       ) : (
         <div className="bg-white border border-[#EFE7DC] rounded-2xl p-6 text-center space-y-2">
           <AlertCircle className="w-8 h-8 text-amber-600 mx-auto" />
-          <h3 className="font-bold text-stone-900">No Special Needs Students Currently Assigned</h3>
+          <h3 className="font-bold text-stone-900">
+            No Special Needs Students Currently Assigned
+          </h3>
           <p className="text-xs text-stone-500 max-w-md mx-auto">
-            The Special Education Coordinator assigns up to 2 Special Needs students to each GPK Teacher. Please contact Ms. Elena Johnson for caseload assignments.
+            The Special Education Coordinator assigns up to 2 Special Needs
+            students to each GPK Teacher. Please contact Ms. Elena Johnson for
+            caseload assignments.
           </p>
         </div>
       )}

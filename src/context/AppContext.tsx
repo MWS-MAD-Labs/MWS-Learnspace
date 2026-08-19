@@ -1,18 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { 
-  User, 
-  Student, 
-  LearningJourney, 
-  IEPRecord, 
-  IEPReport, 
-  FEDCObservationRecord, 
-  SensoryProfileRecord, 
-  SFAObservationRecord,
-  AttendanceRecord
-} from '../types';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { User, Student } from '../types';
 import { storageService } from '../services/storageService';
 
-export type NavigationTab = 
+export type NavigationTab =
   | 'DASHBOARD'
   | 'ATTENDANCE'
   | 'LEARNING_JOURNEY_CALENDAR'
@@ -45,7 +35,7 @@ interface AppContextType {
   searchQuery: string;
   toasts: ToastMessage[];
   isObservationDrawerOpen: boolean;
-  
+
   // Actions
   switchRole: (userId: string) => void;
   setActiveTab: (tab: NavigationTab) => void;
@@ -56,11 +46,15 @@ interface AppContextType {
   setSearchQuery: (query: string) => void;
   setIsObservationDrawerOpen: (open: boolean) => void;
   toggleObservationDrawer: () => void;
-  showToast: (type: 'success' | 'info' | 'warning' | 'error', title: string, message?: string) => void;
+  showToast: (
+    type: 'success' | 'info' | 'warning' | 'error',
+    title: string,
+    message?: string,
+  ) => void;
   dismissToast: (id: string) => void;
   refreshData: () => void;
   resetAllDataToDefault: () => void;
-  
+
   // Quick navigation helpers
   navigateToJourneyEditor: (journeyId?: string) => void;
   navigateToObservation: (studentId: string, type?: SpecialEdSubTab) => void;
@@ -70,25 +64,37 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User>(() => storageService.getCurrentUser());
-  const [allUsers, setAllUsers] = useState<User[]>(() => storageService.getUsers());
-  const [students, setStudents] = useState<Student[]>(() => storageService.getStudents());
-  const [assignedStudents, setAssignedStudents] = useState<Student[]>(() => 
-    storageService.getStudentsForUser(currentUser)
+export const AppProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const [currentUser, setCurrentUser] = useState<User>(() =>
+    storageService.getCurrentUser(),
   );
-  
+  const [allUsers, setAllUsers] = useState<User[]>(() =>
+    storageService.getUsers(),
+  );
+  const [students, setStudents] = useState<Student[]>(() =>
+    storageService.getStudents(),
+  );
+  const [assignedStudents, setAssignedStudents] = useState<Student[]>(() =>
+    storageService.getStudentsForUser(currentUser),
+  );
+
   const [activeTab, setActiveTab] = useState<NavigationTab>('DASHBOARD');
-  const [specialEdSubTab, setSpecialEdSubTab] = useState<SpecialEdSubTab>('FEDC');
+  const [specialEdSubTab, setSpecialEdSubTab] =
+    useState<SpecialEdSubTab>('FEDC');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('stu-001');
-  const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(null);
+  const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(
+    null,
+  );
   const [selectedIepId, setSelectedIepId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [isObservationDrawerOpen, setIsObservationDrawerOpen] = useState<boolean>(false);
+  const [isObservationDrawerOpen, setIsObservationDrawerOpen] =
+    useState<boolean>(false);
 
   const toggleObservationDrawer = () => {
-    setIsObservationDrawerOpen(prev => !prev);
+    setIsObservationDrawerOpen((prev) => !prev);
   };
 
   const refreshData = () => {
@@ -107,28 +113,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setAssignedStudents(userAssigned);
 
     // If SE/GPK teacher, auto-focus their assigned student
-    if (updated.isGPK || (updated.role === 'SPECIAL_ED_TEACHER' && !updated.isSpecialEdCoordinator)) {
+    if (
+      updated.isGPK ||
+      (updated.role === 'SPECIAL_ED_TEACHER' && !updated.isSpecialEdCoordinator)
+    ) {
       if (userAssigned.length > 0) {
         setSelectedStudentId(userAssigned[0].id);
       }
     }
-    showToast('info', `Switched Role to ${updated.roleTitle}`, `Now operating as ${updated.name}`);
+    showToast(
+      'info',
+      `Switched Role to ${updated.roleTitle}`,
+      `Now operating as ${updated.name}`,
+    );
   };
 
-  const showToast = (type: 'success' | 'info' | 'warning' | 'error', title: string, message?: string) => {
+  const showToast = (
+    type: 'success' | 'info' | 'warning' | 'error',
+    title: string,
+    message?: string,
+  ) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-    setToasts(prev => [...prev, { id, type, title, message }]);
+    setToasts((prev) => [...prev, { id, type, title, message }]);
     setTimeout(() => {
       dismissToast(id);
     }, 4500);
   };
 
   const dismissToast = (id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   const resetAllDataToDefault = () => {
-    if (confirm('Are you sure you want to reset all portal data to initial default state?')) {
+    if (
+      confirm(
+        'Are you sure you want to reset all portal data to initial default state?',
+      )
+    ) {
       storageService.resetAllData();
     }
   };
@@ -138,7 +159,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setActiveTab('LEARNING_JOURNEY_EDITOR');
   };
 
-  const navigateToObservation = (studentId: string, type: SpecialEdSubTab = 'FEDC') => {
+  const navigateToObservation = (
+    studentId: string,
+    type: SpecialEdSubTab = 'FEDC',
+  ) => {
     setSelectedStudentId(studentId);
     setSpecialEdSubTab(type);
     setActiveTab('SPECIAL_ED_OBSERVATION');
@@ -186,7 +210,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         navigateToJourneyEditor,
         navigateToObservation,
         navigateToIEP,
-        navigateToWeeklyReport
+        navigateToWeeklyReport,
       }}
     >
       {children}

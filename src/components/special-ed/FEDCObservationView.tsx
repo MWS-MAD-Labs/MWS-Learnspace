@@ -2,41 +2,36 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
 import { FEDC_MILESTONES } from '../../data/seedData';
-import { FEDCObservationRecord, FEDCRating, FEDCItemResponse } from '../../types';
-import { 
-  Brain, 
-  Save, 
-  CheckCircle2, 
-  User, 
-  Calendar, 
-  Clock, 
-  Info, 
-  FileText,
-  ChevronRight,
-  Sparkles,
-  ArrowRight
-} from 'lucide-react';
+import {
+  FEDCObservationRecord,
+  FEDCRating,
+  FEDCItemResponse,
+} from '../../types';
+import { Save, CheckCircle2, ArrowRight } from 'lucide-react';
 
 const RATING_WEIGHTS: Record<FEDCRating, number> = {
   S: 3,
   K: 2,
   T: 1,
-  H: 0
+  H: 0,
 };
 
 export const FEDCObservationView: React.FC = () => {
-  const { 
-    selectedStudentId, 
-    setSelectedStudentId, 
-    students, 
-    currentUser, 
+  const {
+    selectedStudentId,
+    setSelectedStudentId,
+    students,
+    currentUser,
     showToast,
     refreshData,
-    navigateToIEP 
+    navigateToIEP,
   } = useApp();
 
-  const specialStudents = students.filter(s => s.specialNeedsFlag);
-  const currentStudent = students.find(s => s.id === selectedStudentId) || specialStudents[0] || students[0];
+  const specialStudents = students.filter((s) => s.specialNeedsFlag);
+  const currentStudent =
+    students.find((s) => s.id === selectedStudentId) ||
+    specialStudents[0] ||
+    students[0];
 
   const [activeMilestoneId, setActiveMilestoneId] = useState<number>(1);
 
@@ -61,12 +56,16 @@ export const FEDCObservationView: React.FC = () => {
       maxPossibleScore: 72,
       notes: '',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
   });
 
   // Calculate scores on rating change
-  const handleRatingChange = (itemId: string, milestoneId: number, rating: FEDCRating) => {
+  const handleRatingChange = (
+    itemId: string,
+    milestoneId: number,
+    rating: FEDCRating,
+  ) => {
     const prevResp = record.responses[itemId] || { itemId };
     const score = RATING_WEIGHTS[rating];
 
@@ -76,17 +75,24 @@ export const FEDCObservationView: React.FC = () => {
         ...prevResp,
         itemId,
         rating,
-        score
-      }
+        score,
+      },
     };
 
     // Recalculate milestone scores
-    const milestoneScores: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    const milestoneScores: Record<number, number> = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+      6: 0,
+    };
     let total = 0;
 
-    FEDC_MILESTONES.forEach(m => {
+    FEDC_MILESTONES.forEach((m) => {
       let mTotal = 0;
-      m.items.forEach(it => {
+      m.items.forEach((it) => {
         const itResp = updatedResponses[it.id];
         if (itResp?.score !== undefined) {
           mTotal += itResp.score;
@@ -96,25 +102,25 @@ export const FEDCObservationView: React.FC = () => {
       total += mTotal;
     });
 
-    setRecord(prev => ({
+    setRecord((prev) => ({
       ...prev,
       responses: updatedResponses,
       milestoneScores,
-      totalScore: total
+      totalScore: total,
     }));
   };
 
   const handleAgeChange = (itemId: string, masteredAge: string) => {
     const prevResp = record.responses[itemId] || { itemId };
-    setRecord(prev => ({
+    setRecord((prev) => ({
       ...prev,
       responses: {
         ...prev.responses,
         [itemId]: {
           ...prevResp,
-          masteredAge
-        }
-      }
+          masteredAge,
+        },
+      },
     }));
   };
 
@@ -123,27 +129,35 @@ export const FEDCObservationView: React.FC = () => {
       ...record,
       studentId: currentStudent.id,
       status: isCompleted ? 'Completed' : 'Draft',
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     storageService.saveFEDCObservation(updated);
     setRecord(updated);
     showToast(
-      'success', 
-      isCompleted ? 'FEDC Observation Completed' : 'FEDC Draft Saved', 
-      `Successfully saved functional emotional developmental baseline for ${currentStudent.fullName}.`
+      'success',
+      isCompleted ? 'FEDC Observation Completed' : 'FEDC Draft Saved',
+      `Successfully saved functional emotional developmental baseline for ${currentStudent.fullName}.`,
     );
     refreshData();
   };
 
-  const activeMilestone = FEDC_MILESTONES.find(m => m.id === activeMilestoneId) || FEDC_MILESTONES[0];
+  const activeMilestone =
+    FEDC_MILESTONES.find((m) => m.id === activeMilestoneId) ||
+    FEDC_MILESTONES[0];
 
   return (
-    <div id="fedc-observation-view" className="space-y-6 max-w-6xl mx-auto pb-24">
+    <div
+      id="fedc-observation-view"
+      className="space-y-6 max-w-6xl mx-auto pb-24"
+    >
       {/* Student & Observer Header */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <img
-            src={currentStudent.avatarUrl || 'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=120'}
+            src={
+              currentStudent.avatarUrl ||
+              'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=120'
+            }
             alt={currentStudent.fullName}
             className="w-14 h-14 rounded-2xl object-cover border-2 border-[#EFE7DC] shadow-xs"
           />
@@ -160,7 +174,8 @@ export const FEDCObservationView: React.FC = () => {
               {currentStudent.fullName}
             </h1>
             <p className="text-xs text-stone-500 mt-0.5">
-              Grade: {currentStudent.grade} ({currentStudent.className}) · DOB: {currentStudent.dateOfBirth} · Age: {currentStudent.age} yrs
+              Grade: {currentStudent.grade} ({currentStudent.className}) · DOB:{' '}
+              {currentStudent.dateOfBirth} · Age: {currentStudent.age} yrs
             </p>
           </div>
         </div>
@@ -181,8 +196,10 @@ export const FEDCObservationView: React.FC = () => {
               }}
               className="px-3.5 py-2 text-xs font-bold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-900 focus:outline-hidden"
             >
-              {specialStudents.map(s => (
-                <option key={s.id} value={s.id}>{s.fullName} ({s.grade})</option>
+              {specialStudents.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.fullName} ({s.grade})
+                </option>
               ))}
             </select>
           </div>
@@ -192,7 +209,8 @@ export const FEDCObservationView: React.FC = () => {
               Cumulative Score
             </span>
             <span className="text-xl font-black text-[#6E161E]">
-              {record.totalScore} <span className="text-xs text-stone-400 font-normal">/ 72</span>
+              {record.totalScore}{' '}
+              <span className="text-xs text-stone-400 font-normal">/ 72</span>
             </span>
           </div>
         </div>
@@ -228,15 +246,23 @@ export const FEDCObservationView: React.FC = () => {
         {/* Observation Metadata */}
         <div className="bg-white border border-[#EFE7DC] rounded-2xl p-4 shadow-xs space-y-3">
           <div>
-            <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">Observer</span>
-            <p className="text-xs font-bold text-stone-900 mt-0.5">{record.observerName}</p>
+            <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">
+              Observer
+            </span>
+            <p className="text-xs font-bold text-stone-900 mt-0.5">
+              {record.observerName}
+            </p>
           </div>
           <div>
-            <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">Observation Date</span>
+            <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">
+              Observation Date
+            </span>
             <input
               type="date"
               value={record.observationDate}
-              onChange={(e) => setRecord({ ...record, observationDate: e.target.value })}
+              onChange={(e) =>
+                setRecord({ ...record, observationDate: e.target.value })
+              }
               className="text-xs font-bold text-stone-800 bg-[#FAF5EF] border border-[#E8DFC8] rounded-lg px-2 py-1 mt-0.5 w-full"
             />
           </div>
@@ -267,22 +293,30 @@ export const FEDCObservationView: React.FC = () => {
                 }`}
               >
                 <div className="min-w-0 pr-2">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider block ${
-                    isSelected ? 'text-[#F5B842]' : 'text-stone-400'
-                  }`}>
+                  <span
+                    className={`text-[10px] font-bold uppercase tracking-wider block ${
+                      isSelected ? 'text-[#F5B842]' : 'text-stone-400'
+                    }`}
+                  >
                     Tonggak {milestone.id}
                   </span>
-                  <h3 className={`text-xs font-bold leading-tight mt-0.5 line-clamp-1 ${
-                    isSelected ? 'text-white' : 'text-stone-900'
-                  }`}>
+                  <h3
+                    className={`text-xs font-bold leading-tight mt-0.5 line-clamp-1 ${
+                      isSelected ? 'text-white' : 'text-stone-900'
+                    }`}
+                  >
                     {milestone.title}
                   </h3>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
-                    isSelected ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-700'
-                  }`}>
+                  <span
+                    className={`text-xs font-black px-2 py-0.5 rounded-full ${
+                      isSelected
+                        ? 'bg-white/20 text-white'
+                        : 'bg-stone-100 text-stone-700'
+                    }`}
+                  >
                     {mScore} / {milestone.maxScore}
                   </span>
                 </div>
@@ -337,12 +371,22 @@ export const FEDCObservationView: React.FC = () => {
                               key={r}
                               type="button"
                               id={`fedc-btn-${item.id}-${r}`}
-                              onClick={() => handleRatingChange(item.id, activeMilestone.id, r)}
+                              onClick={() =>
+                                handleRatingChange(
+                                  item.id,
+                                  activeMilestone.id,
+                                  r,
+                                )
+                              }
                               className={`w-10 h-8 text-xs font-bold rounded-lg border transition-all ${
                                 isPicked
-                                  ? r === 'S' ? 'bg-emerald-600 text-white border-emerald-600' :
-                                    r === 'K' ? 'bg-amber-500 text-white border-amber-500' :
-                                    r === 'T' ? 'bg-rose-500 text-white border-rose-500' : 'bg-purple-600 text-white border-purple-600'
+                                  ? r === 'S'
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : r === 'K'
+                                      ? 'bg-amber-500 text-white border-amber-500'
+                                      : r === 'T'
+                                        ? 'bg-rose-500 text-white border-rose-500'
+                                        : 'bg-purple-600 text-white border-purple-600'
                                   : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'
                               }`}
                             >
@@ -361,7 +405,9 @@ export const FEDCObservationView: React.FC = () => {
                           type="text"
                           placeholder="e.g. 4 tahun 6 bln"
                           value={resp.masteredAge || ''}
-                          onChange={(e) => handleAgeChange(item.id, e.target.value)}
+                          onChange={(e) =>
+                            handleAgeChange(item.id, e.target.value)
+                          }
                           className="px-2.5 py-1 text-xs bg-white border border-[#E8DFC8] rounded-lg text-stone-900 w-36 focus:outline-hidden"
                         />
                       </div>
@@ -379,7 +425,9 @@ export const FEDCObservationView: React.FC = () => {
               <textarea
                 rows={3}
                 value={record.notes || ''}
-                onChange={(e) => setRecord({ ...record, notes: e.target.value })}
+                onChange={(e) =>
+                  setRecord({ ...record, notes: e.target.value })
+                }
                 placeholder="Tuliskan catatan observasi kualitatif, respon anak saat transisi, dan strategi scaffolding emosional..."
                 className="w-full p-3 text-xs bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-900 leading-relaxed"
               />
@@ -389,7 +437,7 @@ export const FEDCObservationView: React.FC = () => {
       </div>
 
       {/* Sticky Bottom Actions */}
-      <div 
+      <div
         id="fedc-sticky-bar"
         className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-[#EFE7DC] px-6 py-4 shadow-lg flex items-center justify-between"
       >

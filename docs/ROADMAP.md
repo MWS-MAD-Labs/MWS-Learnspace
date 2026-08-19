@@ -41,23 +41,23 @@ At the end of each task, report:
 
 These decisions reduce ambiguity for implementation agents. Change them only through a documented architecture decision record (ADR).
 
-| Area | Decision |
-| --- | --- |
-| Runtime | Node.js 20 LTS or newer compatible LTS |
-| Package manager | npm with a committed `package-lock.json` |
-| Repository | npm workspaces with `apps/web`, `apps/api`, and `packages/contracts` |
-| Web | React, TypeScript, Vite, Tailwind CSS |
-| API | Express and TypeScript |
-| Validation | Zod schemas shared through `packages/contracts` where appropriate |
-| Database | PostgreSQL 16+ |
-| ORM | Prisma with committed migrations |
-| Authentication | Google OAuth 2.0/OpenID Connect authorization-code flow with PKCE |
-| Session model | Opaque, revocable server-side sessions stored in PostgreSQL; secure cookie contains only a session identifier |
-| API namespace | `/api/v1` |
-| Testing | Vitest, React Testing Library, API integration tests, and Playwright E2E tests |
-| Containers | Separate web and API images plus PostgreSQL in Docker Compose |
-| Authorization | API-enforced role-based and record-level authorization |
-| Production data | PostgreSQL is authoritative; browser storage may hold only non-sensitive UI preferences |
+| Area            | Decision                                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
+| Runtime         | Node.js 20 LTS or newer compatible LTS                                                                        |
+| Package manager | npm with a committed `package-lock.json`                                                                      |
+| Repository      | npm workspaces with `apps/web`, `apps/api`, and `packages/contracts`                                          |
+| Web             | React, TypeScript, Vite, Tailwind CSS                                                                         |
+| API             | Express and TypeScript                                                                                        |
+| Validation      | Zod schemas shared through `packages/contracts` where appropriate                                             |
+| Database        | PostgreSQL 16+                                                                                                |
+| ORM             | Prisma with committed migrations                                                                              |
+| Authentication  | Google OAuth 2.0/OpenID Connect authorization-code flow with PKCE                                             |
+| Session model   | Opaque, revocable server-side sessions stored in PostgreSQL; secure cookie contains only a session identifier |
+| API namespace   | `/api/v1`                                                                                                     |
+| Testing         | Vitest, React Testing Library, API integration tests, and Playwright E2E tests                                |
+| Containers      | Separate web and API images plus PostgreSQL in Docker Compose                                                 |
+| Authorization   | API-enforced role-based and record-level authorization                                                        |
+| Production data | PostgreSQL is authoritative; browser storage may hold only non-sensitive UI preferences                       |
 
 ## Current baseline
 
@@ -68,8 +68,8 @@ The current application has a useful React UI and domain inventory, but it is a 
 - authorization is primarily implemented with frontend conditionals;
 - there is no active API, Prisma schema, production database, or Docker deployment;
 - `src/types.ts` contains overlapping status representations that must be normalized;
-- no active Gemini integration exists even though Google AI dependencies/metadata are present;
-- there is no dependency lockfile, CI pipeline, or automated test suite.
+- no active Gemini integration exists; Google AI Studio provenance remains only in `metadata.json`;
+- Milestone 0 now provides a dependency lockfile, CI pipeline, formatting and linting, type checking, and frontend smoke tests.
 
 Existing documentation:
 
@@ -85,9 +85,11 @@ Existing documentation:
 
 **Milestone exit gate:** a clean clone installs deterministically and passes formatting, linting, type checking, tests, and production build in CI.
 
+**Status:** Complete and locally validated on 2026-08-19. The committed CI workflow will enforce the same gates on pushes to `main` and pull requests.
+
 ## P0-001 — Pin Node and npm versions
 
-- [ ] **Dependencies:** none
+- [x] **Dependencies:** none
 - **Change:**
   - Add `engines.node` and `engines.npm` to the root `package.json`.
   - Add `.nvmrc` with the selected Node 20 LTS version.
@@ -102,7 +104,7 @@ Existing documentation:
 
 ## P0-002 — Create the dependency lockfile
 
-- [ ] **Dependencies:** P0-001
+- [x] **Dependencies:** P0-001
 - **Change:**
   - Run `npm install` using the pinned toolchain.
   - Commit the generated `package-lock.json`.
@@ -116,7 +118,7 @@ Existing documentation:
 
 ## P0-003 — Separate formatting, linting, and type checking
 
-- [ ] **Dependencies:** P0-002
+- [x] **Dependencies:** P0-002
 - **Change:**
   - Add Prettier and ESLint with TypeScript/React support.
   - Add scripts: `format`, `format:check`, `lint`, and `typecheck`.
@@ -134,7 +136,7 @@ Existing documentation:
 
 ## P0-004 — Add frontend smoke tests
 
-- [ ] **Dependencies:** P0-003
+- [x] **Dependencies:** P0-003
 - **Change:**
   - Add Vitest, jsdom, and React Testing Library.
   - Add a shared test setup file.
@@ -149,7 +151,7 @@ Existing documentation:
 
 ## P0-005 — Add continuous integration
 
-- [ ] **Dependencies:** P0-004
+- [x] **Dependencies:** P0-004
 - **Change:**
   - Add a GitHub Actions workflow using `npm ci`.
   - Run formatting check, lint, type check, unit tests, and build.
@@ -164,7 +166,7 @@ Existing documentation:
 
 ## P0-006 — Add repository governance documents
 
-- [ ] **Dependencies:** P0-005
+- [x] **Dependencies:** P0-005
 - **Change:**
   - Add `CONTRIBUTING.md` with local setup, branch, test, and PR expectations.
   - Add `SECURITY.md` with a private vulnerability-reporting process and supported-version statement.
@@ -174,13 +176,14 @@ Existing documentation:
   - Contributors can discover setup and validation commands without reading source code.
   - Security reports are directed away from public issues.
 - **Owner input required:** license choice and private security contact.
+- **Note (2026-08-19):** No license was added because the owner has not selected one. Private reports use GitHub private vulnerability reporting when available; `SECURITY.md` records that a dedicated private contact is still owner-configured.
 - **Validate:**
   - Check all internal documentation links.
   - `npm run format:check`
 
 ## P0-007 — Remove prototype dependency and encoding noise
 
-- [ ] **Dependencies:** P0-003
+- [x] **Dependencies:** P0-003
 - **Change:**
   - Prove whether `@google/genai`, `express`, `dotenv`, `motion`, `tsx`, and `esbuild` are currently imported.
   - Remove only dependencies that are unused and not needed by the immediately following API workspace task.
@@ -189,6 +192,7 @@ Existing documentation:
 - **Acceptance:**
   - No dependency is removed based only on assumption.
   - Build and tests pass with the reduced dependency graph.
+- **Note (2026-08-19):** Source inspection proved `motion` is imported. `express`, `tsx`, and Express types remain for the upcoming API scaffold. Unused direct dependencies `@google/genai`, `dotenv`, and `esbuild` were removed; Vite still installs esbuild transitively. `metadata.json` remains as prototype provenance and Google AI Studio compatibility metadata, as documented in `README.md`.
 - **Validate:**
   - `npm ci`
   - `npm run lint`

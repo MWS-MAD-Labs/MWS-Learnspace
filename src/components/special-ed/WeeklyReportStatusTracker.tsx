@@ -1,30 +1,34 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
-import { IEPReport, Student, LJReviewStatus, LJApprovalStatus } from '../../types';
+import { IEPReport, LJReviewStatus, LJApprovalStatus } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
-import { 
-  Search, 
-  CheckCircle2, 
-  RotateCcw, 
-  Edit3, 
-  Clock, 
-  Send, 
-  ShieldCheck, 
-  Calendar, 
-  FileText,
-  UserCheck,
-  ArrowRight
+import {
+  Search,
+  CheckCircle2,
+  RotateCcw,
+  Edit3,
+  Clock,
+  Send,
+  ShieldCheck,
+  Calendar,
+  ArrowRight,
 } from 'lucide-react';
 
 interface WeeklyReportStatusTrackerProps {
   onSelectReportForEdit?: (studentId: string, weekNumber: number) => void;
 }
 
-export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps> = ({
-  onSelectReportForEdit
-}) => {
-  const { currentUser, students, setSelectedStudentId, showToast, refreshData } = useApp();
+export const WeeklyReportStatusTracker: React.FC<
+  WeeklyReportStatusTrackerProps
+> = ({ onSelectReportForEdit }) => {
+  const {
+    currentUser,
+    students,
+    setSelectedStudentId,
+    showToast,
+    refreshData,
+  } = useApp();
 
   const [selectedWeek, setSelectedWeek] = useState<number>(8);
   const [searchFilter, setSearchFilter] = useState('');
@@ -32,36 +36,52 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
   const [stageFilter, setStageFilter] = useState('All Stages');
 
   // Review modal
-  const [reviewingReport, setReviewingReport] = useState<IEPReport | null>(null);
-  const [reviewAction, setReviewAction] = useState<'Approve' | 'Return'>('Approve');
+  const [reviewingReport, setReviewingReport] = useState<IEPReport | null>(
+    null,
+  );
+  const [reviewAction, setReviewAction] = useState<'Approve' | 'Return'>(
+    'Approve',
+  );
   const [reviewComment, setReviewComment] = useState('');
 
   // History modal
   const [historyReport, setHistoryReport] = useState<IEPReport | null>(null);
 
   const isCoordinator = currentUser.isSpecialEdCoordinator;
-  const isDirector = currentUser.role === 'DIRECTOR' || currentUser.role === 'PRINCIPAL';
-  const isSETeacher = currentUser.isGPK || (currentUser.role === 'SPECIAL_ED_TEACHER' && !currentUser.isSpecialEdCoordinator);
+  const isDirector =
+    currentUser.role === 'DIRECTOR' || currentUser.role === 'PRINCIPAL';
+  const isSETeacher =
+    currentUser.isGPK ||
+    (currentUser.role === 'SPECIAL_ED_TEACHER' &&
+      !currentUser.isSpecialEdCoordinator);
 
   const specialStudents = useMemo(() => {
     if (isCoordinator || isDirector) {
-      return students.filter(s => s.specialNeedsFlag);
+      return students.filter((s) => s.specialNeedsFlag);
     }
-    return students.filter(s => s.specialNeedsFlag && (s.assignedGPKTeacherId === currentUser.id || currentUser.assignedSpecialNeedsStudentIds?.includes(s.id)));
+    return students.filter(
+      (s) =>
+        s.specialNeedsFlag &&
+        (s.assignedGPKTeacherId === currentUser.id ||
+          currentUser.assignedSpecialNeedsStudentIds?.includes(s.id)),
+    );
   }, [students, currentUser, isCoordinator, isDirector]);
 
   const allReports = storageService.getIEPReports();
 
   // Build rows for the selected week
   const studentReportRows = useMemo(() => {
-    return specialStudents.map(student => {
-      const match = allReports.find(r => r.studentId === student.id && r.weekNumber === selectedWeek) || {
+    return specialStudents.map((student) => {
+      const match = allReports.find(
+        (r) => r.studentId === student.id && r.weekNumber === selectedWeek,
+      ) || {
         id: `wr-${student.id}-w${selectedWeek}`,
         studentId: student.id,
         iepId: `iep-${student.id}-2026`,
         year: '2026',
         weekNumber: selectedWeek,
-        weekRange: selectedWeek === 8 ? 'Oct 19 – 23, 2026' : `Week ${selectedWeek}`,
+        weekRange:
+          selectedWeek === 8 ? 'Oct 19 – 23, 2026' : `Week ${selectedWeek}`,
         weekStart: '2026-10-19',
         weekEnd: '2026-10-23',
         teacherId: student.assignedGPKTeacherId || currentUser.id,
@@ -73,7 +93,7 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
         goalProgress: [],
         descriptiveObservation: '',
         homeConnection: '',
-        workflowHistory: []
+        workflowHistory: [],
       };
       return { student, report: match };
     });
@@ -82,22 +102,54 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
   // Filtered rows
   const filteredRows = useMemo(() => {
     return studentReportRows.filter(({ student, report }) => {
-      if (searchFilter && !student.name.toLowerCase().includes(searchFilter.toLowerCase())) return false;
-      if (gradeFilter !== 'All Grades' && student.grade !== gradeFilter) return false;
-      if (stageFilter === 'Draft' && report.draftStatus !== 'Done') return false;
-      if (stageFilter === 'Coordinator Review' && report.coordinatorReviewStatus !== 'On Progress' && report.coordinatorReviewStatus !== 'Returned') return false;
-      if (stageFilter === 'Director Approval' && report.directorApprovalStatus !== 'On Progress' && report.directorApprovalStatus !== 'Returned') return false;
-      if (stageFilter === 'Approved' && report.directorApprovalStatus !== 'Done') return false;
+      if (
+        searchFilter &&
+        !student.name.toLowerCase().includes(searchFilter.toLowerCase())
+      )
+        return false;
+      if (gradeFilter !== 'All Grades' && student.grade !== gradeFilter)
+        return false;
+      if (stageFilter === 'Draft' && report.draftStatus !== 'Done')
+        return false;
+      if (
+        stageFilter === 'Coordinator Review' &&
+        report.coordinatorReviewStatus !== 'On Progress' &&
+        report.coordinatorReviewStatus !== 'Returned'
+      )
+        return false;
+      if (
+        stageFilter === 'Director Approval' &&
+        report.directorApprovalStatus !== 'On Progress' &&
+        report.directorApprovalStatus !== 'Returned'
+      )
+        return false;
+      if (
+        stageFilter === 'Approved' &&
+        report.directorApprovalStatus !== 'Done'
+      )
+        return false;
       return true;
     });
   }, [studentReportRows, searchFilter, gradeFilter, stageFilter]);
 
   // KPI counts for this week
   const totalCount = studentReportRows.length;
-  const draftCount = studentReportRows.filter(r => r.report.draftStatus !== 'Done').length;
-  const coordinatorReviewCount = studentReportRows.filter(r => r.report.draftStatus === 'Done' && r.report.coordinatorReviewStatus !== 'Done').length;
-  const directorApprovalCount = studentReportRows.filter(r => r.report.coordinatorReviewStatus === 'Done' && r.report.directorApprovalStatus !== 'Done').length;
-  const approvedCount = studentReportRows.filter(r => r.report.directorApprovalStatus === 'Done').length;
+  const draftCount = studentReportRows.filter(
+    (r) => r.report.draftStatus !== 'Done',
+  ).length;
+  const coordinatorReviewCount = studentReportRows.filter(
+    (r) =>
+      r.report.draftStatus === 'Done' &&
+      r.report.coordinatorReviewStatus !== 'Done',
+  ).length;
+  const directorApprovalCount = studentReportRows.filter(
+    (r) =>
+      r.report.coordinatorReviewStatus === 'Done' &&
+      r.report.directorApprovalStatus !== 'Done',
+  ).length;
+  const approvedCount = studentReportRows.filter(
+    (r) => r.report.directorApprovalStatus === 'Done',
+  ).length;
 
   // Handle Submit Draft (Teacher)
   const handleSubmitDraft = (rep: IEPReport) => {
@@ -106,10 +158,14 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
       'draftStatus',
       'Done',
       currentUser,
-      `Submitted Week ${rep.weekNumber} progress log to Coordinator.`
+      `Submitted Week ${rep.weekNumber} progress log to Coordinator.`,
     );
     refreshData();
-    showToast('success', 'Weekly Report Submitted', `Week ${rep.weekNumber} IEP report submitted for verification.`);
+    showToast(
+      'success',
+      'Weekly Report Submitted',
+      `Week ${rep.weekNumber} IEP report submitted for verification.`,
+    );
   };
 
   // Handle Submit Review (Coordinator or Director)
@@ -117,37 +173,52 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
     if (!reviewingReport) return;
 
     if (reviewAction === 'Return' && !reviewComment.trim()) {
-      showToast('error', 'Feedback Required', 'Please provide revision remarks for the assigned teacher.');
+      showToast(
+        'error',
+        'Feedback Required',
+        'Please provide revision remarks for the assigned teacher.',
+      );
       return;
     }
 
     if (isCoordinator) {
-      const status: LJReviewStatus = reviewAction === 'Approve' ? 'Done' : 'Returned';
+      const status: LJReviewStatus =
+        reviewAction === 'Approve' ? 'Done' : 'Returned';
       storageService.updateWeeklyReportWorkflow(
         reviewingReport.id,
         'coordinatorReviewStatus',
         status,
         currentUser,
-        reviewComment || 'Verified weekly goal ratings and descriptive notes.'
+        reviewComment || 'Verified weekly goal ratings and descriptive notes.',
       );
       showToast(
         reviewAction === 'Approve' ? 'success' : 'info',
-        reviewAction === 'Approve' ? 'Coordinator Verified' : 'Returned for Adjustments',
-        reviewAction === 'Approve' ? 'Weekly report forwarded to Director.' : 'Weekly report returned to teacher.'
+        reviewAction === 'Approve'
+          ? 'Coordinator Verified'
+          : 'Returned for Adjustments',
+        reviewAction === 'Approve'
+          ? 'Weekly report forwarded to Director.'
+          : 'Weekly report returned to teacher.',
       );
     } else if (isDirector) {
-      const status: LJApprovalStatus = reviewAction === 'Approve' ? 'Done' : 'Returned';
+      const status: LJApprovalStatus =
+        reviewAction === 'Approve' ? 'Done' : 'Returned';
       storageService.updateWeeklyReportWorkflow(
         reviewingReport.id,
         'directorApprovalStatus',
         status,
         currentUser,
-        reviewComment || 'Director authorized weekly IEP progress log for parent portal release.'
+        reviewComment ||
+          'Director authorized weekly IEP progress log for parent portal release.',
       );
       showToast(
         reviewAction === 'Approve' ? 'success' : 'info',
-        reviewAction === 'Approve' ? 'Weekly Report Approved' : 'Returned by Director',
-        reviewAction === 'Approve' ? 'Weekly progress report released to Parent Portal.' : 'Report returned to Coordinator.'
+        reviewAction === 'Approve'
+          ? 'Weekly Report Approved'
+          : 'Returned by Director',
+        reviewAction === 'Approve'
+          ? 'Weekly progress report released to Parent Portal.'
+          : 'Report returned to Coordinator.',
       );
     }
 
@@ -162,15 +233,21 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
         <div className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-[#6E161E]" />
           <div>
-            <span className="text-[10px] font-bold text-stone-500 uppercase">Select Target Academic Week</span>
+            <span className="text-[10px] font-bold text-stone-500 uppercase">
+              Select Target Academic Week
+            </span>
             <h3 className="font-heading font-bold text-sm text-stone-900">
-              Week {selectedWeek} ({selectedWeek === 8 ? 'Oct 19 – 23, 2026' : `Term 1 - Week ${selectedWeek}`})
+              Week {selectedWeek} (
+              {selectedWeek === 8
+                ? 'Oct 19 – 23, 2026'
+                : `Term 1 - Week ${selectedWeek}`}
+              )
             </h3>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-          {[6, 7, 8, 9, 10].map(w => (
+          {[6, 7, 8, 9, 10].map((w) => (
             <button
               key={w}
               id={`select-week-btn-${w}`}
@@ -189,54 +266,104 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
 
       {/* KPI Counters */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div 
+        <div
           onClick={() => setStageFilter('All Stages')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            stageFilter === 'All Stages' ? 'bg-[#6E161E] text-white border-[#6E161E] shadow-sm' : 'bg-white border-[#EFE7DC]'
+            stageFilter === 'All Stages'
+              ? 'bg-[#6E161E] text-white border-[#6E161E] shadow-sm'
+              : 'bg-white border-[#EFE7DC]'
           }`}
         >
-          <span className={`text-[10px] font-bold uppercase ${stageFilter === 'All Stages' ? 'text-white/80' : 'text-stone-400'}`}>Total Reports</span>
-          <p className={`text-xl font-black mt-0.5 ${stageFilter === 'All Stages' ? 'text-white' : 'text-stone-900'}`}>{totalCount}</p>
+          <span
+            className={`text-[10px] font-bold uppercase ${stageFilter === 'All Stages' ? 'text-white/80' : 'text-stone-400'}`}
+          >
+            Total Reports
+          </span>
+          <p
+            className={`text-xl font-black mt-0.5 ${stageFilter === 'All Stages' ? 'text-white' : 'text-stone-900'}`}
+          >
+            {totalCount}
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Draft')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            stageFilter === 'Draft' ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-white border-[#EFE7DC]'
+            stageFilter === 'Draft'
+              ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+              : 'bg-white border-[#EFE7DC]'
           }`}
         >
-          <span className={`text-[10px] font-bold uppercase ${stageFilter === 'Draft' ? 'text-white/80' : 'text-amber-600'}`}>1. Teacher Draft</span>
-          <p className={`text-xl font-black mt-0.5 ${stageFilter === 'Draft' ? 'text-white' : 'text-amber-700'}`}>{draftCount}</p>
+          <span
+            className={`text-[10px] font-bold uppercase ${stageFilter === 'Draft' ? 'text-white/80' : 'text-amber-600'}`}
+          >
+            1. Teacher Draft
+          </span>
+          <p
+            className={`text-xl font-black mt-0.5 ${stageFilter === 'Draft' ? 'text-white' : 'text-amber-700'}`}
+          >
+            {draftCount}
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Coordinator Review')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            stageFilter === 'Coordinator Review' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white border-[#EFE7DC]'
+            stageFilter === 'Coordinator Review'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+              : 'bg-white border-[#EFE7DC]'
           }`}
         >
-          <span className={`text-[10px] font-bold uppercase ${stageFilter === 'Coordinator Review' ? 'text-white/80' : 'text-blue-600'}`}>2. Coordinator Review</span>
-          <p className={`text-xl font-black mt-0.5 ${stageFilter === 'Coordinator Review' ? 'text-white' : 'text-blue-700'}`}>{coordinatorReviewCount}</p>
+          <span
+            className={`text-[10px] font-bold uppercase ${stageFilter === 'Coordinator Review' ? 'text-white/80' : 'text-blue-600'}`}
+          >
+            2. Coordinator Review
+          </span>
+          <p
+            className={`text-xl font-black mt-0.5 ${stageFilter === 'Coordinator Review' ? 'text-white' : 'text-blue-700'}`}
+          >
+            {coordinatorReviewCount}
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Director Approval')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            stageFilter === 'Director Approval' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white border-[#EFE7DC]'
+            stageFilter === 'Director Approval'
+              ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+              : 'bg-white border-[#EFE7DC]'
           }`}
         >
-          <span className={`text-[10px] font-bold uppercase ${stageFilter === 'Director Approval' ? 'text-white/80' : 'text-purple-600'}`}>3. Director Approval</span>
-          <p className={`text-xl font-black mt-0.5 ${stageFilter === 'Director Approval' ? 'text-white' : 'text-purple-700'}`}>{directorApprovalCount}</p>
+          <span
+            className={`text-[10px] font-bold uppercase ${stageFilter === 'Director Approval' ? 'text-white/80' : 'text-purple-600'}`}
+          >
+            3. Director Approval
+          </span>
+          <p
+            className={`text-xl font-black mt-0.5 ${stageFilter === 'Director Approval' ? 'text-white' : 'text-purple-700'}`}
+          >
+            {directorApprovalCount}
+          </p>
         </div>
 
-        <div 
+        <div
           onClick={() => setStageFilter('Approved')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer col-span-2 sm:col-span-1 ${
-            stageFilter === 'Approved' ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white border-[#EFE7DC]'
+            stageFilter === 'Approved'
+              ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
+              : 'bg-white border-[#EFE7DC]'
           }`}
         >
-          <span className={`text-[10px] font-bold uppercase ${stageFilter === 'Approved' ? 'text-white/80' : 'text-emerald-700'}`}>4. Released to Parents</span>
-          <p className={`text-xl font-black mt-0.5 ${stageFilter === 'Approved' ? 'text-white' : 'text-emerald-800'}`}>{approvedCount}</p>
+          <span
+            className={`text-[10px] font-bold uppercase ${stageFilter === 'Approved' ? 'text-white/80' : 'text-emerald-700'}`}
+          >
+            4. Released to Parents
+          </span>
+          <p
+            className={`text-xl font-black mt-0.5 ${stageFilter === 'Approved' ? 'text-white' : 'text-emerald-800'}`}
+          >
+            {approvedCount}
+          </p>
         </div>
       </div>
 
@@ -287,7 +414,9 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
               <tr className="border-b border-[#EFE7DC] bg-[#FAF5EF] text-stone-600 font-bold">
                 <th className="py-3.5 px-4">Student</th>
                 <th className="py-3.5 px-4">Grade</th>
-                <th className="py-3.5 px-4 text-center">Draft (Assigned GPK)</th>
+                <th className="py-3.5 px-4 text-center">
+                  Draft (Assigned GPK)
+                </th>
                 <th className="py-3.5 px-4 text-center">Coordinator Review</th>
                 <th className="py-3.5 px-4 text-center">Director Approval</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
@@ -295,23 +424,45 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
             </thead>
             <tbody className="divide-y divide-[#EFE7DC] text-stone-800">
               {filteredRows.map(({ student, report }) => {
-                const isAssignedGPK = (student.assignedGPKTeacherId === currentUser.id || currentUser.assignedSpecialNeedsStudentIds?.includes(student.id)) && !isCoordinator;
-                const canSubmitDraft = isAssignedGPK && report.draftStatus !== 'Done';
-                const canReviewCoordinator = isCoordinator && report.draftStatus === 'Done' && report.coordinatorReviewStatus !== 'Done';
-                const canReviewDirector = isDirector && report.coordinatorReviewStatus === 'Done' && report.directorApprovalStatus !== 'Done';
+                const isAssignedGPK =
+                  (student.assignedGPKTeacherId === currentUser.id ||
+                    currentUser.assignedSpecialNeedsStudentIds?.includes(
+                      student.id,
+                    )) &&
+                  !isCoordinator;
+                const canSubmitDraft =
+                  isAssignedGPK && report.draftStatus !== 'Done';
+                const canReviewCoordinator =
+                  isCoordinator &&
+                  report.draftStatus === 'Done' &&
+                  report.coordinatorReviewStatus !== 'Done';
+                const canReviewDirector =
+                  isDirector &&
+                  report.coordinatorReviewStatus === 'Done' &&
+                  report.directorApprovalStatus !== 'Done';
 
                 return (
-                  <tr key={student.id} className="hover:bg-[#FAF5EF]/50 transition-colors">
+                  <tr
+                    key={student.id}
+                    className="hover:bg-[#FAF5EF]/50 transition-colors"
+                  >
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
                         <img
-                          src={student.avatarUrl || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=80'}
+                          src={
+                            student.avatarUrl ||
+                            'https://images.unsplash.com/photo-1544717305-2782549b5136?w=80'
+                          }
                           alt={student.name}
                           className="w-9 h-9 rounded-full object-cover border border-stone-200"
                         />
                         <div>
-                          <p className="font-bold text-stone-900">{student.name}</p>
-                          <span className="text-[10px] text-stone-400 font-mono">NISN: {student.nisn}</span>
+                          <p className="font-bold text-stone-900">
+                            {student.name}
+                          </p>
+                          <span className="text-[10px] text-stone-400 font-mono">
+                            NISN: {student.nisn}
+                          </span>
                         </div>
                       </div>
                     </td>
@@ -322,7 +473,10 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
 
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <StatusBadge status={report.draftStatus || 'Not Started'} size="sm" />
+                        <StatusBadge
+                          status={report.draftStatus || 'Not Started'}
+                          size="sm"
+                        />
                         <span className="text-[10px] text-stone-500 font-medium">
                           {student.assignedGPKTeacherName || 'Assigned GPK'}
                         </span>
@@ -331,15 +485,29 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
 
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <StatusBadge status={report.coordinatorReviewStatus || 'Not Started'} size="sm" />
-                        <span className="text-[10px] text-stone-500 font-medium">SpecEd Coordinator</span>
+                        <StatusBadge
+                          status={
+                            report.coordinatorReviewStatus || 'Not Started'
+                          }
+                          size="sm"
+                        />
+                        <span className="text-[10px] text-stone-500 font-medium">
+                          SpecEd Coordinator
+                        </span>
                       </div>
                     </td>
 
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <StatusBadge status={report.directorApprovalStatus || 'Not Started'} size="sm" />
-                        <span className="text-[10px] text-stone-500 font-medium">Director / Principal</span>
+                        <StatusBadge
+                          status={
+                            report.directorApprovalStatus || 'Not Started'
+                          }
+                          size="sm"
+                        />
+                        <span className="text-[10px] text-stone-500 font-medium">
+                          Director / Principal
+                        </span>
                       </div>
                     </td>
 
@@ -356,7 +524,8 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
                         <button
                           onClick={() => {
                             setSelectedStudentId(student.id);
-                            if (onSelectReportForEdit) onSelectReportForEdit(student.id, selectedWeek);
+                            if (onSelectReportForEdit)
+                              onSelectReportForEdit(student.id, selectedWeek);
                           }}
                           className="flex items-center gap-1 px-2.5 py-1.5 bg-[#FAF5EF] hover:bg-[#6E161E] hover:text-white border border-[#E8DFC8] rounded-xl font-bold text-stone-700 transition-all text-xs shadow-2xs"
                         >
@@ -418,14 +587,22 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
             <div className="p-5 border-b border-stone-100 flex items-center justify-between bg-[#FAF5EF]">
               <div>
                 <h3 className="font-heading font-black text-base text-stone-900">
-                  {isCoordinator ? 'Special Ed Coordinator Review' : 'Director Authorization & Release'}
+                  {isCoordinator
+                    ? 'Special Ed Coordinator Review'
+                    : 'Director Authorization & Release'}
                 </h3>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  Week {reviewingReport.weekNumber} ({reviewingReport.weekRange}) · {specialStudents.find(s => s.id === reviewingReport.studentId)?.name}
+                  Week {reviewingReport.weekNumber} ({reviewingReport.weekRange}
+                  ) ·{' '}
+                  {
+                    specialStudents.find(
+                      (s) => s.id === reviewingReport.studentId,
+                    )?.name
+                  }
                 </p>
               </div>
-              <button 
-                onClick={() => setReviewingReport(null)} 
+              <button
+                onClick={() => setReviewingReport(null)}
                 className="text-stone-400 hover:text-stone-700 font-bold p-1 rounded-lg"
               >
                 ✕
@@ -437,7 +614,8 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
               <div className="bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-stone-800 text-[11px] uppercase tracking-wider">
-                    Report Draft Summary (By {reviewingReport.teacherName || 'Assigned SE Teacher'})
+                    Report Draft Summary (By{' '}
+                    {reviewingReport.teacherName || 'Assigned SE Teacher'})
                   </span>
                   <button
                     type="button"
@@ -446,7 +624,8 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
                       const wNum = reviewingReport.weekNumber;
                       setReviewingReport(null);
                       setSelectedStudentId(studId);
-                      if (onSelectReportForEdit) onSelectReportForEdit(studId, wNum);
+                      if (onSelectReportForEdit)
+                        onSelectReportForEdit(studId, wNum);
                     }}
                     className="text-[11px] font-bold text-[#6E161E] hover:underline flex items-center gap-1"
                   >
@@ -457,12 +636,19 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
 
                 {/* Target Goals */}
                 <div className="space-y-1.5 pt-1">
-                  <span className="font-semibold text-stone-600 block text-[11px]">Goal Progress & Ratings:</span>
+                  <span className="font-semibold text-stone-600 block text-[11px]">
+                    Goal Progress & Ratings:
+                  </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {reviewingReport.goalProgress.map((gp, i) => (
-                      <div key={gp.goalId || i} className="bg-white p-2.5 rounded-xl border border-stone-200 space-y-1">
+                      <div
+                        key={gp.goalId || i}
+                        className="bg-white p-2.5 rounded-xl border border-stone-200 space-y-1"
+                      >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-stone-800">Goal #{i + 1}</span>
+                          <span className="font-bold text-stone-800">
+                            Goal #{i + 1}
+                          </span>
                           <span className="px-2 py-0.5 rounded-md bg-stone-100 font-bold text-stone-700 text-[10px]">
                             Rating: {gp.rating}/5
                           </span>
@@ -478,7 +664,9 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
                 {/* Observations */}
                 {reviewingReport.descriptiveObservation && (
                   <div className="space-y-1 pt-1">
-                    <span className="font-semibold text-stone-600 block text-[11px]">Classroom Observations:</span>
+                    <span className="font-semibold text-stone-600 block text-[11px]">
+                      Classroom Observations:
+                    </span>
                     <p className="bg-white p-2.5 rounded-xl border border-stone-200 text-stone-700 leading-relaxed italic">
                       "{reviewingReport.descriptiveObservation}"
                     </p>
@@ -488,7 +676,9 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
                 {/* Home Connection */}
                 {reviewingReport.homeConnection && (
                   <div className="space-y-1 pt-1">
-                    <span className="font-semibold text-blue-900 block text-[11px]">Parent Guidance / Home Connection:</span>
+                    <span className="font-semibold text-blue-900 block text-[11px]">
+                      Parent Guidance / Home Connection:
+                    </span>
                     <p className="bg-blue-50/70 p-2.5 rounded-xl border border-blue-200 text-blue-950 leading-relaxed italic">
                       "{reviewingReport.homeConnection}"
                     </p>
@@ -508,7 +698,11 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
                   }`}
                 >
                   <CheckCircle2 className="w-5 h-5 mx-auto mb-1.5 text-emerald-600" />
-                  <span>{isCoordinator ? 'Verify & Forward' : 'Approve & Release to Parents'}</span>
+                  <span>
+                    {isCoordinator
+                      ? 'Verify & Forward'
+                      : 'Approve & Release to Parents'}
+                  </span>
                 </button>
 
                 <button
@@ -528,9 +722,15 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
               {/* Reviewer Feedback Comment */}
               <div className="space-y-1.5">
                 <label className="font-bold text-stone-800 flex items-center justify-between">
-                  <span>{reviewAction === 'Return' ? 'Revision Instructions (Required):' : 'Reviewer Verification Remarks:'}</span>
+                  <span>
+                    {reviewAction === 'Return'
+                      ? 'Revision Instructions (Required):'
+                      : 'Reviewer Verification Remarks:'}
+                  </span>
                   {reviewAction === 'Return' && (
-                    <span className="text-rose-600 text-[10px] font-black uppercase tracking-wider">Mandatory</span>
+                    <span className="text-rose-600 text-[10px] font-black uppercase tracking-wider">
+                      Mandatory
+                    </span>
                   )}
                 </label>
                 <textarea
@@ -568,7 +768,9 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
                     : 'bg-rose-600 hover:bg-rose-700'
                 }`}
               >
-                {reviewAction === 'Approve' ? 'Confirm Verification' : 'Return Report to Teacher'}
+                {reviewAction === 'Approve'
+                  ? 'Confirm Verification'
+                  : 'Return Report to Teacher'}
               </button>
             </div>
           </div>
@@ -583,28 +785,58 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
               <div className="flex items-center gap-2.5">
                 <Clock className="w-5 h-5 text-[#6E161E]" />
                 <div>
-                  <h3 className="font-heading font-black text-base text-stone-900">Weekly Report Audit Trail</h3>
-                  <p className="text-xs text-stone-500">Student: {specialStudents.find(s => s.id === historyReport.studentId)?.name} (Week {historyReport.weekNumber})</p>
+                  <h3 className="font-heading font-black text-base text-stone-900">
+                    Weekly Report Audit Trail
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Student:{' '}
+                    {
+                      specialStudents.find(
+                        (s) => s.id === historyReport.studentId,
+                      )?.name
+                    }{' '}
+                    (Week {historyReport.weekNumber})
+                  </p>
                 </div>
               </div>
-              <button onClick={() => setHistoryReport(null)} className="text-stone-400 hover:text-stone-700 font-bold">✕</button>
+              <button
+                onClick={() => setHistoryReport(null)}
+                className="text-stone-400 hover:text-stone-700 font-bold"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="p-6 overflow-y-auto space-y-4 text-xs">
-              {(!historyReport.workflowHistory || historyReport.workflowHistory.length === 0) ? (
-                <p className="text-stone-400 text-center py-6">No historical workflow transitions recorded yet.</p>
+              {!historyReport.workflowHistory ||
+              historyReport.workflowHistory.length === 0 ? (
+                <p className="text-stone-400 text-center py-6">
+                  No historical workflow transitions recorded yet.
+                </p>
               ) : (
                 <div className="space-y-4 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-stone-200">
                   {historyReport.workflowHistory.map((h, i) => (
                     <div key={h.id || i} className="relative pl-9 space-y-1">
                       <div className="absolute left-2.5 top-1 w-3 h-3 rounded-full bg-[#6E161E] ring-4 ring-[#FAF5EF]" />
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-stone-900">{h.stage} → {h.status}</span>
+                        <span className="font-bold text-stone-900">
+                          {h.stage} → {h.status}
+                        </span>
                         <span className="text-[10px] text-stone-400 font-mono">
-                          {new Date(h.timestamp).toLocaleDateString()} {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(h.timestamp).toLocaleDateString()}{' '}
+                          {new Date(h.timestamp).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </span>
                       </div>
-                      <p className="text-[11px] text-stone-600 font-medium">By <strong className="text-stone-800">{h.authorName}</strong> ({h.authorRole})</p>
+                      <p className="text-[11px] text-stone-600 font-medium">
+                        By{' '}
+                        <strong className="text-stone-800">
+                          {h.authorName}
+                        </strong>{' '}
+                        ({h.authorRole})
+                      </p>
                       {h.comment && (
                         <p className="p-2 bg-[#FAF5EF] rounded-lg border border-[#E8DFC8] text-stone-700 mt-1 italic">
                           "{h.comment}"
@@ -617,7 +849,10 @@ export const WeeklyReportStatusTracker: React.FC<WeeklyReportStatusTrackerProps>
             </div>
 
             <div className="p-4 border-t border-stone-100 bg-[#FAF5EF] flex justify-end">
-              <button onClick={() => setHistoryReport(null)} className="px-4 py-2 bg-stone-800 text-white rounded-xl text-xs font-bold">
+              <button
+                onClick={() => setHistoryReport(null)}
+                className="px-4 py-2 bg-stone-800 text-white rounded-xl text-xs font-bold"
+              >
                 Close Audit Log
               </button>
             </div>

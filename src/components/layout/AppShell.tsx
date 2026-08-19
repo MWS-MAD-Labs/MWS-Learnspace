@@ -1,29 +1,27 @@
 import React, { useState } from 'react';
-import { useApp, NavigationTab, SpecialEdSubTab } from '../../context/AppContext';
-import { 
-  LayoutDashboard, 
-  CalendarCheck, 
-  BookOpen, 
-  GraduationCap, 
-  BarChart3, 
-  Search, 
-  Bell, 
-  ChevronDown, 
-  ChevronRight, 
-  Sparkles,
-  Calendar, 
-  ListOrdered, 
-  PlusCircle, 
-  Brain, 
-  FileSignature, 
-  ClipboardList, 
+import { useApp } from '../../context/AppContext';
+import {
+  LayoutDashboard,
+  CalendarCheck,
+  BookOpen,
+  GraduationCap,
+  BarChart3,
+  Search,
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  Calendar,
+  ListOrdered,
+  PlusCircle,
+  Brain,
+  FileSignature,
+  ClipboardList,
   RefreshCw,
-  UserCheck,
-  ShieldAlert,
-  LogOut
 } from 'lucide-react';
 
-export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppShell: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const {
     currentUser,
     allUsers,
@@ -35,7 +33,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
     searchQuery,
     setSearchQuery,
     resetAllDataToDefault,
-    navigateToJourneyEditor
+    navigateToJourneyEditor,
   } = useApp();
 
   const [learningJourneyMenuOpen, setLearningJourneyMenuOpen] = useState(true);
@@ -43,20 +41,20 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const isLearningJourneyActive = 
-    activeTab === 'LEARNING_JOURNEY_CALENDAR' || 
-    activeTab === 'LEARNING_JOURNEY_TRACKER' || 
+  const isLearningJourneyActive =
+    activeTab === 'LEARNING_JOURNEY_CALENDAR' ||
+    activeTab === 'LEARNING_JOURNEY_TRACKER' ||
     activeTab === 'LEARNING_JOURNEY_EDITOR';
 
-  const isSpecialEdActive = 
-    activeTab === 'SPECIAL_ED_OBSERVATION' || 
-    activeTab === 'SPECIAL_ED_IEP' || 
+  const isSpecialEdActive =
+    activeTab === 'SPECIAL_ED_OBSERVATION' ||
+    activeTab === 'SPECIAL_ED_IEP' ||
     activeTab === 'SPECIAL_ED_WEEKLY_REPORT';
 
   return (
     <div className="min-h-screen bg-[#FAF6F0] flex flex-col font-sans text-stone-900">
       {/* Top Bar */}
-      <header 
+      <header
         id="app-header"
         className="sticky top-0 z-30 bg-[#FFFDF9] border-b border-[#EFE7DC] px-4 lg:px-8 py-3 flex items-center justify-between shadow-2xs"
       >
@@ -105,13 +103,17 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
               className="flex items-center gap-2 px-3 py-1.5 bg-[#FAF5EF] hover:bg-[#F2EAE0] border border-[#E8DEC7] rounded-xl text-xs font-semibold text-stone-800 transition-colors shadow-2xs"
             >
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="hidden sm:inline text-stone-500 font-medium">Role:</span>
-              <span className="font-bold text-[#6E161E]">{currentUser.roleTitle}</span>
+              <span className="hidden sm:inline text-stone-500 font-medium">
+                Role:
+              </span>
+              <span className="font-bold text-[#6E161E]">
+                {currentUser.roleTitle}
+              </span>
               <ChevronDown className="w-3.5 h-3.5 text-stone-500" />
             </button>
 
             {roleDropdownOpen && (
-              <div 
+              <div
                 id="role-switcher-menu"
                 className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-stone-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
               >
@@ -133,11 +135,16 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         setRoleDropdownOpen(false);
                       }}
                       className={`w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-[#FAF5EF] transition-colors ${
-                        currentUser.id === user.id ? 'bg-[#FAF5EF] border-l-3 border-[#6E161E]' : ''
+                        currentUser.id === user.id
+                          ? 'bg-[#FAF5EF] border-l-3 border-[#6E161E]'
+                          : ''
                       }`}
                     >
                       <img
-                        src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80'}
+                        src={
+                          user.avatarUrl ||
+                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80'
+                        }
                         alt={user.name}
                         className="w-8 h-8 rounded-full object-cover border border-stone-200 shrink-0"
                       />
@@ -147,7 +154,9 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             {user.name}
                           </p>
                           {currentUser.id === user.id && (
-                            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.2 rounded">Active</span>
+                            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.2 rounded">
+                              Active
+                            </span>
                           )}
                         </div>
                         <p className="text-[11px] text-stone-500 truncate">
@@ -186,27 +195,35 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
             </button>
 
             {notificationsOpen && (
-              <div 
+              <div
                 id="notifications-dropdown-menu"
                 className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-stone-200 p-4 z-50"
               >
                 <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-                  <span className="text-xs font-bold text-stone-900">Notifications & Action Items</span>
+                  <span className="text-xs font-bold text-stone-900">
+                    Notifications & Action Items
+                  </span>
                   <span className="text-[10px] bg-[#6E161E]/10 text-[#6E161E] font-bold px-1.5 py-0.5 rounded-full">
                     2 New
                   </span>
                 </div>
                 <div className="py-2 space-y-2">
                   <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-left">
-                    <p className="text-xs font-bold text-amber-900">Learning Journey Review Required</p>
+                    <p className="text-xs font-bold text-amber-900">
+                      Learning Journey Review Required
+                    </p>
                     <p className="text-[11px] text-amber-700 mt-0.5">
-                      "Moving My Body" by Coach Marcus Vance is awaiting Principal review.
+                      "Moving My Body" by Coach Marcus Vance is awaiting
+                      Principal review.
                     </p>
                   </div>
                   <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-200/60 text-left">
-                    <p className="text-xs font-bold text-purple-900">Weekly IEP Report Due</p>
+                    <p className="text-xs font-bold text-purple-900">
+                      Weekly IEP Report Due
+                    </p>
                     <p className="text-[11px] text-purple-700 mt-0.5">
-                      Week 14 IEP progress logging for Leo M. is ready for completion.
+                      Week 14 IEP progress logging for Leo M. is ready for
+                      completion.
                     </p>
                   </div>
                 </div>
@@ -219,7 +236,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
       {/* Main Layout Container */}
       <div className="flex-1 flex max-w-full">
         {/* Left Sidebar */}
-        <aside 
+        <aside
           id="app-sidebar"
           className="w-64 shrink-0 bg-[#FFFDF9] border-r border-[#EFE7DC] flex flex-col justify-between py-6 px-3 min-h-[calc(100vh-65px)] select-none"
         >
@@ -252,9 +269,13 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
               >
                 <CalendarCheck className="w-4 h-4" />
                 <span>Attendance</span>
-                <span className={`ml-auto text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
-                  activeTab === 'ATTENDANCE' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
-                }`}>
+                <span
+                  className={`ml-auto text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                    activeTab === 'ATTENDANCE'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-emerald-100 text-emerald-800'
+                  }`}
+                >
                   Today
                 </span>
               </button>
@@ -263,7 +284,9 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
               <div className="pt-2">
                 <button
                   id="nav-learning-journey-toggle"
-                  onClick={() => setLearningJourneyMenuOpen(!learningJourneyMenuOpen)}
+                  onClick={() =>
+                    setLearningJourneyMenuOpen(!learningJourneyMenuOpen)
+                  }
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                     isLearningJourneyActive && !learningJourneyMenuOpen
                       ? 'bg-[#6E161E]/10 text-[#6E161E]'
@@ -326,7 +349,11 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
               </div>
 
               {/* Special Education Accordion - Only accessible to GPK teachers, Coordinator, and Leadership */}
-              {(currentUser.isGPK || currentUser.isSpecialEdCoordinator || currentUser.role === 'SPECIAL_ED_TEACHER' || currentUser.role === 'PRINCIPAL' || currentUser.role === 'DIRECTOR') && (
+              {(currentUser.isGPK ||
+                currentUser.isSpecialEdCoordinator ||
+                currentUser.role === 'SPECIAL_ED_TEACHER' ||
+                currentUser.role === 'PRINCIPAL' ||
+                currentUser.role === 'DIRECTOR') && (
                 <div className="pt-2">
                   <button
                     id="nav-special-ed-toggle"
@@ -413,7 +440,10 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           <div className="pt-4 border-t border-[#EFE7DC] space-y-3">
             <div className="flex items-center gap-3 p-2 rounded-xl bg-[#FAF5EF] border border-[#E8DFC8]">
               <img
-                src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80'}
+                src={
+                  currentUser.avatarUrl ||
+                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80'
+                }
                 alt={currentUser.name}
                 className="w-9 h-9 rounded-full object-cover border border-stone-200"
               />
@@ -428,14 +458,19 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-stone-500 px-1">
-              <span>Status: <strong className="text-emerald-700 font-semibold">Online</strong></span>
+              <span>
+                Status:{' '}
+                <strong className="text-emerald-700 font-semibold">
+                  Online
+                </strong>
+              </span>
               <span className="font-mono text-[10px]">v1.0.4</span>
             </div>
           </div>
         </aside>
 
         {/* Primary Page Canvas */}
-        <main 
+        <main
           id="main-page-canvas"
           className="flex-1 p-4 md:p-8 overflow-y-auto max-h-[calc(100vh-65px)]"
         >

@@ -14,12 +14,12 @@ import { ObservationReferenceDrawer } from './components/common/ObservationRefer
 import { ToastContainer } from './components/common/ToastContainer';
 
 const MainContent: React.FC = () => {
-  const { 
-    activeTab, 
-    isObservationDrawerOpen, 
-    setIsObservationDrawerOpen, 
-    selectedStudentId, 
-    navigateToObservation 
+  const {
+    activeTab,
+    isObservationDrawerOpen,
+    setIsObservationDrawerOpen,
+    selectedStudentId,
+    navigateToObservation,
   } = useApp();
 
   const renderTabContent = () => {
@@ -50,7 +50,7 @@ const MainContent: React.FC = () => {
   return (
     <AppShell>
       {renderTabContent()}
-      <ObservationReferenceDrawer 
+      <ObservationReferenceDrawer
         isOpen={isObservationDrawerOpen}
         onClose={() => setIsObservationDrawerOpen(false)}
         studentId={selectedStudentId}

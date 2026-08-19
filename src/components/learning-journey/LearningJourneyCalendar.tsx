@@ -2,43 +2,58 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
 import { LearningJourney, LearningJourneyProject } from '../../types';
-import { StatusBadge } from '../common/StatusBadge';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Calendar as CalendarIcon, 
-  Clock, 
-  ArrowRight,
+import {
+  Plus,
+  Search,
+  Calendar as CalendarIcon,
+  Clock,
   Edit3,
   Eye,
-  BookOpen,
-  Layers,
-  Sparkles,
-  Target,
-  Share2,
   Lock,
-  CheckCircle2,
-  UserCheck,
   Shield,
   GraduationCap,
-  X
+  X,
 } from 'lucide-react';
 
-const SEMESTER_1_MONTHS = ['July', 'August', 'September', 'October', 'November', 'December'];
-const SEMESTER_2_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June'];
+const SEMESTER_1_MONTHS = [
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+const SEMESTER_2_MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+];
 const ALL_MONTHS = [...SEMESTER_1_MONTHS, ...SEMESTER_2_MONTHS];
 
-const ALL_SCHOOL_GRADES = ['K1', 'K2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+const ALL_SCHOOL_GRADES = [
+  'K1',
+  'K2',
+  'Grade 1',
+  'Grade 2',
+  'Grade 3',
+  'Grade 4',
+  'Grade 5',
+  'Grade 6',
+];
 
 export const LearningJourneyCalendar: React.FC = () => {
   const { currentUser, navigateToJourneyEditor } = useApp();
-  const [selectedSemester, setSelectedSemester] = useState<'Semester 1' | 'Semester 2' | 'Full Year'>('Semester 1');
+  const [selectedSemester, setSelectedSemester] = useState<
+    'Semester 1' | 'Semester 2' | 'Full Year'
+  >('Semester 1');
   const [selectedUnit, setSelectedUnit] = useState('All Units');
   const [selectedGrade, setSelectedGrade] = useState('All Grades');
   const [selectedSubject, setSelectedSubject] = useState('All Subjects');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [selectedProjectModal, setSelectedProjectModal] = useState<{
     journey: LearningJourney;
     project: LearningJourneyProject;
@@ -60,11 +75,14 @@ export const LearningJourneyCalendar: React.FC = () => {
     }
     // Teacher: assigned homeroom grades + grades where they teach their subjects
     const teacherGrades = new Set<string>();
-    (currentUser.gradeIds || []).forEach(g => teacherGrades.add(g));
-    
+    (currentUser.gradeIds || []).forEach((g) => teacherGrades.add(g));
+
     // Also include any grade in journeys matching their subjects
-    journeys.forEach(j => {
-      if (currentUser.subjectIds?.includes(j.subject) && currentUser.gradeIds?.includes(j.grade)) {
+    journeys.forEach((j) => {
+      if (
+        currentUser.subjectIds?.includes(j.subject) &&
+        currentUser.gradeIds?.includes(j.grade)
+      ) {
         teacherGrades.add(j.grade);
       }
     });
@@ -77,7 +95,11 @@ export const LearningJourneyCalendar: React.FC = () => {
     if (!isLeadership) {
       if (allowedGrades.length === 1) {
         setSelectedGrade(allowedGrades[0]);
-      } else if (allowedGrades.length > 0 && selectedGrade !== 'All Grades' && !allowedGrades.includes(selectedGrade)) {
+      } else if (
+        allowedGrades.length > 0 &&
+        selectedGrade !== 'All Grades' &&
+        !allowedGrades.includes(selectedGrade)
+      ) {
         setSelectedGrade(allowedGrades[0]);
       }
     }
@@ -91,13 +113,19 @@ export const LearningJourneyCalendar: React.FC = () => {
 
   // Filter journeys based on user role permissions AND user filters
   const filteredJourneys = useMemo(() => {
-    return journeys.filter(j => {
+    return journeys.filter((j) => {
       // 1. Role-Based Access Control:
       if (!isLeadership) {
-        const isHomeroom = isGradeTeacher && currentUser.gradeIds?.includes(j.grade);
-        const isSubjectSpecialist = currentUser.subjectIds?.includes(j.subject) && currentUser.gradeIds?.includes(j.grade);
-        const isAuthor = j.ownerIds?.includes(currentUser.id) || j.createdBy === currentUser.id;
-        const isSpecialEd = isSpecialEdTeacher && currentUser.gradeIds?.includes(j.grade);
+        const isHomeroom =
+          isGradeTeacher && currentUser.gradeIds?.includes(j.grade);
+        const isSubjectSpecialist =
+          currentUser.subjectIds?.includes(j.subject) &&
+          currentUser.gradeIds?.includes(j.grade);
+        const isAuthor =
+          j.ownerIds?.includes(currentUser.id) ||
+          j.createdBy === currentUser.id;
+        const isSpecialEd =
+          isSpecialEdTeacher && currentUser.gradeIds?.includes(j.grade);
 
         // Teacher can only view:
         // a) Their homeroom grade
@@ -115,49 +143,81 @@ export const LearningJourneyCalendar: React.FC = () => {
         const matchSubject = j.subject.toLowerCase().includes(q);
         const matchAuthor = j.authorName.toLowerCase().includes(q);
         const matchGrade = j.grade.toLowerCase().includes(q);
-        const matchProjects = j.projects?.some(p => 
-          p.title.toLowerCase().includes(q) || 
-          p.description.toLowerCase().includes(q) ||
-          p.learningGoals?.some(g => g.description.toLowerCase().includes(q))
+        const matchProjects = j.projects?.some(
+          (p) =>
+            p.title.toLowerCase().includes(q) ||
+            p.description.toLowerCase().includes(q) ||
+            p.learningGoals?.some((g) =>
+              g.description.toLowerCase().includes(q),
+            ),
         );
-        if (!matchTitle && !matchSubject && !matchAuthor && !matchGrade && !matchProjects) {
+        if (
+          !matchTitle &&
+          !matchSubject &&
+          !matchAuthor &&
+          !matchGrade &&
+          !matchProjects
+        ) {
           return false;
         }
       }
 
       if (selectedUnit !== 'All Units' && j.unit !== selectedUnit) return false;
-      if (selectedGrade !== 'All Grades' && j.grade !== selectedGrade) return false;
-      if (selectedSubject !== 'All Subjects' && j.subject !== selectedSubject) return false;
-      if (selectedSemester !== 'Full Year' && j.semester !== selectedSemester) return false;
+      if (selectedGrade !== 'All Grades' && j.grade !== selectedGrade)
+        return false;
+      if (selectedSubject !== 'All Subjects' && j.subject !== selectedSubject)
+        return false;
+      if (selectedSemester !== 'Full Year' && j.semester !== selectedSemester)
+        return false;
 
       return true;
     });
-  }, [journeys, isLeadership, isGradeTeacher, isSpecialEdTeacher, currentUser, searchQuery, selectedUnit, selectedGrade, selectedSubject, selectedSemester]);
+  }, [
+    journeys,
+    isLeadership,
+    isGradeTeacher,
+    isSpecialEdTeacher,
+    currentUser,
+    searchQuery,
+    selectedUnit,
+    selectedGrade,
+    selectedSubject,
+    selectedSemester,
+  ]);
 
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedUnit('All Units');
-    setSelectedGrade(isLeadership ? 'All Grades' : (allowedGrades[0] || 'All Grades'));
+    setSelectedGrade(
+      isLeadership ? 'All Grades' : allowedGrades[0] || 'All Grades',
+    );
     setSelectedSubject('All Subjects');
     setSelectedSemester('Semester 1');
   };
 
-  const hasActiveFilters = 
+  const hasActiveFilters =
     searchQuery.trim() !== '' ||
-    selectedUnit !== 'All Units' || 
+    selectedUnit !== 'All Units' ||
     (isLeadership && selectedGrade !== 'All Grades') ||
-    (!isLeadership && allowedGrades.length > 1 && selectedGrade !== 'All Grades') ||
+    (!isLeadership &&
+      allowedGrades.length > 1 &&
+      selectedGrade !== 'All Grades') ||
     selectedSubject !== 'All Subjects' ||
     selectedSemester !== 'Semester 1';
 
   // Helper function to find column index of month
   const getMonthIndex = (monthStr: string): number => {
     const cleanMonth = monthStr.split(' ')[0];
-    return activeMonths.findIndex(m => m.toLowerCase() === cleanMonth.toLowerCase());
+    return activeMonths.findIndex(
+      (m) => m.toLowerCase() === cleanMonth.toLowerCase(),
+    );
   };
 
   return (
-    <div id="learning-journey-calendar-view" className="space-y-6 max-w-7xl mx-auto">
+    <div
+      id="learning-journey-calendar-view"
+      className="space-y-6 max-w-7xl mx-auto"
+    >
       {/* Header Bar */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 md:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1.5">
@@ -166,7 +226,9 @@ export const LearningJourneyCalendar: React.FC = () => {
               <CalendarIcon className="w-3.5 h-3.5" />
               Curriculum Roadmap
             </span>
-            <span className="text-xs text-stone-500 font-medium">Academic Year 2026–2027</span>
+            <span className="text-xs text-stone-500 font-medium">
+              Academic Year 2026–2027
+            </span>
             {isPrincipal && (
               <span className="text-xs font-bold bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
                 <Shield className="w-3 h-3" /> Principal Full Grade Access
@@ -174,8 +236,10 @@ export const LearningJourneyCalendar: React.FC = () => {
             )}
             {!isLeadership && (
               <span className="text-xs font-bold bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                <GraduationCap className="w-3 h-3" /> 
-                {isGradeTeacher ? `Homeroom: ${currentUser.gradeIds?.join(', ')}` : `Subject Specialist (${currentUser.subjectIds?.join(', ')})`}
+                <GraduationCap className="w-3 h-3" />
+                {isGradeTeacher
+                  ? `Homeroom: ${currentUser.gradeIds?.join(', ')}`
+                  : `Subject Specialist (${currentUser.subjectIds?.join(', ')})`}
               </span>
             )}
           </div>
@@ -183,7 +247,7 @@ export const LearningJourneyCalendar: React.FC = () => {
             Learning Journey Calendar
           </h1>
           <p className="text-xs md:text-sm text-stone-600 max-w-2xl leading-relaxed">
-            {isLeadership 
+            {isLeadership
               ? 'Comprehensive curriculum roadmaps per grade. Switch between grade levels below to inspect project scopes and timelines.'
               : `Grade & Subject curriculum roadmap. You have access to your assigned homeroom (${currentUser.gradeIds?.join(', ')}) and subjects (${currentUser.subjectIds?.join(', ')}).`}
           </p>
@@ -195,8 +259,7 @@ export const LearningJourneyCalendar: React.FC = () => {
             onClick={() => navigateToJourneyEditor()}
             className="px-5 py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
           >
-            <Plus className="w-4 h-4" />
-            + Create Learning Journey
+            <Plus className="w-4 h-4" />+ Create Learning Journey
           </button>
         </div>
       </div>
@@ -227,8 +290,9 @@ export const LearningJourneyCalendar: React.FC = () => {
           )}
 
           {/* Render allowed grades */}
-          {(isLeadership ? ALL_SCHOOL_GRADES : allowedGrades).map(grade => {
-            const isHomeroomGrade = isGradeTeacher && currentUser.gradeIds?.includes(grade);
+          {(isLeadership ? ALL_SCHOOL_GRADES : allowedGrades).map((grade) => {
+            const isHomeroomGrade =
+              isGradeTeacher && currentUser.gradeIds?.includes(grade);
             const isSelected = selectedGrade === grade;
 
             return (
@@ -244,7 +308,9 @@ export const LearningJourneyCalendar: React.FC = () => {
               >
                 <span>{grade}</span>
                 {isHomeroomGrade && (
-                  <span className={`text-[9px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-[#6E161E]/10 text-[#6E161E]'}`}>
+                  <span
+                    className={`text-[9px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-[#6E161E]/10 text-[#6E161E]'}`}
+                  >
                     Homeroom
                   </span>
                 )}
@@ -347,7 +413,12 @@ export const LearningJourneyCalendar: React.FC = () => {
                   {filteredJourneys.length} Active
                 </span>
               </div>
-              <div className="col-span-9 grid" style={{ gridTemplateColumns: `repeat(${activeMonths.length}, minmax(0, 1fr))` }}>
+              <div
+                className="col-span-9 grid"
+                style={{
+                  gridTemplateColumns: `repeat(${activeMonths.length}, minmax(0, 1fr))`,
+                }}
+              >
                 {activeMonths.map((m, idx) => (
                   <div
                     key={m}
@@ -356,7 +427,9 @@ export const LearningJourneyCalendar: React.FC = () => {
                     }`}
                   >
                     <span className="block text-stone-900 font-bold">{m}</span>
-                    <span className="text-[10px] text-stone-500 font-normal">2026–2027</span>
+                    <span className="text-[10px] text-stone-500 font-normal">
+                      2026–2027
+                    </span>
                   </div>
                 ))}
               </div>
@@ -368,7 +441,9 @@ export const LearningJourneyCalendar: React.FC = () => {
                 <div className="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center mx-auto text-stone-400">
                   <CalendarIcon className="w-6 h-6" />
                 </div>
-                <h3 className="text-sm font-bold text-stone-800">No Learning Journeys Visible</h3>
+                <h3 className="text-sm font-bold text-stone-800">
+                  No Learning Journeys Visible
+                </h3>
                 <p className="text-xs text-stone-500 max-w-sm mx-auto">
                   {!isLeadership
                     ? `No curriculum entries match your assigned teaching permissions (${currentUser.gradeIds?.join(', ')} / ${currentUser.subjectIds?.join(', ')}).`
@@ -385,7 +460,10 @@ export const LearningJourneyCalendar: React.FC = () => {
               </div>
             ) : (
               filteredJourneys.map((journey) => {
-                const isUnderReview = journey.draftStatus === 'Done' && (journey.principalReviewStatus === 'On Progress' || journey.directorApprovalStatus === 'On Progress');
+                const isUnderReview =
+                  journey.draftStatus === 'Done' &&
+                  (journey.principalReviewStatus === 'On Progress' ||
+                    journey.directorApprovalStatus === 'On Progress');
                 const isApproved = journey.directorApprovalStatus === 'Done';
                 const isLocked = isUnderReview || isApproved;
 
@@ -446,7 +524,9 @@ export const LearningJourneyCalendar: React.FC = () => {
                     {/* Right Column: Month Timeline Bars */}
                     <div
                       className="col-span-9 grid relative min-h-[100px] p-2"
-                      style={{ gridTemplateColumns: `repeat(${activeMonths.length}, minmax(0, 1fr))` }}
+                      style={{
+                        gridTemplateColumns: `repeat(${activeMonths.length}, minmax(0, 1fr))`,
+                      }}
                     >
                       {/* Vertical month guide lines */}
                       {activeMonths.map((_, idx) => (
@@ -463,23 +543,37 @@ export const LearningJourneyCalendar: React.FC = () => {
                           const endIdx = getMonthIndex(proj.endMonth);
 
                           const effectiveStart = startIdx === -1 ? 0 : startIdx;
-                          const effectiveEnd = endIdx === -1 ? (activeMonths.length - 1) : endIdx;
+                          const effectiveEnd =
+                            endIdx === -1 ? activeMonths.length - 1 : endIdx;
 
-                          const isVisible = startIdx !== -1 || endIdx !== -1 || (
-                            selectedSemester === 'Semester 1' && proj.startMonth.includes('August')
+                          const isVisible =
+                            startIdx !== -1 ||
+                            endIdx !== -1 ||
+                            (selectedSemester === 'Semester 1' &&
+                              proj.startMonth.includes('August'));
+
+                          if (!isVisible && startIdx === -1 && endIdx === -1)
+                            return null;
+
+                          const colSpan = Math.max(
+                            1,
+                            effectiveEnd - effectiveStart + 1,
                           );
-
-                          if (!isVisible && startIdx === -1 && endIdx === -1) return null;
-
-                          const colSpan = Math.max(1, (effectiveEnd - effectiveStart + 1));
-                          const leftPercent = (effectiveStart / activeMonths.length) * 100;
-                          const widthPercent = (colSpan / activeMonths.length) * 100;
+                          const leftPercent =
+                            (effectiveStart / activeMonths.length) * 100;
+                          const widthPercent =
+                            (colSpan / activeMonths.length) * 100;
 
                           return (
                             <div
                               key={proj.id}
                               id={`timeline-project-bar-${proj.id}`}
-                              onClick={() => setSelectedProjectModal({ journey, project: proj })}
+                              onClick={() =>
+                                setSelectedProjectModal({
+                                  journey,
+                                  project: proj,
+                                })
+                              }
                               className="cursor-pointer group relative rounded-xl p-2.5 text-stone-900 border shadow-xs transition-all hover:scale-[1.01] hover:shadow-md"
                               style={{
                                 marginLeft: `${leftPercent}%`,
@@ -487,7 +581,7 @@ export const LearningJourneyCalendar: React.FC = () => {
                                 backgroundColor: `${proj.color || '#F5B842'}20`,
                                 borderColor: `${proj.color || '#F5B842'}80`,
                                 borderLeftWidth: '5px',
-                                borderLeftColor: proj.color || '#6E161E'
+                                borderLeftColor: proj.color || '#6E161E',
                               }}
                             >
                               <div className="flex items-center justify-between gap-1 overflow-hidden">
@@ -536,14 +630,16 @@ export const LearningJourneyCalendar: React.FC = () => {
             <div className="flex items-start justify-between pb-3 border-b border-stone-100">
               <div>
                 <span className="text-xs font-bold text-[#6E161E] bg-[#6E161E]/10 px-2.5 py-0.5 rounded-full">
-                  {selectedProjectModal.journey.grade} · {selectedProjectModal.journey.subject}
+                  {selectedProjectModal.journey.grade} ·{' '}
+                  {selectedProjectModal.journey.subject}
                 </span>
                 <h2 className="text-xl font-bold text-stone-900 mt-2">
                   {selectedProjectModal.project.title}
                 </h2>
                 <p className="text-xs text-stone-500 mt-0.5 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-stone-400" />
-                  Timeline: {selectedProjectModal.project.startMonth} – {selectedProjectModal.project.endMonth}
+                  Timeline: {selectedProjectModal.project.startMonth} –{' '}
+                  {selectedProjectModal.project.endMonth}
                 </p>
               </div>
               <button
@@ -568,31 +664,51 @@ export const LearningJourneyCalendar: React.FC = () => {
               {selectedProjectModal.project.learningGoals?.length > 0 && (
                 <div>
                   <span className="font-bold text-stone-900 uppercase tracking-wider text-[11px]">
-                    Targeted Learning Goals ({selectedProjectModal.project.learningGoals.length})
+                    Targeted Learning Goals (
+                    {selectedProjectModal.project.learningGoals.length})
                   </span>
                   <ul className="mt-2 space-y-2">
-                    {selectedProjectModal.project.learningGoals.map((goal, idx) => (
-                      <li key={goal.id || idx} className="flex items-start gap-2.5 bg-stone-50 p-3 rounded-xl border border-stone-200">
-                        <span className="font-bold text-[#6E161E] shrink-0">{idx + 1}.</span>
-                        <span className="leading-snug">{goal.description}</span>
-                      </li>
-                    ))}
+                    {selectedProjectModal.project.learningGoals.map(
+                      (goal, idx) => (
+                        <li
+                          key={goal.id || idx}
+                          className="flex items-start gap-2.5 bg-stone-50 p-3 rounded-xl border border-stone-200"
+                        >
+                          <span className="font-bold text-[#6E161E] shrink-0">
+                            {idx + 1}.
+                          </span>
+                          <span className="leading-snug">
+                            {goal.description}
+                          </span>
+                        </li>
+                      ),
+                    )}
                   </ul>
                 </div>
               )}
 
-              {selectedProjectModal.project.crossCurricularConnections?.length > 0 && (
+              {selectedProjectModal.project.crossCurricularConnections?.length >
+                0 && (
                 <div>
                   <span className="font-bold text-stone-900 uppercase tracking-wider text-[11px]">
                     Cross-Curricular Connections
                   </span>
                   <div className="mt-2 space-y-2">
-                    {selectedProjectModal.project.crossCurricularConnections.map((conn) => (
-                      <div key={conn.id} className="p-3 rounded-xl bg-amber-50/70 border border-amber-200">
-                        <span className="font-bold text-amber-900">{conn.subject}: </span>
-                        <span className="text-amber-800 leading-snug">{conn.description}</span>
-                      </div>
-                    ))}
+                    {selectedProjectModal.project.crossCurricularConnections.map(
+                      (conn) => (
+                        <div
+                          key={conn.id}
+                          className="p-3 rounded-xl bg-amber-50/70 border border-amber-200"
+                        >
+                          <span className="font-bold text-amber-900">
+                            {conn.subject}:{' '}
+                          </span>
+                          <span className="text-amber-800 leading-snug">
+                            {conn.description}
+                          </span>
+                        </div>
+                      ),
+                    )}
                   </div>
                 </div>
               )}

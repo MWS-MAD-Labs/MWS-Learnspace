@@ -8,12 +8,12 @@ Learnspace is currently a frontend prototype with package version `0.0.0`. Until
 
 Recommended first milestones:
 
-| Version | Meaning |
-| --- | --- |
-| `0.1.0` | Production foundation: API skeleton, Prisma schema, PostgreSQL, Google OAuth, and local Docker Compose |
-| `0.2.0` | First end-to-end feature migrated from `localStorage` to the API |
-| `0.3.0`–`0.9.x` | Incremental feature migrations, operational hardening, and release candidates |
-| `1.0.0` | Stable self-hosted release with supported upgrade/backup procedures and no required browser persistence |
+| Version         | Meaning                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------- |
+| `0.1.0`         | Production foundation: API skeleton, Prisma schema, PostgreSQL, Google OAuth, and local Docker Compose  |
+| `0.2.0`         | First end-to-end feature migrated from `localStorage` to the API                                        |
+| `0.3.0`–`0.9.x` | Incremental feature migrations, operational hardening, and release candidates                           |
+| `1.0.0`         | Stable self-hosted release with supported upgrade/backup procedures and no required browser persistence |
 
 ## Semantic Versioning
 
