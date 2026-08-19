@@ -1,0 +1,165 @@
+import { randomUUID } from 'node:crypto';
+import type { ErrorRequestHandler, RequestHandler } from 'express';
+import express from 'express';
+import {
+  apiErrorSchema,
+  healthResponseSchema,
+  versionResponseSchema,
+} from '@learnspace/contracts';
+import type { AppConfig } from './config.js';
+import type { Database } from './database.js';
+import type { Logger } from './logger.js';
+
+export type AppDependencies = {
+  config: AppConfig;
+  database: Database;
+  logger: Logger;
+  version?: string;
+};
+
+export function createApp({
+  config,
+  database,
+  logger,
+  version = '0.1.0-alpha.1',
+}: AppDependencies) {
+  const app = express();
+  app.disable('x-powered-by');
+  app.use(express.json({ limit: '100kb' }));
+
+  app.use((request, response, next) => {
+    const suppliedRequestId = request.header('x-request-id')?.trim();
+    const requestId =
+      suppliedRequestId && suppliedRequestId.length <= 128
+        ? suppliedRequestId
+        : randomUUID();
+    response.locals.requestId = requestId;
+    response.setHeader('x-request-id', requestId);
+
+    const startedAt = process.hrtime.bigint();
+    response.on('finish', () => {
+      const durationMs =
+        Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+      logger.info(
+        {
+          requestId,
+          method: request.method,
+          path: request.originalUrl,
+          status: response.statusCode,
+          durationMs: Number(durationMs.toFixed(2)),
+        },
+        'request completed',
+      );
+    });
+
+    next();
+  });
+
+  app.get('/health/live', (_request, response) => {
+    response.json(healthResponseSchema.parse({ status: 'live' }));
+  });
+
+  app.get('/health/ready', async (_request, response, next) => {
+    try {
+      await database.check();
+      response.json(
+        healthResponseSchema.parse({
+          status: 'ready',
+          dependencies: { database: 'up' },
+        }),
+      );
+    } catch (error) {
+      logger.warn(
+        { error: error instanceof Error ? error.message : 'unknown' },
+        'readiness check failed',
+      );
+      response.status(503).json(
+        healthResponseSchema.parse({
+          status: 'unavailable',
+          dependencies: { database: 'down' },
+        }),
+      );
+    }
+  });
+
+  app.get('/api/v1/version', (_request, response) => {
+    response.json(
+      versionResponseSchema.parse({ name: 'learnspace-api', version }),
+    );
+  });
+
+  if (config.nodeEnv === 'test') {
+    app.get('/__test/error', () => {
+      throw new Error('test failure');
+    });
+  }
+
+  const notFound: RequestHandler = (_request, response) => {
+    response.status(404).json(
+      apiErrorSchema.parse({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'The requested resource was not found.',
+          requestId: response.locals.requestId,
+        },
+      }),
+    );
+  };
+
+  const errorHandler: ErrorRequestHandler = (
+    error,
+    _request,
+    response,
+    _next,
+  ) => {
+    const requestId = String(response.locals.requestId ?? randomUUID());
+    const httpError = error as {
+      body?: unknown;
+      status?: number;
+      statusCode?: number;
+      type?: string;
+    };
+    const isPayloadTooLarge =
+      httpError.status === 413 ||
+      httpError.statusCode === 413 ||
+      httpError.type === 'entity.too.large';
+    const isInvalidJson = error instanceof SyntaxError && 'body' in httpError;
+    const status = isPayloadTooLarge ? 413 : isInvalidJson ? 400 : 500;
+    const code = isPayloadTooLarge
+      ? 'PAYLOAD_TOO_LARGE'
+      : isInvalidJson
+        ? 'INVALID_JSON'
+        : 'INTERNAL_SERVER_ERROR';
+    const message = isPayloadTooLarge
+      ? 'The request body exceeds the allowed size.'
+      : isInvalidJson
+        ? 'The request body is not valid JSON.'
+        : 'An unexpected error occurred.';
+
+    logger.error(
+      {
+        requestId,
+        error: error instanceof Error ? error.message : 'unknown error',
+        ...(config.nodeEnv === 'production'
+          ? {}
+          : { stack: error instanceof Error ? error.stack : undefined }),
+      },
+      'request failed',
+    );
+
+    response.status(status).json(
+      apiErrorSchema.parse({
+        error: {
+          code,
+          message,
+          requestId,
+        },
+      }),
+    );
+  };
+
+  app.use(notFound);
+  app.use(errorHandler);
+
+  return app;
+}

@@ -2,8 +2,10 @@
 
 Learnspace is an educator portal for academic planning, attendance, special-education observations, Individualized Education Programs (IEPs), and weekly progress reporting.
 
+The repository is currently at **`0.1.0-alpha.1`**. Milestone 1 provides an npm workspace, a typed Express API foundation, shared Zod contracts, PostgreSQL and Docker Compose orchestration, and production-oriented web/API images.
+
 > [!IMPORTANT]
-> The current repository is a functional frontend prototype originally developed in Google AI Studio. It is **not production-ready yet**: application data is stored in each browser's `localStorage`, identity is simulated through a role switcher, and no server-side authorization boundary exists. The production architecture described below is the intended migration target.
+> The educator workflows are still a frontend prototype and are **not production-ready**. Application records are seeded in the browser and stored in each browser profile's `localStorage`; identity is simulated through a role switcher; and the UI has not yet migrated its records or authentication to the API. Do not use real student, family, educational, or disability-related information.
 
 ## Current capabilities
 
@@ -18,259 +20,272 @@ Learnspace is an educator portal for academic planning, attendance, special-educ
 - Weekly IEP progress reports with goal synchronization
 - Role-oriented views for teachers, coordinators, principals, and directors
 - Seeded demo records for evaluating the workflows
+- Express API foundation with liveness, PostgreSQL readiness, version, structured logging, request IDs, and safe error responses
+- Docker Compose services for the web application, API, and PostgreSQL
 
-## Current technology
-
-| Area           | Current implementation                                      |
-| -------------- | ----------------------------------------------------------- |
-| UI             | React 19, TypeScript, Vite 6                                |
-| Styling        | Tailwind CSS 4                                              |
-| State          | React Context and component state                           |
-| Persistence    | Browser `localStorage` via `src/services/storageService.ts` |
-| Authentication | Demo-only user/role switcher                                |
-| Backend        | None currently used                                         |
-| Testing        | Vitest and React Testing Library smoke tests                |
-| Packaging      | No Docker image yet                                         |
-
-The package manifest retains Express tooling for the next API workspace milestone, but there is no active backend or Gemini integration in the application code. `metadata.json` remains temporarily as provenance and compatibility metadata for the prototype's Google AI Studio origin; the application does not load it at runtime.
-
-## Project status
-
-The repository is at **prototype/pre-alpha** maturity. Its current package version is `0.0.0`; the first production-foundation milestone should be released as `0.1.0` after the backend skeleton, Prisma schema, authentication boundary, and containerized development environment are working.
-
-See:
-
-- [`docs/ROADMAP.md`](docs/ROADMAP.md) for the production migration plan
-- [`docs/VERSIONING.md`](docs/VERSIONING.md) for release and migration policy
-- [`CHANGELOG.md`](CHANGELOG.md) for release history
-
-## Repository structure
-
-```text
-.
-├── src/
-│   ├── components/           # Feature and shared React components
-│   ├── context/AppContext.tsx
-│   ├── data/seedData.ts      # Prototype/demo data
-│   ├── services/storageService.ts
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── types.ts              # Current domain model
-├── docs/
-│   ├── ROADMAP.md
-│   └── VERSIONING.md
-├── index.html
-├── metadata.json             # Google AI Studio metadata
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
-```
-
-## Run the current prototype
-
-### Requirements
-
-- Node.js `20.20.2` (pinned in [`.nvmrc`](.nvmrc)); newer compatible LTS releases are also accepted
-- npm `10.8.2` or newer
-
-### Installation
-
-```bash
-nvm use
-npm ci
-npm run dev
-```
-
-The repository sets `engine-strict=true`, so npm stops with an understandable engine error when the installed Node.js or npm version is below the supported minimum.
-
-Open <http://localhost:3000>.
-
-### Available scripts
-
-```bash
-npm run dev           # Start Vite on 0.0.0.0:3000
-npm run build         # Build the frontend into dist/
-npm run preview       # Preview the production frontend bundle
-npm run format        # Format supported repository files
-npm run format:check  # Check formatting without changing files
-npm run lint          # Run ESLint, including React Hooks and unused-import checks
-npm run typecheck     # Run the TypeScript no-emit check
-npm test -- --run     # Run the frontend tests once in jsdom
-npm run clean         # Remove generated frontend output and coverage
-```
-
-### Prototype data behavior
-
-On first load, `src/services/storageService.ts` copies records from `src/data/seedData.ts` into browser `localStorage`. Data therefore:
-
-- exists only in one browser profile;
-- is not synchronized between users or devices;
-- can be modified by anyone with browser developer tools;
-- has no transaction, concurrency, backup, or audit guarantees;
-- must not be treated as a secure store for real student information.
-
-The role switcher in the header is also a demonstration tool, not authentication. UI checks are useful for presentation but cannot enforce access control.
-
-## Target production architecture
-
-The recommended migration preserves the React frontend while introducing a server-side API and PostgreSQL.
+## Current architecture
 
 ```mermaid
 flowchart TB
-    Browser[React web application] -->|HTTPS JSON API| API[Node.js API]
-    Browser -->|Google sign-in redirect| OAuth[Google OAuth 2.0 / OIDC]
-    OAuth -->|Verified identity| API
-    API --> AuthZ[RBAC and record-level authorization]
-    API --> Prisma[Prisma ORM]
-    Prisma --> DB[(PostgreSQL)]
-    API --> Audit[(Audit events)]
-    Worker[Background worker] --> DB
-    Proxy[Reverse proxy / TLS] --> Browser
-    Proxy --> API
+    Browser[Browser] --> Web[React/Vite web application]
+    Web --> LocalStorage[(Browser localStorage prototype data)]
+    Browser -->|same-origin /api traffic in Compose| Proxy[Non-root nginx web container]
+    Proxy --> API[Express TypeScript API]
+    API --> DB[(PostgreSQL 16)]
+    Web -. shared wire schemas .-> Contracts[Zod contracts package]
+    API -. shared wire schemas .-> Contracts
 ```
 
-### Intended production components
+The workspace and service boundary are implemented, but the migration is intentionally incremental:
 
-- **Web:** existing React/Vite application, migrated from direct storage calls to typed API calls
-- **API:** Node.js + TypeScript HTTP service with request validation, structured errors, authorization, health checks, and OpenAPI documentation
-- **Database:** PostgreSQL managed through Prisma schema and migrations
-- **Authentication:** server-side Google OAuth/OIDC with secure, `HttpOnly`, `Secure`, `SameSite` cookies
-- **Authorization:** role-based and record-level checks on every protected API operation
-- **Containers:** separate web/API and PostgreSQL services orchestrated by Docker Compose
-- **Operations:** health checks, structured logs, backups, migration jobs, monitoring, and documented restore procedures
+- `apps/web` contains the existing React/Vite prototype. Its domain records still use `apps/web/src/services/storageService.ts` and `localStorage`.
+- `apps/api` is an active Express/TypeScript service. It validates runtime configuration, emits structured JSON logs, assigns request IDs, checks PostgreSQL readiness, handles shutdown signals, and returns shared response schemas.
+- `packages/contracts` provides shared Zod schemas and inferred TypeScript types for health, version, and API error responses.
+- `compose.yaml` defines production-oriented `web`, `api`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation.
+- `compose.dev.yaml` is an optional override that publishes PostgreSQL on host port `5432` for database tools or a host-run API.
+- PostgreSQL is connected to the API but is not yet the authoritative store for the educator workflows. Prisma, OAuth, server-side sessions, authorization, and domain APIs remain later milestones.
 
-### Suggested production repository layout
+Frontend role checks are presentation behavior only and are not authorization. The API is the intended security boundary for protected operations as those operations are implemented.
 
-This is a migration target, not the current layout:
+## Repository layout
 
 ```text
 .
 ├── apps/
-│   ├── web/                  # React/Vite frontend
-│   └── api/                  # Node.js HTTP API
+│   ├── web/                       # React 19, TypeScript, Vite, Tailwind prototype
+│   │   ├── Dockerfile             # Multi-stage build and non-root nginx runtime
+│   │   └── src/
+│   └── api/                       # Express TypeScript API
+│       ├── Dockerfile             # Multi-stage, non-root Node runtime
+│       ├── src/
+│       └── test/
 ├── packages/
-│   ├── contracts/            # Shared API schemas and generated types
-│   └── config/               # Shared lint/TypeScript configuration
-├── prisma/
-│   ├── schema.prisma
-│   ├── migrations/
-│   └── seed.ts
+│   └── contracts/                 # Shared Zod wire schemas and types
 ├── docker/
+│   └── web/nginx.conf             # SPA fallback, caching, health, and /api proxy
 ├── docs/
-├── compose.yaml
-└── package.json
+│   ├── adr/0001-application-architecture.md
+│   ├── ROADMAP.md
+│   └── VERSIONING.md
+├── compose.yaml                   # Web, API, and internal PostgreSQL stack
+├── compose.dev.yaml               # Optional host PostgreSQL port override
+├── .env.example                   # Safe environment template
+└── package.json                   # npm workspace orchestration
 ```
 
-The repository should only be reorganized after the API boundary is defined; moving files first would create churn without improving security or reliability.
+`metadata.json` remains as provenance and compatibility metadata for the prototype's Google AI Studio origin. The application does not load it at runtime.
 
-## Planned self-hosting workflow
+## Requirements
 
-The production Docker Compose setup should provide:
+- Node.js `20.20.2` (pinned in [`.nvmrc`](.nvmrc)); newer compatible LTS releases are accepted by the package engine range
+- npm `10.8.2` or newer
+- Docker with the Compose plugin for container workflows
 
-- `web`: static frontend served by a hardened web server or reverse proxy;
-- `api`: Node.js API with an unprivileged runtime user;
-- `db`: PostgreSQL with a named persistent volume;
-- an explicit migration command/job using `prisma migrate deploy`;
-- health checks and restart policies;
-- optional `redis` only if sessions, queues, or rate limiting require it;
-- separate development and production configuration.
+The repository sets `engine-strict=true`, so unsupported Node.js or npm versions fail installation with an engine error.
 
-A future production deployment should look similar to:
+## Install dependencies
+
+```bash
+nvm use
+npm ci
+```
+
+## Local npm development
+
+### Run the web prototype
+
+```bash
+npm run dev
+```
+
+Open <http://localhost:3000>. This starts only `@learnspace/web`; its prototype records remain browser-local.
+
+Equivalent workspace command:
+
+```bash
+npm run dev -w @learnspace/web
+```
+
+### Run the API locally
+
+The API requires its environment variables to be present in the process environment; it does not automatically load `.env` files. Start PostgreSQL, load a development environment, and then run the API:
 
 ```bash
 cp .env.example .env
-# Configure database, public URL, session secret, and Google OAuth credentials.
+# Edit .env for local development.
+docker compose -f compose.yaml -f compose.dev.yaml up -d db
+set -a
+. ./.env
+set +a
+npm run dev:api
+```
+
+For a host-run API, set `DATABASE_URL` to a host address such as `postgresql://learnspace:change-me@localhost:5432/learnspace`. The Compose-internal hostname `db` is only resolvable from containers.
+
+Equivalent workspace command:
+
+```bash
+npm run dev -w @learnspace/api
+```
+
+The API listens on <http://localhost:4000> by default.
+
+### Root commands
+
+```bash
+npm run dev           # Start the web workspace on 0.0.0.0:3000
+npm run dev:api       # Start the API workspace in watch mode
+npm run build         # Build all workspaces that provide a build script
+npm run format        # Format supported repository files
+npm run format:check  # Check formatting without modifying files
+npm run lint          # Lint the complete workspace
+npm run typecheck     # Type-check all workspaces that provide the script
+npm test              # Run workspace tests once
+npm run clean         # Remove generated workspace output and coverage
+```
+
+### Workspace-local commands
+
+```bash
+npm run build -w @learnspace/contracts
+npm run typecheck -w @learnspace/contracts
+
+npm run build -w @learnspace/api
+npm run typecheck -w @learnspace/api
+npm test -w @learnspace/api -- --run
+npm run start -w @learnspace/api   # Run the previously built API
+
+npm run build -w @learnspace/web
+npm run typecheck -w @learnspace/web
+npm test -w @learnspace/web -- --run
+npm run preview -w @learnspace/web
+```
+
+## API endpoints
+
+| Method | Endpoint          | Purpose                                    | Database required |
+| ------ | ----------------- | ------------------------------------------ | ----------------- |
+| `GET`  | `/health/live`    | Process liveness (`{"status":"live"}`)     | No                |
+| `GET`  | `/health/ready`   | PostgreSQL readiness and dependency status | Yes               |
+| `GET`  | `/api/v1/version` | API name and current alpha version         | No                |
+
+The API also:
+
+- propagates a valid incoming `X-Request-ID` or generates one;
+- returns the request ID in response headers and error envelopes;
+- limits JSON request bodies to `100kb` and returns a safe `413 PAYLOAD_TOO_LARGE` envelope when exceeded;
+- bounds PostgreSQL readiness connection, query, and statement operations to two seconds;
+- disables Express's `X-Powered-By` header;
+- returns structured `404`, invalid-JSON, payload-too-large, and internal-error responses without production stack traces.
+
+When using the Compose web endpoint, `/api/v1/version` is available through the nginx same-origin proxy at <http://localhost:3000/api/v1/version>. API health endpoints are available directly on the published API port, for example <http://localhost:4000/health/ready>. The web container has its own health endpoint at <http://localhost:3000/health>.
+
+## Environment setup
+
+Copy the safe template before local or Compose operation:
+
+```bash
+cp .env.example .env
+```
+
+Never commit `.env` or real credentials. The API validates the following contract before listening:
+
+| Variable                              | Requirement                                                       |
+| ------------------------------------- | ----------------------------------------------------------------- |
+| `NODE_ENV`                            | `development`, `test`, or `production`; defaults to `development` |
+| `PORT`                                | Integer from `1` to `65535`; defaults to `4000`                   |
+| `DATABASE_URL`                        | Valid `postgresql://` or `postgres://` URL                        |
+| `APP_URL`                             | Valid absolute application URL                                    |
+| `SESSION_SECRET`                      | At least 32 characters                                            |
+| `GOOGLE_CLIENT_ID`                    | Non-empty; placeholder values are normally rejected               |
+| `GOOGLE_CLIENT_SECRET`                | Non-empty; placeholder values are normally rejected               |
+| `GOOGLE_ALLOWED_DOMAINS`              | Optional comma-separated domain list                              |
+| `ALLOW_DEVELOPMENT_AUTH_PLACEHOLDERS` | `true` only for explicit development placeholder credentials      |
+| `LOG_LEVEL`                           | `fatal`, `error`, `warn`, `info`, `debug`, or `trace`             |
+
+Compose additionally accepts `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `API_PORT`. Defaults are suitable only for isolated development.
+
+### Production-required secrets and settings
+
+Before any production-oriented Compose deployment:
+
+- set a unique `SESSION_SECRET` of at least 32 characters;
+- set real `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` values—development placeholders are rejected because the Compose API runs with `NODE_ENV=production`;
+- replace the default PostgreSQL password and ensure `DATABASE_URL` uses the matching database, user, password, host, and database name;
+- set `APP_URL` to the externally reachable HTTPS origin;
+- configure `GOOGLE_ALLOWED_DOMAINS` according to instance admission policy, if used;
+- keep all secrets outside the repository and arrange TLS, secret rotation, backups, and restore testing.
+
+OAuth routes and sessions are not implemented yet. Supplying credentials satisfies the current startup contract but does not enable Google sign-in.
+
+## Docker Compose
+
+### Full stack
+
+```bash
+cp .env.example .env
+# Replace required values, especially SESSION_SECRET and Google credentials.
 docker compose up -d --build
-docker compose run --rm api npm run db:migrate:deploy
+docker compose ps
 ```
 
-These commands are illustrative until the Docker and API milestones in the roadmap are implemented.
+Services and default host endpoints:
 
-## Planned configuration
+- web: <http://localhost:3000>
+- API: <http://localhost:4000>
+- PostgreSQL: internal Compose network only
 
-The production environment contract should include variables equivalent to:
+The `web` image builds the Vite bundle and serves it with an unprivileged nginx runtime, SPA fallback, immutable asset caching, no-store HTML responses, `/health`, and same-origin `/api/` proxying. The `api` image builds TypeScript in a separate stage, prunes development dependencies, runs as the unprivileged Node user, and checks `/health/live`. PostgreSQL uses a named `postgres-data` volume and is isolated on the internal backend network.
 
-```dotenv
-APP_URL=https://learnspace.example.org
-DATABASE_URL=postgresql://learnspace:change-me@db:5432/learnspace
-SESSION_SECRET=replace-with-at-least-32-random-bytes
-GOOGLE_CLIENT_ID=your-google-oauth-client-id
-GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
-GOOGLE_ALLOWED_DOMAINS=example.org
-LOG_LEVEL=info
+Stop the stack without deleting database data:
+
+```bash
+docker compose down
 ```
 
-Rules:
+To also delete the named database volume:
 
-- Never commit real `.env` files or OAuth secrets.
-- Configure Google OAuth redirect URIs for each environment.
-- Refuse startup in production when required secrets are absent or weak.
-- Treat domain allowlisting as an admission rule, not as the sole authorization mechanism.
+```bash
+docker compose down --volumes
+```
 
-## Google OAuth model
+### Optional host database access
 
-The recommended sign-in flow is authorization-code OAuth/OIDC handled by the API:
+Use the development override only when a host-run API or database tool needs PostgreSQL on `localhost:5432`:
 
-1. The user starts sign-in from the web application.
-2. The API generates state/PKCE values and redirects to Google.
-3. The callback validates state, issuer, audience, nonce, and token claims.
-4. The API matches the verified Google identity to an internal `User` record.
-5. New identities are rejected, invited, or provisioned according to instance policy.
-6. The API creates a server-side session and sends only an opaque secure cookie.
-7. Every API request loads the user and applies role and record-level authorization.
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml up -d db
+```
 
-Google identity determines **who the user is**. Learnspace's database determines **what the user may access**. Roles must not be accepted from browser input or inferred only from an email domain.
+Do not use this override for a production-oriented deployment; `compose.yaml` intentionally leaves the database port unpublished.
 
-For local development, use a dedicated OAuth client and callback such as `http://localhost:3000/api/auth/google/callback` (or the final API URL selected during implementation).
+### Docker validation status
 
-## Prisma and data migration direction
+On 2026-08-19, the complete Compose stack was built and runtime-validated with the required environment values supplied. Web, API, and PostgreSQL reached healthy status; direct and proxied endpoints, SPA fallback, cache headers, non-root users, PostgreSQL volume persistence, database-dependent readiness failure and recovery, and graceful API `SIGTERM` shutdown all passed. The stack was then stopped with `docker compose down` while preserving the named database volume.
 
-`src/types.ts` provides a useful domain inventory, but it is not yet a normalized relational model. Initial Prisma work should model at least:
+## Prototype data and security caveats
 
-- users, OAuth accounts, sessions, roles, and permissions;
-- schools/organizations, units, grades, classes, and subjects;
-- students and staff-to-student assignments;
-- attendance records;
-- learning journeys, projects, goals, cross-curricular links, and workflow events;
-- observation definitions, assignments, FEDC records, sensory records, and SFA records;
-- IEPs, team members, performance areas, accommodations, goals, services, and weekly reports;
-- immutable audit events.
+On first load, `apps/web/src/services/storageService.ts` copies records from `apps/web/src/data/seedData.ts` into browser `localStorage`. Data therefore:
 
-Some assessment response structures can start as PostgreSQL `Json` fields when their shape is instrument-specific, but identifiers, ownership, workflow state, dates, and fields used for filtering/reporting should be relational and indexed.
+- exists only in one browser profile;
+- is not synchronized between users or devices;
+- can be read or modified by anyone with browser developer tools;
+- has no transaction, concurrency, backup, audit, or server-side authorization guarantees;
+- is not written to the current PostgreSQL service;
+- must not be treated as a secure store for real student information.
 
-Before importing any browser data, create a one-time export/import format with schema versioning, validation, authorization checks, and a dry-run mode. Seed data must remain clearly separate from production data.
+The role switcher is a demonstration tool, not authentication. Google OAuth, opaque server-side sessions, Prisma models/migrations, domain persistence, audit events, and server-enforced role/record authorization remain roadmap work.
 
-## Security and privacy baseline
+Learnspace handles categories of data that can be highly sensitive. Deployment owners must assess applicable privacy, education, accessibility, retention, breach-response, and data-residency obligations with qualified advisers. This repository does not itself guarantee compliance with FERPA, GDPR/UK GDPR, COPPA, Indonesia's Personal Data Protection Law, or any local education policy.
 
-Learnspace contains highly sensitive student, family, educational, and disability-related information. A production deployment should not launch until it has:
+## Project documentation
 
-- server-side authorization for every read and write;
-- least-privilege role definitions and record scoping;
-- append-only audit logging for access and workflow changes;
-- TLS at the ingress and encrypted backups;
-- CSRF protection, secure cookies, OAuth state/PKCE, and restrictive CORS;
-- request validation, rate limiting, and safe error responses;
-- secret rotation and documented incident response;
-- retention, export, correction, and deletion policies appropriate to applicable law;
-- dependency, container, and source-code vulnerability scanning;
-- recovery tests for database backups.
-
-Compliance obligations vary by jurisdiction and organization. Deployment owners should review requirements such as FERPA, GDPR/UK GDPR, COPPA, Indonesia's Personal Data Protection Law, and local education policies with qualified counsel. This repository does not itself guarantee compliance.
-
-## Development principles
-
-- The API is the security boundary; never rely on hidden buttons for authorization.
-- Use Prisma migrations for every database change.
-- Keep demo data opt-in and impossible to seed accidentally in production.
-- Validate API input at runtime in addition to TypeScript checks.
-- Prefer explicit workflow state machines over loosely related status strings.
-- Record actor, timestamp, and reason for sensitive workflow changes.
-- Add tests with each migration from `storageService` to the API.
-- Keep deployment reproducible from a clean clone and documented environment variables.
-
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local setup, branch, validation, and pull-request expectations. See [`SECURITY.md`](SECURITY.md) for private vulnerability reporting and [`docs/VERSIONING.md`](docs/VERSIONING.md) for commit, release, and migration conventions.
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — implementation backlog and milestone status
+- [`docs/adr/0001-application-architecture.md`](docs/adr/0001-application-architecture.md) — accepted architecture decisions
+- [`docs/VERSIONING.md`](docs/VERSIONING.md) — release and migration policy
+- [`CHANGELOG.md`](CHANGELOG.md) — release history
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution and validation workflow
+- [`SECURITY.md`](SECURITY.md) — private vulnerability reporting
 
 ## License
 

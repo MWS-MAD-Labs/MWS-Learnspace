@@ -61,15 +61,17 @@ These decisions reduce ambiguity for implementation agents. Change them only thr
 
 ## Current baseline
 
-The current application has a useful React UI and domain inventory, but it is a prototype:
+The current application has a useful React UI and domain inventory, but its educator workflows remain a prototype:
 
-- data is initialized from `src/data/seedData.ts` and persisted by `src/services/storageService.ts` in browser `localStorage`;
-- the role switcher in `src/components/layout/AppShell.tsx` simulates identity;
+- the npm workspace contains `apps/web`, `apps/api`, and `packages/contracts`;
+- data is initialized from `apps/web/src/data/seedData.ts` and persisted by `apps/web/src/services/storageService.ts` in browser `localStorage`;
+- the role switcher in `apps/web/src/components/layout/AppShell.tsx` simulates identity;
 - authorization is primarily implemented with frontend conditionals;
-- there is no active API, Prisma schema, production database, or Docker deployment;
-- `src/types.ts` contains overlapping status representations that must be normalized;
+- an active Express API, shared response contracts, PostgreSQL Compose service, and production-oriented web/API images now provide the Milestone 1 foundation;
+- PostgreSQL is not yet authoritative for educator workflow data, and Prisma, OAuth, sessions, and protected domain APIs are not implemented;
+- `apps/web/src/types.ts` contains overlapping status representations that must be normalized;
 - no active Gemini integration exists; Google AI Studio provenance remains only in `metadata.json`;
-- Milestone 0 now provides a dependency lockfile, CI pipeline, formatting and linting, type checking, and frontend smoke tests.
+- Milestone 0 provides a dependency lockfile, CI pipeline, formatting and linting, type checking, and frontend smoke tests.
 
 Existing documentation:
 
@@ -206,11 +208,13 @@ Existing documentation:
 
 **Target release:** `0.1.0-alpha.1`
 
-**Milestone exit gate:** `docker compose up --build` starts web, API, and PostgreSQL; health checks reflect dependency status; containers run as non-root.
+**Milestone exit gate:** web, API, PostgreSQL, dependency health checks, and non-root application images are implemented and runtime-validated in Compose.
+
+**Status:** Complete on 2026-08-19. `docker compose up -d --build` built both application images and started healthy web, API, and PostgreSQL services. Endpoint, proxy, cache-header, SPA fallback, non-root user, graceful shutdown, database persistence, and dependency-failure checks passed.
 
 ## P1-001 — Record the target architecture
 
-- [ ] **Dependencies:** P0-007
+- [x] **Dependencies:** P0-007
 - **Change:**
   - Add `docs/adr/0001-application-architecture.md`.
   - Document workspace layout, browser/API trust boundary, PostgreSQL ownership, session model, Docker services, and migration strategy.
@@ -218,11 +222,12 @@ Existing documentation:
 - **Acceptance:**
   - The ADR resolves where code, schemas, migrations, and shared contracts belong.
   - It explicitly states that frontend role checks are not authorization.
+- **Note (2026-08-19):** Added ADR 0001 defining the target workspace, trust boundary, PostgreSQL and session ownership, Docker services, migration strategy, rejected alternatives, and consequences.
 - **Validate:** documentation review and link check.
 
 ## P1-002 — Convert the repository to npm workspaces
 
-- [ ] **Dependencies:** P1-001
+- [x] **Dependencies:** P1-001
 - **Change:**
   - Create `apps/web`, `apps/api`, and `packages/contracts`.
   - Move the existing Vite application into `apps/web` without redesigning it.
@@ -232,6 +237,7 @@ Existing documentation:
   - Existing UI behavior remains unchanged.
   - Root commands can build and test all workspaces.
   - Web aliases and TypeScript paths resolve from the new location.
+- **Note (2026-08-19):** Moved the prototype to `apps/web`, added `apps/api` and `packages/contracts`, configured root npm workspaces and orchestration scripts, and retained working web aliases and tests.
 - **Validate:**
   - `npm ci`
   - `npm run lint --workspaces --if-present`
@@ -241,7 +247,7 @@ Existing documentation:
 
 ## P1-003 — Scaffold the shared contracts package
 
-- [ ] **Dependencies:** P1-002
+- [x] **Dependencies:** P1-002
 - **Change:**
   - Configure `packages/contracts` as a TypeScript package.
   - Add Zod and define initial schemas for API error responses, health responses, and version responses.
@@ -249,13 +255,14 @@ Existing documentation:
 - **Acceptance:**
   - Web and API workspaces can import the package without copying types.
   - Package build and type checking succeed independently.
+- **Note (2026-08-19):** Added `@learnspace/contracts` with Zod schemas and inferred types for API errors, health responses, and version responses, exported as a buildable TypeScript workspace package.
 - **Validate:**
   - `npm run typecheck -w packages/contracts`
   - `npm run build -w packages/contracts`
 
 ## P1-004 — Scaffold the Express API
 
-- [ ] **Dependencies:** P1-003
+- [x] **Dependencies:** P1-003
 - **Change:**
   - Create an Express TypeScript application in `apps/api`.
   - Add graceful startup and shutdown.
@@ -265,6 +272,7 @@ Existing documentation:
   - API startup does not require the frontend.
   - `SIGTERM` stops accepting traffic and closes the server.
   - Endpoints return validated JSON and correct status codes.
+- **Note (2026-08-19):** Added the Express/TypeScript API with graceful `SIGINT`/`SIGTERM` shutdown, `/health/live`, `/health/ready`, and `/api/v1/version` endpoints using shared schemas, plus disabled Express identification headers.
 - **Validate:**
   - API unit/integration tests
   - `npm run typecheck -w apps/api`
@@ -272,7 +280,7 @@ Existing documentation:
 
 ## P1-005 — Add runtime configuration validation
 
-- [ ] **Dependencies:** P1-004
+- [x] **Dependencies:** P1-004
 - **Change:**
   - Add a Zod environment schema in the API.
   - Validate `NODE_ENV`, `PORT`, `DATABASE_URL`, `APP_URL`, `SESSION_SECRET`, Google OAuth values, and `LOG_LEVEL`.
@@ -281,13 +289,14 @@ Existing documentation:
 - **Acceptance:**
   - Production startup fails before listening when required configuration is missing or weak.
   - Secret values are never printed in errors or logs.
+- **Note (2026-08-19):** Added Zod validation for API runtime variables, minimum session-secret strength, safe field-only configuration errors, explicit development-only OAuth placeholders, and a non-secret `.env.example` contract.
 - **Validate:**
   - Tests for valid, missing, malformed, and weak configuration
   - `npm run typecheck -w apps/api`
 
 ## P1-006 — Add API logging and error handling
 
-- [ ] **Dependencies:** P1-005
+- [x] **Dependencies:** P1-005
 - **Change:**
   - Add structured JSON logging.
   - Generate or propagate a request ID.
@@ -297,11 +306,12 @@ Existing documentation:
 - **Acceptance:**
   - Every request log contains request ID, method, path, status, and duration.
   - Unexpected errors are logged once and return a safe response.
+- **Note (2026-08-19):** Added structured JSON request logging, generated/propagated request IDs, a `100kb` JSON limit with a safe `413 PAYLOAD_TOO_LARGE` envelope, consistent not-found and error responses, and production-safe error handling covered by API integration tests.
 - **Validate:** API integration tests for success, 404, validation error, and unexpected error.
 
 ## P1-007 — Add PostgreSQL to Docker Compose
 
-- [ ] **Dependencies:** P1-005
+- [x] **Dependencies:** P1-005
 - **Change:**
   - Add `compose.yaml` with a PostgreSQL 16+ service.
   - Use a named volume, health check, internal network, and environment interpolation.
@@ -311,6 +321,7 @@ Existing documentation:
   - Database data survives container restart.
   - API receives `DATABASE_URL` through runtime configuration.
   - Database is not externally exposed by default.
+- **Note (2026-08-19):** Added PostgreSQL 16 Alpine with a named volume, health check, internal backend network, interpolated credentials, API `DATABASE_URL`, optional `compose.dev.yaml` host port publishing, and two-second API connection/query/statement timeouts for bounded readiness checks. Compose configuration and runtime checks passed; a validation row survived a database container restart and was then removed.
 - **Validate:**
   - `docker compose config`
   - `docker compose up -d db`
@@ -318,7 +329,7 @@ Existing documentation:
 
 ## P1-008 — Containerize the API
 
-- [ ] **Dependencies:** P1-006, P1-007
+- [x] **Dependencies:** P1-006, P1-007
 - **Change:**
   - Add a multi-stage API Dockerfile.
   - Install dependencies reproducibly with `npm ci`.
@@ -328,6 +339,7 @@ Existing documentation:
 - **Acceptance:**
   - No compiler or development-only source is required at runtime.
   - Container runs as non-root and handles `SIGTERM`.
+- **Note (2026-08-19):** Added and built a multi-stage Node Alpine API image using `npm ci`, compiled workspace output, pruned production dependencies, the unprivileged `node` user, and a `/health/live` image check. Runtime inspection confirmed UID/GID `1000`, healthy operation, and graceful `SIGTERM` shutdown with exit code `0`.
 - **Validate:**
   - Build the API image.
   - Inspect configured user.
@@ -335,7 +347,7 @@ Existing documentation:
 
 ## P1-009 — Containerize the web application
 
-- [ ] **Dependencies:** P1-002
+- [x] **Dependencies:** P1-002
 - **Change:**
   - Add a multi-stage web Dockerfile.
   - Build the Vite bundle once and serve it from a hardened static server.
@@ -345,11 +357,12 @@ Existing documentation:
   - Direct navigation to frontend routes does not return 404 when routing is introduced.
   - Static assets use immutable caching while `index.html` does not.
   - Container runs as non-root where supported by the selected server image.
+- **Note (2026-08-19):** Added and built a multi-stage Vite image served by `nginx-unprivileged`, with SPA fallback, immutable static-asset caching, no-store HTML, `/health`, and same-origin `/api/` proxying. Runtime inspection confirmed the `nginx` UID/GID `101`, successful fallback navigation, and expected response headers.
 - **Validate:** build image, run image, load `/`, and inspect response headers.
 
 ## P1-010 — Complete local Compose integration
 
-- [ ] **Dependencies:** P1-008, P1-009
+- [x] **Dependencies:** P1-008, P1-009
 - **Change:**
   - Add web and API services to `compose.yaml`.
   - Route browser API traffic without permissive production CORS.
@@ -359,6 +372,7 @@ Existing documentation:
   - One command starts the complete local stack.
   - Web can call the API version endpoint.
   - API readiness becomes unhealthy when PostgreSQL is unavailable.
+- **Note (2026-08-19):** Integrated and runtime-validated `web`, `api`, and `db` with health-based dependencies, restart policies, isolated networks, published web/API ports, nginx same-origin API routing, PostgreSQL-backed API readiness, and README setup instructions. Web, liveness, readiness, version, and proxied version requests passed; stopping PostgreSQL produced readiness `503` and an unhealthy API health state, both of which recovered after PostgreSQL restarted.
 - **Validate:**
   - `docker compose config`
   - `docker compose up -d --build`
