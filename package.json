@@ -1,7 +1,7 @@
 {
   "name": "learnspace",
   "private": true,
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "type": "module",
   "workspaces": [
     "apps/*",
@@ -19,8 +19,16 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm test --workspaces --if-present -- --run"
+    "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
+    "test": "npm test --workspaces --if-present -- --run",
+    "prisma:validate": "npm run prisma:validate -w @learnspace/api",
+    "prisma:generate": "npm run prisma:generate -w @learnspace/api",
+    "db:migrate:dev": "npm run db:migrate:dev -w @learnspace/api --",
+    "db:migrate:deploy": "npm run db:migrate:deploy -w @learnspace/api",
+    "db:migrate:status": "npm run db:migrate:status -w @learnspace/api",
+    "db:seed": "npm run db:seed -w @learnspace/api",
+    "db:backup": "sh scripts/db-backup.sh",
+    "db:restore": "sh scripts/db-restore.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
@@ -29,6 +37,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-unused-imports": "^4.1.4",
     "prettier": "^3.5.3",
+    "typescript": "~5.8.2",
     "typescript-eslint": "^8.26.0"
   }
 }

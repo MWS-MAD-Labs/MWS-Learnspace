@@ -11,6 +11,22 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: learnspace_test
+          POSTGRES_USER: learnspace
+          POSTGRES_PASSWORD: test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U learnspace -d learnspace_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://learnspace:test-password@localhost:5432/learnspace_test
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -24,6 +40,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate and generate Prisma client
+        run: npm run prisma:validate && npm run prisma:generate
+
+      - name: Apply migrations to an empty database
+        run: npm run db:migrate:deploy
+
       - name: Check formatting
         run: npm run format:check
 
@@ -34,7 +56,16 @@ jobs:
         run: npm run typecheck
 
       - name: Run unit tests
-        run: npm test -- --run
+        run: npm test
+
+      - name: Run database integration tests
+        run: npm run test:integration -w @learnspace/api
 
       - name: Build
         run: npm run build
+
+      - name: Build API runtime image
+        run: docker build --file apps/api/Dockerfile --target runtime --tag learnspace-api:ci .
+
+      - name: Build migration image
+        run: docker build --file apps/api/Dockerfile --target migration --tag learnspace-migrate:ci .

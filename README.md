@@ -2,7 +2,7 @@
 
 Learnspace is an educator portal for academic planning, attendance, special-education observations, Individualized Education Programs (IEPs), and weekly progress reporting.
 
-The repository is currently at **`0.1.0-alpha.1`**. Milestone 1 provides an npm workspace, a typed Express API foundation, shared Zod contracts, PostgreSQL and Docker Compose orchestration, and production-oriented web/API images.
+The repository is currently at **`0.1.0-alpha.2`**. Milestone 2 adds the canonical domain model, Prisma schema and initial migration, guarded development seed, schema-aware API readiness, database integration tests, and rehearsed PostgreSQL backup/restore operations.
 
 > [!IMPORTANT]
 > The educator workflows are still a frontend prototype and are **not production-ready**. Application records are seeded in the browser and stored in each browser profile's `localStorage`; identity is simulated through a role switcher; and the UI has not yet migrated its records or authentication to the API. Do not use real student, family, educational, or disability-related information.
@@ -21,7 +21,8 @@ The repository is currently at **`0.1.0-alpha.1`**. Milestone 1 provides an npm 
 - Role-oriented views for teachers, coordinators, principals, and directors
 - Seeded demo records for evaluating the workflows
 - Express API foundation with liveness, PostgreSQL readiness, version, structured logging, request IDs, and safe error responses
-- Docker Compose services for the web application, API, and PostgreSQL
+- Docker Compose services for the web application, API, PostgreSQL, and a one-shot Prisma migration job
+- Normalized Prisma models for tenant ownership, academics, attendance, planning, observations, IEPs, weekly reports, workflows, sessions, and audit events
 
 ## Current architecture
 
@@ -39,11 +40,11 @@ flowchart TB
 The workspace and service boundary are implemented, but the migration is intentionally incremental:
 
 - `apps/web` contains the existing React/Vite prototype. Its domain records still use `apps/web/src/services/storageService.ts` and `localStorage`.
-- `apps/api` is an active Express/TypeScript service. It validates runtime configuration, emits structured JSON logs, assigns request IDs, checks PostgreSQL readiness, handles shutdown signals, and returns shared response schemas.
+- `apps/api` is an active Express/TypeScript service. It validates runtime configuration, emits structured JSON logs, assigns request IDs, checks PostgreSQL connectivity and required migration compatibility through Prisma, handles shutdown signals, and returns shared response schemas.
 - `packages/contracts` provides shared Zod schemas and inferred TypeScript types for health, version, and API error responses.
-- `compose.yaml` defines production-oriented `web`, `api`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation.
+- `compose.yaml` defines production-oriented `web`, `api`, `migrate`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation. API startup waits for the one-shot migration job.
 - `compose.dev.yaml` is an optional override that publishes PostgreSQL on host port `5432` for database tools or a host-run API.
-- PostgreSQL is connected to the API but is not yet the authoritative store for the educator workflows. Prisma, OAuth, server-side sessions, authorization, and domain APIs remain later milestones.
+- PostgreSQL now has the authoritative normalized schema and lifecycle tooling, but educator workflow reads/writes still use browser `localStorage` until later feature API milestones. OAuth, authorization, and domain endpoints also remain future work.
 
 Frontend role checks are presentation behavior only and are not authorization. The API is the intended security boundary for protected operations as those operations are implemented.
 
@@ -61,10 +62,14 @@ Frontend role checks are presentation behavior only and are not authorization. T
 │       └── test/
 ├── packages/
 │   └── contracts/                 # Shared Zod wire schemas and types
+├── prisma/                        # Schema, committed migrations, guarded seed
+├── scripts/                       # Guarded database backup and restore tools
 ├── docker/
 │   └── web/nginx.conf             # SPA fallback, caching, health, and /api proxy
 ├── docs/
 │   ├── adr/0001-application-architecture.md
+│   ├── operations/backup-and-restore.md
+│   ├── domain-model.md
 │   ├── ROADMAP.md
 │   └── VERSIONING.md
 ├── compose.yaml                   # Web, API, and internal PostgreSQL stack
@@ -117,6 +122,7 @@ docker compose -f compose.yaml -f compose.dev.yaml up -d db
 set -a
 . ./.env
 set +a
+npm run db:migrate:deploy
 npm run dev:api
 ```
 
@@ -142,6 +148,13 @@ npm run lint          # Lint the complete workspace
 npm run typecheck     # Type-check all workspaces that provide the script
 npm test              # Run workspace tests once
 npm run clean         # Remove generated workspace output and coverage
+npm run prisma:validate
+npm run prisma:generate
+npm run db:migrate:deploy
+npm run db:migrate:status
+npm run db:seed        # Requires explicit non-production seed opt-in
+npm run db:backup -- --database SOURCE --output FILE
+npm run db:restore -- --archive FILE --database NEW_TARGET
 ```
 
 ### Workspace-local commands
@@ -153,6 +166,7 @@ npm run typecheck -w @learnspace/contracts
 npm run build -w @learnspace/api
 npm run typecheck -w @learnspace/api
 npm test -w @learnspace/api -- --run
+npm run test:integration -w @learnspace/api # Requires disposable PostgreSQL
 npm run start -w @learnspace/api   # Run the previously built API
 
 npm run build -w @learnspace/web
@@ -174,7 +188,7 @@ The API also:
 - propagates a valid incoming `X-Request-ID` or generates one;
 - returns the request ID in response headers and error envelopes;
 - limits JSON request bodies to `100kb` and returns a safe `413 PAYLOAD_TOO_LARGE` envelope when exceeded;
-- bounds PostgreSQL readiness connection, query, and statement operations to two seconds;
+- bounds the Prisma readiness operation to two seconds and requires migration `20260819000000_initial`;
 - disables Express's `X-Powered-By` header;
 - returns structured `404`, invalid-JSON, payload-too-large, and internal-error responses without production stack traces.
 
@@ -235,7 +249,7 @@ Services and default host endpoints:
 - API: <http://localhost:4000>
 - PostgreSQL: internal Compose network only
 
-The `web` image builds the Vite bundle and serves it with an unprivileged nginx runtime, SPA fallback, immutable asset caching, no-store HTML responses, `/health`, and same-origin `/api/` proxying. The `api` image builds TypeScript in a separate stage, prunes development dependencies, runs as the unprivileged Node user, and checks `/health/live`. PostgreSQL uses a named `postgres-data` volume and is isolated on the internal backend network.
+The `web` image builds the Vite bundle and serves it with an unprivileged nginx runtime, SPA fallback, immutable asset caching, no-store HTML responses, `/health`, and same-origin `/api/` proxying. The API Dockerfile provides a one-shot Prisma migration target and a pruned non-root runtime image. PostgreSQL uses a named `postgres-data` volume and is isolated on the internal backend network.
 
 Stop the stack without deleting database data:
 
@@ -281,6 +295,8 @@ Learnspace handles categories of data that can be highly sensitive. Deployment o
 ## Project documentation
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — implementation backlog and milestone status
+- [`docs/domain-model.md`](docs/domain-model.md) — canonical entities, enums, ownership, workflow transitions, and JSON boundaries
+- [`docs/operations/backup-and-restore.md`](docs/operations/backup-and-restore.md) — guarded Compose PostgreSQL backup and restore procedure
 - [`docs/adr/0001-application-architecture.md`](docs/adr/0001-application-architecture.md) — accepted architecture decisions
 - [`docs/VERSIONING.md`](docs/VERSIONING.md) — release and migration policy
 - [`CHANGELOG.md`](CHANGELOG.md) — release history

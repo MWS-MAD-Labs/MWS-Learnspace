@@ -389,7 +389,7 @@ Existing documentation:
 
 ## P2-001 — Normalize domain terminology and workflow states
 
-- [ ] **Dependencies:** P1-010
+- [x] **Dependencies:** P1-010
 - **Change:**
   - Add `docs/domain-model.md` mapping current `src/types.ts` concepts to database entities.
   - Define one canonical representation for roles, observation types, attendance statuses, and workflow states.
@@ -402,7 +402,7 @@ Existing documentation:
 
 ## P2-002 — Initialize Prisma
 
-- [ ] **Dependencies:** P2-001
+- [x] **Dependencies:** P2-001
 - **Change:**
   - Add Prisma to the API workspace.
   - Create `prisma/schema.prisma` and Prisma configuration.
@@ -418,7 +418,7 @@ Existing documentation:
 
 ## P2-003 — Model organizations and authentication records
 
-- [ ] **Dependencies:** P2-002
+- [x] **Dependencies:** P2-002
 - **Change:**
   - Add Organization, User, Membership, OAuthAccount, and Session models.
   - Add canonical role enums and active/disabled state.
@@ -432,7 +432,7 @@ Existing documentation:
 
 ## P2-004 — Model academic structure, students, and assignments
 
-- [ ] **Dependencies:** P2-003
+- [x] **Dependencies:** P2-003
 - **Change:**
   - Add AcademicYear, Semester, Unit, Grade, Class, Subject, Student, Enrollment, GuardianContact, and StaffStudentAssignment models.
   - Separate sensitive guardian contact fields from basic student listing fields.
@@ -445,7 +445,7 @@ Existing documentation:
 
 ## P2-005 — Model attendance
 
-- [ ] **Dependencies:** P2-004
+- [x] **Dependencies:** P2-004
 - **Change:**
   - Add AttendanceRecord with student, enrollment/class context, school date, status, minutes late, notes, recorder, and timestamps.
   - Add a uniqueness constraint preventing duplicate attendance for the same student and school context/date.
@@ -455,7 +455,7 @@ Existing documentation:
 
 ## P2-006 — Model Learning Journeys and workflow events
 
-- [ ] **Dependencies:** P2-004
+- [x] **Dependencies:** P2-004
 - **Change:**
   - Add LearningJourney, ownership, Project, LearningGoal, CrossCurricularConnection, and append-only WorkflowEvent models.
   - Store canonical current state on the aggregate and actor-attributed transition history as events.
@@ -464,7 +464,7 @@ Existing documentation:
 
 ## P2-007 — Model observation definitions and records
 
-- [ ] **Dependencies:** P2-004
+- [x] **Dependencies:** P2-004
 - **Change:**
   - Add versioned ObservationDefinition, ObservationAssignment, FEDCObservation, SensoryProfileObservation, and SFAObservation models.
   - Keep instrument response payloads as validated JSON initially where relational reporting is not required.
@@ -474,7 +474,7 @@ Existing documentation:
 
 ## P2-008 — Model IEPs and weekly reports
 
-- [ ] **Dependencies:** P2-004
+- [x] **Dependencies:** P2-004
 - **Change:**
   - Add IEP, team member, performance area, accommodation, goal, service schedule, WeeklyReport, WeeklyGoalProgress, and workflow event models.
   - Separate goal achievement events from derived goal summary fields.
@@ -485,7 +485,7 @@ Existing documentation:
 
 ## P2-009 — Add immutable audit events
 
-- [ ] **Dependencies:** P2-003, P2-004
+- [x] **Dependencies:** P2-003, P2-004
 - **Change:**
   - Add AuditEvent with organization, actor, action, target type/ID, timestamp, request ID, result, and safe metadata.
   - Define an allowlist for metadata fields and prohibit raw secrets or full sensitive payload snapshots.
@@ -494,7 +494,7 @@ Existing documentation:
 
 ## P2-010 — Create and test the initial migration
 
-- [ ] **Dependencies:** P2-005, P2-006, P2-007, P2-008, P2-009
+- [x] **Dependencies:** P2-005, P2-006, P2-007, P2-008, P2-009
 - **Change:**
   - Generate a reviewed initial Prisma migration.
   - Add a migration test that starts from an empty PostgreSQL database.
@@ -506,7 +506,7 @@ Existing documentation:
 
 ## P2-011 — Add guarded development seed data
 
-- [ ] **Dependencies:** P2-010
+- [x] **Dependencies:** P2-010
 - **Change:**
   - Convert only necessary fake records from prototype seed data into a Prisma seed.
   - Require an explicit development/test environment flag.
@@ -517,13 +517,15 @@ Existing documentation:
 
 ## P2-012 — Add database backup and restore runbook
 
-- [ ] **Dependencies:** P2-010
+- [x] **Dependencies:** P2-010
 - **Change:**
   - Add `docs/operations/backup-and-restore.md`.
   - Document consistent `pg_dump`, restore, encryption, retention, and verification procedures for Compose deployments.
   - Add scripts that require explicit source/target arguments and never embed credentials.
 - **Acceptance:** a disposable database can be backed up, deleted, restored, and verified.
 - **Validate:** perform and record one local restore drill using fake data.
+- **Note (2026-08-19):** Completed Milestone 2 with canonical domain documentation, a root Prisma schema and reviewed initial migration, schema-aware API readiness, normalized organization/authentication/academic/attendance/Learning Journey/observation/IEP/report/audit models, JSON payload validation, database integration tests, guarded idempotent seed data, and a one-shot Compose migration job. A synthetic-data backup/delete/restore drill passed after correcting checksum sidecar portability; the result is recorded in `docs/operations/restore-drills/2026-08-19-local.md`.
+- **Validated with:** Prisma format/validate/generate, root Prisma-config type checking, and zero-drift migration diff; `prisma migrate deploy` against an empty PostgreSQL 16 database; API unit and PostgreSQL integration suites including adversarial cross-tenant, actor-membership/state, historical-attribution and membership-identity immutability, cross-IEP, and observation-immutability cases; repeated seed and production-refusal tests; Compose configuration/build and CI Docker target builds; backup and restore scripts including mandatory-checksum refusal, infrastructure-error reporting, and rollback of partially published backup pairs; restored migration, probe-row, and seed-record queries. Final suites passed with 31 API unit tests, 8 PostgreSQL integration tests, and 1 web test.
 
 ---
 

@@ -1,0 +1,876 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum MembershipRole {
+  PRINCIPAL
+  DIRECTOR
+  GRADE_TEACHER
+  SUBJECT_TEACHER
+  SPECIAL_ED_TEACHER
+  SPECIALIST
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  UNSPECIFIED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  SICK
+  EXCUSED_ABSENCE
+  UNEXCUSED_ABSENCE
+}
+
+enum WorkflowState {
+  DRAFT
+  PRINCIPAL_REVIEW
+  COORDINATOR_REVIEW
+  DIRECTOR_APPROVAL
+  APPROVED
+  ACTIVE
+  ARCHIVED
+}
+
+enum WorkflowAction {
+  SUBMITTED
+  APPROVED
+  RETURNED
+  UPDATED
+  ACTIVATED
+  ARCHIVED
+}
+
+enum WorkflowAggregateType {
+  LEARNING_JOURNEY
+  IEP
+  WEEKLY_REPORT
+}
+
+enum ObservationType {
+  FEDC
+  SENSORY_PROFILE
+  SFA
+}
+
+enum ObservationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ServiceType {
+  INDIVIDUAL
+  GROUP
+  CONSULTATION
+}
+
+enum AccommodationCategory {
+  ACADEMIC
+  INSTRUCTIONAL
+  ENVIRONMENTAL
+  ASSESSMENT
+}
+
+enum AuditResult {
+  SUCCEEDED
+  DENIED
+  FAILED
+}
+
+model Organization {
+  id                  String                      @id @default(uuid()) @db.Uuid
+  slug                String                      @unique
+  name                String
+  status              AccountStatus               @default(ACTIVE)
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  memberships         Membership[]
+  academicYears       AcademicYear[]
+  semesters           Semester[]
+  units               Unit[]
+  grades              Grade[]
+  classes             SchoolClass[]
+  subjects            Subject[]
+  students            Student[]
+  enrollments         Enrollment[]
+  guardianContacts    GuardianContact[]
+  staffAssignments    StaffStudentAssignment[]
+  attendanceRecords   AttendanceRecord[]
+  learningJourneys    LearningJourney[]
+  workflowEvents      WorkflowEvent[]
+  definitions         ObservationDefinition[]
+  observationAssigns  ObservationAssignment[]
+  fedcObservations    FEDCObservation[]
+  sensoryObservations SensoryProfileObservation[]
+  sfaObservations     SFAObservation[]
+  ieps                IEP[]
+  weeklyReports       WeeklyReport[]
+  goalEvents          GoalAchievementEvent[]
+  auditEvents         AuditEvent[]
+}
+
+model User {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  email                 String                      @unique
+  displayName           String
+  avatarUrl             String?
+  status                AccountStatus               @default(ACTIVE)
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  memberships           Membership[]
+  oauthAccounts         OAuthAccount[]
+  sessions              Session[]
+  assignedByAssignments ObservationAssignment[]     @relation("ObservationAssignedBy")
+  attendanceRecorded    AttendanceRecord[]          @relation("AttendanceRecorder")
+  createdJourneys       LearningJourney[]           @relation("LearningJourneyCreatedBy")
+  updatedJourneys       LearningJourney[]           @relation("LearningJourneyUpdatedBy")
+  fedcObservations      FEDCObservation[]           @relation("FEDCObserver")
+  sensoryObservations   SensoryProfileObservation[] @relation("SensoryObserver")
+  sfaObservations       SFAObservation[]            @relation("SFAObserver")
+  createdIeps           IEP[]                       @relation("IEPCreatedBy")
+  updatedIeps           IEP[]                       @relation("IEPUpdatedBy")
+  weeklyReports         WeeklyReport[]              @relation("WeeklyReportTeacher")
+  workflowEvents        WorkflowEvent[]
+  auditEvents           AuditEvent[]
+  goalEvents            GoalAchievementEvent[]
+}
+
+model Membership {
+  id                     String                   @id @default(uuid()) @db.Uuid
+  organizationId         String                   @db.Uuid
+  userId                 String                   @db.Uuid
+  role                   MembershipRole
+  roleTitle              String?
+  status                 AccountStatus            @default(ACTIVE)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  organization           Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitScopes             MembershipUnit[]
+  gradeScopes            MembershipGrade[]
+  subjectScopes          MembershipSubject[]
+  staffAssignments       StaffStudentAssignment[]
+  journeyOwnerships      LearningJourneyOwner[]
+  observationAssignments ObservationAssignment[]  @relation("ObservationAssignee")
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, role, status])
+}
+
+model OAuthAccount {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @db.Uuid
+  provider          String
+  providerAccountId String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt, revokedAt])
+}
+
+model AcademicYear {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  name           String
+  startsOn       DateTime          @db.Date
+  endsOn         DateTime          @db.Date
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  semesters      Semester[]
+  enrollments    Enrollment[]
+  journeys       LearningJourney[]
+  ieps           IEP[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, startsOn, endsOn])
+}
+
+model Semester {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  academicYearId String            @db.Uuid
+  name           String
+  position       Int
+  startsOn       DateTime          @db.Date
+  endsOn         DateTime          @db.Date
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear      @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  journeys       LearningJourney[]
+  ieps           IEP[]
+
+  @@unique([academicYearId, position])
+  @@unique([academicYearId, name])
+  @@index([organizationId])
+}
+
+model Unit {
+  id               String            @id @default(uuid()) @db.Uuid
+  organizationId   String            @db.Uuid
+  code             String
+  name             String
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  grades           Grade[]
+  classes          SchoolClass[]
+  membershipScopes MembershipUnit[]
+  journeys         LearningJourney[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, name])
+}
+
+model Grade {
+  id               String            @id @default(uuid()) @db.Uuid
+  organizationId   String            @db.Uuid
+  unitId           String            @db.Uuid
+  code             String
+  name             String
+  position         Int
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unit             Unit              @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  classes          SchoolClass[]
+  membershipScopes MembershipGrade[]
+  journeys         LearningJourney[]
+
+  @@unique([organizationId, code])
+  @@unique([unitId, position])
+  @@index([organizationId, unitId])
+}
+
+model SchoolClass {
+  id                String             @id @default(uuid()) @db.Uuid
+  organizationId    String             @db.Uuid
+  unitId            String             @db.Uuid
+  gradeId           String             @db.Uuid
+  code              String
+  name              String
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unit              Unit               @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  grade             Grade              @relation(fields: [gradeId], references: [id], onDelete: Restrict)
+  enrollments       Enrollment[]
+  attendanceRecords AttendanceRecord[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, gradeId, name])
+  @@index([organizationId, gradeId])
+}
+
+model Subject {
+  id               String              @id @default(uuid()) @db.Uuid
+  organizationId   String              @db.Uuid
+  code             String
+  name             String
+  organization     Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  membershipScopes MembershipSubject[]
+  journeys         LearningJourney[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, name])
+}
+
+model MembershipUnit {
+  membershipId String     @db.Uuid
+  unitId       String     @db.Uuid
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  unit         Unit       @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, unitId])
+}
+
+model MembershipGrade {
+  membershipId String     @db.Uuid
+  gradeId      String     @db.Uuid
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  grade        Grade      @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, gradeId])
+}
+
+model MembershipSubject {
+  membershipId String     @db.Uuid
+  subjectId    String     @db.Uuid
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  subject      Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, subjectId])
+}
+
+model Student {
+  id                     String                      @id @default(uuid()) @db.Uuid
+  organizationId         String                      @db.Uuid
+  studentNumber          String
+  fullName               String
+  nickname               String?
+  gender                 Gender                      @default(UNSPECIFIED)
+  dateOfBirth            DateTime                    @db.Date
+  address                String?
+  specialNeedsFlag       Boolean                     @default(false)
+  status                 AccountStatus               @default(ACTIVE)
+  avatarUrl              String?
+  primaryClassification  String?
+  currentPlacement       String?
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+  organization           Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  enrollments            Enrollment[]
+  guardians              GuardianContact[]
+  staffAssignments       StaffStudentAssignment[]
+  attendanceRecords      AttendanceRecord[]
+  observationAssignments ObservationAssignment[]
+  fedcObservations       FEDCObservation[]
+  sensoryObservations    SensoryProfileObservation[]
+  sfaObservations        SFAObservation[]
+  ieps                   IEP[]
+  weeklyReports          WeeklyReport[]
+
+  @@unique([organizationId, studentNumber])
+  @@index([organizationId, status, fullName])
+}
+
+model Enrollment {
+  id                String             @id @default(uuid()) @db.Uuid
+  organizationId    String             @db.Uuid
+  studentId         String             @db.Uuid
+  academicYearId    String             @db.Uuid
+  classId           String             @db.Uuid
+  startsOn          DateTime           @db.Date
+  endsOn            DateTime?          @db.Date
+  createdAt         DateTime           @default(now())
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  student           Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear      AcademicYear       @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  schoolClass       SchoolClass        @relation(fields: [classId], references: [id], onDelete: Restrict)
+  attendanceRecords AttendanceRecord[]
+
+  @@unique([studentId, academicYearId, classId, startsOn])
+  @@index([organizationId, classId, startsOn, endsOn])
+  @@index([organizationId, studentId, startsOn, endsOn])
+}
+
+model GuardianContact {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  studentId      String       @db.Uuid
+  name           String
+  relationship   String
+  phone          String?
+  email          String?
+  address        String?
+  isPrimary      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  student        Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, studentId])
+}
+
+model StaffStudentAssignment {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  membershipId   String       @db.Uuid
+  studentId      String       @db.Uuid
+  roleContext    String
+  startsOn       DateTime     @db.Date
+  endsOn         DateTime?    @db.Date
+  maxCaseload    Int?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  membership     Membership   @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  student        Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, studentId, roleContext, startsOn])
+  @@index([organizationId, studentId, startsOn, endsOn])
+  @@index([organizationId, membershipId, startsOn, endsOn])
+}
+
+model AttendanceRecord {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  studentId      String           @db.Uuid
+  enrollmentId   String           @db.Uuid
+  classId        String           @db.Uuid
+  schoolDate     DateTime         @db.Date
+  status         AttendanceStatus
+  minutesLate    Int?
+  notes          String?
+  recordedById   String           @db.Uuid
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enrollment     Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  schoolClass    SchoolClass      @relation(fields: [classId], references: [id], onDelete: Restrict)
+  recordedBy     User             @relation("AttendanceRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, studentId, classId, schoolDate])
+  @@index([organizationId, schoolDate, classId])
+  @@index([organizationId, studentId, schoolDate])
+}
+
+model LearningJourney {
+  id             String                   @id @default(uuid()) @db.Uuid
+  organizationId String                   @db.Uuid
+  title          String
+  academicYearId String                   @db.Uuid
+  semesterId     String                   @db.Uuid
+  unitId         String                   @db.Uuid
+  gradeId        String                   @db.Uuid
+  subjectId      String                   @db.Uuid
+  state          WorkflowState            @default(DRAFT)
+  createdById    String                   @db.Uuid
+  updatedById    String                   @db.Uuid
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear             @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  semester       Semester                 @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  unit           Unit                     @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  grade          Grade                    @relation(fields: [gradeId], references: [id], onDelete: Restrict)
+  subject        Subject                  @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  createdBy      User                     @relation("LearningJourneyCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy      User                     @relation("LearningJourneyUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  owners         LearningJourneyOwner[]
+  projects       LearningJourneyProject[]
+
+  @@unique([organizationId, academicYearId, semesterId, gradeId, subjectId, title])
+  @@index([organizationId, state])
+}
+
+model LearningJourneyOwner {
+  learningJourneyId String          @db.Uuid
+  membershipId      String          @db.Uuid
+  learningJourney   LearningJourney @relation(fields: [learningJourneyId], references: [id], onDelete: Cascade)
+  membership        Membership      @relation(fields: [membershipId], references: [id], onDelete: Restrict)
+
+  @@id([learningJourneyId, membershipId])
+}
+
+model LearningJourneyProject {
+  id                String                      @id @default(uuid()) @db.Uuid
+  learningJourneyId String                      @db.Uuid
+  title             String
+  description       String
+  startsOn          DateTime                    @db.Date
+  endsOn            DateTime                    @db.Date
+  color             String?
+  position          Int
+  learningJourney   LearningJourney             @relation(fields: [learningJourneyId], references: [id], onDelete: Cascade)
+  goals             LearningGoal[]
+  connections       CrossCurricularConnection[]
+
+  @@unique([learningJourneyId, position])
+}
+
+model LearningGoal {
+  id          String                 @id @default(uuid()) @db.Uuid
+  projectId   String                 @db.Uuid
+  description String
+  position    Int
+  project     LearningJourneyProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, position])
+}
+
+model CrossCurricularConnection {
+  id          String                 @id @default(uuid()) @db.Uuid
+  projectId   String                 @db.Uuid
+  subject     String
+  description String
+  position    Int                    @default(0)
+  project     LearningJourneyProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, position])
+}
+
+model WorkflowEvent {
+  id             String                @id @default(uuid()) @db.Uuid
+  organizationId String                @db.Uuid
+  aggregateType  WorkflowAggregateType
+  aggregateId    String                @db.Uuid
+  fromState      WorkflowState
+  toState        WorkflowState
+  action         WorkflowAction
+  actorId        String                @db.Uuid
+  comment        String?
+  occurredAt     DateTime              @default(now())
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor          User                  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, aggregateType, aggregateId, occurredAt])
+}
+
+model ObservationDefinition {
+  id                  String                      @id @default(uuid()) @db.Uuid
+  organizationId      String                      @db.Uuid
+  definitionKey       String
+  version             Int
+  type                ObservationType
+  title               String
+  framework           String?
+  description         String?
+  targetAges          String?
+  defaultFrequency    String?
+  body                Json
+  isActive            Boolean                     @default(true)
+  publishedAt         DateTime?
+  createdAt           DateTime                    @default(now())
+  organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignments         ObservationAssignment[]
+  fedcObservations    FEDCObservation[]
+  sensoryObservations SensoryProfileObservation[]
+  sfaObservations     SFAObservation[]
+
+  @@unique([organizationId, definitionKey, version])
+  @@index([organizationId, type, isActive])
+}
+
+model ObservationAssignment {
+  id                 String                     @id @default(uuid()) @db.Uuid
+  organizationId     String                     @db.Uuid
+  studentId          String                     @db.Uuid
+  definitionId       String                     @db.Uuid
+  assignedToId       String                     @db.Uuid
+  assignedById       String?                    @db.Uuid
+  academicYear       String
+  dueDate            DateTime                   @db.Date
+  priority           String?
+  notes              String?
+  status             ObservationStatus          @default(PENDING)
+  assignedAt         DateTime                   @default(now())
+  completedAt        DateTime?
+  organization       Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  student            Student                    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  definition         ObservationDefinition      @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  assignedTo         Membership                 @relation("ObservationAssignee", fields: [assignedToId], references: [id], onDelete: Restrict)
+  assignedBy         User?                      @relation("ObservationAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+  fedcObservation    FEDCObservation?
+  sensoryObservation SensoryProfileObservation?
+  sfaObservation     SFAObservation?
+
+  @@index([organizationId, studentId, status])
+  @@index([organizationId, assignedToId, status, dueDate])
+}
+
+model FEDCObservation {
+  id               String                @id @default(uuid()) @db.Uuid
+  organizationId   String                @db.Uuid
+  assignmentId     String                @unique @db.Uuid
+  studentId        String                @db.Uuid
+  definitionId     String                @db.Uuid
+  observerId       String                @db.Uuid
+  observationDate  DateTime              @db.Date
+  status           ObservationStatus     @default(IN_PROGRESS)
+  responses        Json
+  milestoneScores  Json
+  totalScore       Int
+  maxPossibleScore Int
+  notes            String?
+  completedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignment       ObservationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  student          Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  definition       ObservationDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  observer         User                  @relation("FEDCObserver", fields: [observerId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, studentId, observationDate])
+}
+
+model SensoryProfileObservation {
+  id                      String                @id @default(uuid()) @db.Uuid
+  organizationId          String                @db.Uuid
+  assignmentId            String                @unique @db.Uuid
+  studentId               String                @db.Uuid
+  definitionId            String                @db.Uuid
+  observerId              String                @db.Uuid
+  observationDate         DateTime              @db.Date
+  status                  ObservationStatus     @default(IN_PROGRESS)
+  teacherContactFrequency String?
+  teacherContactLength    String?
+  responses               Json
+  sectionScores           Json
+  totalRawScore           Int
+  notes                   String?
+  completedAt             DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  organization            Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignment              ObservationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  student                 Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  definition              ObservationDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  observer                User                  @relation("SensoryObserver", fields: [observerId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, studentId, observationDate])
+}
+
+model SFAObservation {
+  id                             String                @id @default(uuid()) @db.Uuid
+  organizationId                 String                @db.Uuid
+  assignmentId                   String                @unique @db.Uuid
+  studentId                      String                @db.Uuid
+  definitionId                   String                @db.Uuid
+  observerId                     String                @db.Uuid
+  assessmentDate                 DateTime              @db.Date
+  observationDate                DateTime?             @db.Date
+  status                         ObservationStatus     @default(IN_PROGRESS)
+  programRecommendation          String
+  primaryLanguage                String?
+  writingMethod                  String?
+  mobilityMethod                 String?
+  conditionsAffectingPerformance String?
+  respondents                    Json
+  participationScores            Json
+  settings                       Json?
+  taskSupports                   Json
+  activityPerformance            Json
+  adaptations                    Json
+  participationAverage           Decimal               @db.Decimal(5, 2)
+  totalParticipationRawScore     Int?
+  notes                          String?
+  completedAt                    DateTime?
+  createdAt                      DateTime              @default(now())
+  updatedAt                      DateTime              @updatedAt
+  organization                   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignment                     ObservationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  student                        Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  definition                     ObservationDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  observer                       User                  @relation("SFAObserver", fields: [observerId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, studentId, assessmentDate])
+}
+
+model IEP {
+  id                             String               @id @default(uuid()) @db.Uuid
+  organizationId                 String               @db.Uuid
+  studentId                      String               @db.Uuid
+  academicYearId                 String               @db.Uuid
+  semesterId                     String?              @db.Uuid
+  state                          WorkflowState        @default(DRAFT)
+  consideration                  String
+  primaryClassification          String
+  currentPlacement               String
+  homePartnershipSupport         String?
+  homePartnershipRecommendations String?
+  progressMeasurementMethods     Json
+  parentCommunicationMethods     Json
+  parentApproved                 Boolean              @default(false)
+  parentName                     String?
+  parentApprovalDate             DateTime?            @db.Date
+  startsOn                       DateTime             @db.Date
+  endsOn                         DateTime             @db.Date
+  createdById                    String               @db.Uuid
+  updatedById                    String               @db.Uuid
+  createdAt                      DateTime             @default(now())
+  updatedAt                      DateTime             @updatedAt
+  organization                   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  student                        Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear                   AcademicYear         @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  semester                       Semester?            @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  createdBy                      User                 @relation("IEPCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy                      User                 @relation("IEPUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  teamMembers                    IEPTeamMember[]
+  performanceAreas               IEPPerformanceArea[]
+  accommodations                 IEPAccommodation[]
+  goals                          IEPGoal[]
+  services                       IEPServiceSchedule[]
+  weeklyReports                  WeeklyReport[]
+
+  @@index([organizationId, studentId, state])
+  @@index([organizationId, academicYearId])
+}
+
+model IEPTeamMember {
+  id        String  @id @default(uuid()) @db.Uuid
+  iepId     String  @db.Uuid
+  role      String
+  name      String
+  initials  String?
+  confirmed Boolean @default(false)
+  position  Int     @default(0)
+  iep       IEP     @relation(fields: [iepId], references: [id], onDelete: Cascade)
+
+  @@unique([iepId, position])
+}
+
+model IEPPerformanceArea {
+  id                String    @id @default(uuid()) @db.Uuid
+  iepId             String    @db.Uuid
+  name              String
+  category          String
+  strengths         String
+  needs             String
+  impactOfNeed      String?
+  informationSource String?
+  assessmentProcess String?
+  assessmentDate    DateTime? @db.Date
+  summaryOfResults  String?
+  position          Int       @default(0)
+  iep               IEP       @relation(fields: [iepId], references: [id], onDelete: Cascade)
+
+  @@unique([iepId, position])
+}
+
+model IEPAccommodation {
+  id          String                @id @default(uuid()) @db.Uuid
+  iepId       String                @db.Uuid
+  category    AccommodationCategory
+  subject     String?
+  code        String?
+  description String
+  position    Int                   @default(0)
+  iep         IEP                   @relation(fields: [iepId], references: [id], onDelete: Cascade)
+
+  @@unique([iepId, category, position])
+}
+
+model IEPGoal {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  iepId               String                 @db.Uuid
+  code                String
+  performanceArea     String
+  longTermGoal        String?
+  shortTermGoal       String?
+  measurableGoal      String
+  strategyActivity    String?
+  learningExpectation String?
+  learningStrategy    String?
+  evaluationMethod    String
+  schedule            String
+  targetDate          DateTime?              @db.Date
+  active              Boolean                @default(true)
+  position            Int                    @default(0)
+  iep                 IEP                    @relation(fields: [iepId], references: [id], onDelete: Cascade)
+  weeklyProgress      WeeklyGoalProgress[]
+  achievementEvents   GoalAchievementEvent[]
+
+  @@unique([iepId, code])
+  @@unique([iepId, position])
+  @@unique([id, iepId])
+}
+
+model IEPServiceSchedule {
+  id          String      @id @default(uuid()) @db.Uuid
+  iepId       String      @db.Uuid
+  serviceName String
+  type        ServiceType
+  duration    String
+  frequency   String?
+  location    String
+  days        String?
+  position    Int         @default(0)
+  iep         IEP         @relation(fields: [iepId], references: [id], onDelete: Cascade)
+
+  @@unique([iepId, position])
+}
+
+model WeeklyReport {
+  id                     String                 @id @default(uuid()) @db.Uuid
+  organizationId         String                 @db.Uuid
+  studentId              String                 @db.Uuid
+  iepId                  String                 @db.Uuid
+  year                   Int
+  weekNumber             Int
+  weekStart              DateTime               @db.Date
+  weekEnd                DateTime               @db.Date
+  teacherId              String                 @db.Uuid
+  state                  WorkflowState          @default(DRAFT)
+  descriptiveObservation String
+  homeConnection         String
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  student                Student                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  iep                    IEP                    @relation(fields: [iepId], references: [id], onDelete: Restrict)
+  teacher                User                   @relation("WeeklyReportTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
+  goalProgress           WeeklyGoalProgress[]
+  achievementEvents      GoalAchievementEvent[]
+
+  @@unique([organizationId, studentId, year, weekNumber])
+  @@unique([id, iepId])
+  @@index([organizationId, iepId, weekStart])
+}
+
+model WeeklyGoalProgress {
+  id                     String       @id @default(uuid()) @db.Uuid
+  weeklyReportId         String       @db.Uuid
+  iepId                  String       @db.Uuid
+  goalId                 String       @db.Uuid
+  addressedThisWeek      Boolean      @default(false)
+  rating                 Int?
+  notes                  String?
+  markedAchievedThisWeek Boolean      @default(false)
+  achievedDate           DateTime?    @db.Date
+  achievedNote           String?
+  weeklyReport           WeeklyReport @relation(fields: [weeklyReportId, iepId], references: [id, iepId], onDelete: Cascade)
+  goal                   IEPGoal      @relation(fields: [goalId, iepId], references: [id, iepId], onDelete: Restrict)
+
+  @@unique([weeklyReportId, goalId])
+  @@index([iepId, goalId])
+}
+
+model GoalAchievementEvent {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  iepId          String        @db.Uuid
+  goalId         String        @db.Uuid
+  weeklyReportId String?       @db.Uuid
+  actorId        String        @db.Uuid
+  achieved       Boolean
+  note           String?
+  occurredAt     DateTime      @default(now())
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  goal           IEPGoal       @relation(fields: [goalId, iepId], references: [id, iepId], onDelete: Restrict)
+  weeklyReport   WeeklyReport? @relation(fields: [weeklyReportId, iepId], references: [id, iepId], onDelete: Restrict)
+  actor          User          @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, goalId, occurredAt])
+}
+
+model AuditEvent {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  actorId        String?      @db.Uuid
+  action         String
+  targetType     String
+  targetId       String
+  requestId      String
+  result         AuditResult
+  metadata       Json?
+  occurredAt     DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actor          User?        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, occurredAt])
+  @@index([organizationId, targetType, targetId, occurredAt])
+  @@index([requestId])
+}

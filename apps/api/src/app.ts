@@ -21,7 +21,7 @@ export function createApp({
   config,
   database,
   logger,
-  version = '0.1.0-alpha.1',
+  version = '0.1.0-alpha.2',
 }: AppDependencies) {
   const app = express();
   app.disable('x-powered-by');
