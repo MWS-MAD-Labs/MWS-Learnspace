@@ -24,3 +24,42 @@ export const versionResponseSchema = z.object({
 });
 
 export type VersionResponse = z.infer<typeof versionResponseSchema>;
+
+export const membershipRoleSchema = z.enum([
+  'PRINCIPAL',
+  'DIRECTOR',
+  'GRADE_TEACHER',
+  'SUBJECT_TEACHER',
+  'SPECIAL_ED_COORDINATOR',
+  'SPECIAL_ED_TEACHER',
+  'SPECIALIST',
+]);
+
+export const currentSessionResponseSchema = z.object({
+  user: z.object({
+    id: z.string().uuid(),
+    email: z.string().email(),
+    name: z.string().min(1),
+    avatarUrl: z.string().url().nullable(),
+    status: z.literal('ACTIVE'),
+  }),
+  memberships: z.array(
+    z.object({
+      id: z.string().uuid(),
+      organizationId: z.string().uuid(),
+      organizationName: z.string().min(1),
+      role: membershipRoleSchema,
+      roleTitle: z.string().nullable(),
+      unitIds: z.array(z.string().uuid()),
+      gradeIds: z.array(z.string().uuid()),
+      subjectIds: z.array(z.string().uuid()),
+      assignedStudentIds: z.array(z.string().uuid()),
+      permissions: z.array(z.string()),
+    }),
+  ),
+  expiresAt: z.string().datetime(),
+});
+
+export type CurrentSessionResponse = z.infer<
+  typeof currentSessionResponseSchema
+>;

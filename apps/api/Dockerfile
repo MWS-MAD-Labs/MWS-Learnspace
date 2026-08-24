@@ -8,7 +8,7 @@ RUN npm ci
 COPY apps/api apps/api
 COPY packages/contracts packages/contracts
 COPY prisma prisma
-COPY prisma.config.ts prisma.config.ts
+
 RUN npm run build -w @learnspace/api
 
 FROM builder AS migration

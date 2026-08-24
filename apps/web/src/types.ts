@@ -3,6 +3,7 @@ export type UserRole =
   | 'DIRECTOR'
   | 'GRADE_TEACHER'
   | 'SUBJECT_TEACHER'
+  | 'SPECIAL_ED_COORDINATOR'
   | 'SPECIAL_ED_TEACHER'
   | 'SPECIALIST';
 

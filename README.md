@@ -2,7 +2,7 @@
 
 Learnspace is an educator portal for academic planning, attendance, special-education observations, Individualized Education Programs (IEPs), and weekly progress reporting.
 
-The repository is currently at **`0.1.0-alpha.2`**. Milestone 2 adds the canonical domain model, Prisma schema and initial migration, guarded development seed, schema-aware API readiness, database integration tests, and rehearsed PostgreSQL backup/restore operations.
+The repository is currently at **`0.1.0-beta.1`**. Milestone 3 adds Google OpenID Connect login, revocable server-side sessions, explicit user admission policy, server-derived roles and scopes, authorization primitives, an authenticated web shell, and authentication security tests.
 
 > [!IMPORTANT]
 > The educator workflows are still a frontend prototype and are **not production-ready**. Application records are seeded in the browser and stored in each browser profile's `localStorage`; identity is simulated through a role switcher; and the UI has not yet migrated its records or authentication to the API. Do not use real student, family, educational, or disability-related information.
@@ -214,6 +214,9 @@ Never commit `.env` or real credentials. The API validates the following contrac
 | `GOOGLE_CLIENT_ID`                    | Non-empty; placeholder values are normally rejected               |
 | `GOOGLE_CLIENT_SECRET`                | Non-empty; placeholder values are normally rejected               |
 | `GOOGLE_ALLOWED_DOMAINS`              | Optional comma-separated domain list                              |
+| `GOOGLE_REDIRECT_URI`                 | Exact Google callback URL registered for this environment         |
+| `AUTH_ADMISSION_MODE`                 | `DENY_UNKNOWN`, `INVITE_ONLY`, or `ALLOWED_DOMAIN`                |
+| `SESSION_TTL_HOURS`                   | Session lifetime from 1 to 168 hours                              |
 | `ALLOW_DEVELOPMENT_AUTH_PLACEHOLDERS` | `true` only for explicit development placeholder credentials      |
 | `LOG_LEVEL`                           | `fatal`, `error`, `warn`, `info`, `debug`, or `trace`             |
 
@@ -226,11 +229,11 @@ Before any production-oriented Compose deployment:
 - set a unique `SESSION_SECRET` of at least 32 characters;
 - set real `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` values—development placeholders are rejected because the Compose API runs with `NODE_ENV=production`;
 - replace the default PostgreSQL password and ensure `DATABASE_URL` uses the matching database, user, password, host, and database name;
-- set `APP_URL` to the externally reachable HTTPS origin;
-- configure `GOOGLE_ALLOWED_DOMAINS` according to instance admission policy, if used;
+- set `APP_URL` to the externally reachable HTTPS origin and `GOOGLE_REDIRECT_URI` to the exact registered API callback;
+- choose `AUTH_ADMISSION_MODE`; configure `GOOGLE_ALLOWED_DOMAINS` only for domain admission;
 - keep all secrets outside the repository and arrange TLS, secret rotation, backups, and restore testing.
 
-OAuth routes and sessions are not implemented yet. Supplying credentials satisfies the current startup contract but does not enable Google sign-in.
+See `docs/auth/google-oauth.md` for Google Cloud clients, exact development/staging/production URLs, admission policy, and rotation procedures.
 
 ## Docker Compose
 

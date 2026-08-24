@@ -9,19 +9,27 @@ import {
 import type { AppConfig } from './config.js';
 import type { Database } from './database.js';
 import type { Logger } from './logger.js';
+import { createAuthRouter } from './authRoutes.js';
+import { OAuthService } from './oauthService.js';
+import { SessionService } from './sessionService.js';
 
 export type AppDependencies = {
   config: AppConfig;
   database: Database;
   logger: Logger;
   version?: string;
+  auth?: {
+    sessions: SessionService;
+    oauth: OAuthService;
+  };
 };
 
 export function createApp({
   config,
   database,
   logger,
-  version = '0.1.0-alpha.2',
+  version = '0.1.0-beta.1',
+  auth,
 }: AppDependencies) {
   const app = express();
   app.disable('x-powered-by');
@@ -81,6 +89,30 @@ export function createApp({
       );
     }
   });
+
+  const authServices =
+    auth ??
+    (database.client
+      ? {
+          sessions: new SessionService(
+            database.client,
+            config.sessionSecret,
+            config.sessionTtlHours,
+          ),
+          oauth: new OAuthService(database.client, config),
+        }
+      : undefined);
+  if (authServices) {
+    app.use(
+      '/api/v1/auth',
+      createAuthRouter(
+        config,
+        authServices.sessions,
+        authServices.oauth,
+        logger,
+      ),
+    );
+  }
 
   app.get('/api/v1/version', (_request, response) => {
     response.json(

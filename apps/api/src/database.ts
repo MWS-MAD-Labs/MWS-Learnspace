@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-export const requiredMigration = '20260819000000_initial';
+export const requiredMigration = '20260820000000_google_oauth_authorization';
 const databaseTimeoutMs = 2_000;
 
 export class IncompatibleDatabaseSchemaError extends Error {
@@ -13,6 +13,7 @@ export class IncompatibleDatabaseSchemaError extends Error {
 }
 
 export type Database = {
+  client?: PrismaClient;
   check: () => Promise<void>;
   close: () => Promise<void>;
 };
@@ -22,7 +23,7 @@ type ReadinessTransaction = {
   $queryRaw: PrismaClient['$queryRaw'];
 };
 
-type PrismaDatabaseClient = {
+type PrismaDatabaseClient = PrismaClient & {
   $transaction: <T>(
     operation: (transaction: ReadinessTransaction) => Promise<T>,
     options: {
@@ -41,6 +42,7 @@ export function createDatabase(
   }),
 ): Database {
   return {
+    client,
     async check() {
       try {
         const migrations = await client.$transaction(

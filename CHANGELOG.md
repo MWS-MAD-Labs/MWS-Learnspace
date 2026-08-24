@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Prisma schema, generated initial migration, one-shot Compose migration job, schema-compatible readiness checks, PostgreSQL integration tests, and guarded idempotent development seed data.
 - Organization-scoped authentication, academic, student, attendance, Learning Journey, observation, IEP, weekly report, workflow, goal-achievement, and immutable audit models.
 - Compose PostgreSQL backup/guarded restore scripts, operational runbook, and a recorded synthetic-data restore drill.
+- Google OpenID Connect authorization-code flow with state, nonce, PKCE, signed ID-token verification, one-time callback transactions, explicit admission modes, and OAuth identity linking.
+- Opaque PostgreSQL-backed sessions with hashed tokens, expiration, last-seen tracking, revocation, cleanup, secure cookie policy, logout, current-session endpoint, and double-submit CSRF protection.
+- Canonical server permission matrix, organization-scoped repository helpers, audited deny-by-default authorization guards, and a distinct Special Education Coordinator role.
+- Authenticated web loading, login, denied, disabled, active-session, and logout states; production builds no longer expose prototype impersonation controls.
 
 ### Changed
 
@@ -35,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Replaced the direct `pg` readiness pool with a singleton Prisma client that verifies the required committed migration before reporting ready and enforces PostgreSQL-side readiness query/lock timeouts.
 - Required SHA-256 sidecars for every database restore, failing before Docker access when integrity metadata is absent; backup archives and checksums are now published as a failure-safe pair only after verification and checksum generation succeed, with distinct infrastructure and missing-database errors.
 - Hardened tenant integrity with database triggers covering organization-owned relations and immutable tenant ownership; tenant actor references now require an active user and active organization membership when assigned, while unchanged historical attribution remains update-safe after an actor leaves. Membership user identity and audit actor attribution are immutable; audit actor deletion is restricted. Added composite IEP lineage for goal-achievement events, strict audit metadata schemas, and database immutability for completed observations and used definitions.
+- Replaced browser-selected startup identity with the API current-session response. The fake-data role switcher now requires both explicit development-only build flags and cannot change server identity.
 
 ### Removed
 

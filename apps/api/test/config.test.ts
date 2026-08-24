@@ -10,6 +10,10 @@ const validEnvironment = {
   GOOGLE_CLIENT_ID: 'google-client-id',
   GOOGLE_CLIENT_SECRET: 'google-client-secret',
   GOOGLE_ALLOWED_DOMAINS: 'example.org, school.example.org',
+  GOOGLE_REDIRECT_URI: 'https://api.example.org/api/v1/auth/callback',
+  AUTH_ADMISSION_MODE: 'INVITE_ONLY',
+
+  SESSION_TTL_HOURS: '24',
   LOG_LEVEL: 'info',
 };
 
@@ -18,6 +22,9 @@ describe('loadConfig', () => {
     expect(loadConfig(validEnvironment)).toMatchObject({
       port: 4000,
       googleAllowedDomains: ['example.org', 'school.example.org'],
+      googleRedirectUri: 'https://api.example.org/api/v1/auth/callback',
+      authAdmissionMode: 'INVITE_ONLY',
+      sessionTtlHours: 24,
     });
   });
 

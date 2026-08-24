@@ -17,6 +17,7 @@ enum MembershipRole {
   DIRECTOR
   GRADE_TEACHER
   SUBJECT_TEACHER
+  SPECIAL_ED_COORDINATOR
   SPECIAL_ED_TEACHER
   SPECIALIST
 }
@@ -122,6 +123,7 @@ model Organization {
   weeklyReports       WeeklyReport[]
   goalEvents          GoalAchievementEvent[]
   auditEvents         AuditEvent[]
+  invitations         UserInvitation[]
 }
 
 model User {
@@ -135,6 +137,7 @@ model User {
   memberships           Membership[]
   oauthAccounts         OAuthAccount[]
   sessions              Session[]
+  invitationsCreated    UserInvitation[]            @relation("InvitationCreatedBy")
   assignedByAssignments ObservationAssignment[]     @relation("ObservationAssignedBy")
   attendanceRecorded    AttendanceRecord[]          @relation("AttendanceRecorder")
   createdJourneys       LearningJourney[]           @relation("LearningJourneyCreatedBy")
@@ -170,6 +173,36 @@ model Membership {
 
   @@unique([organizationId, userId])
   @@index([organizationId, role, status])
+}
+
+model UserInvitation {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
+  email          String
+  role           MembershipRole
+  roleTitle      String?
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdById    String?        @db.Uuid
+  createdAt      DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User?          @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([email, expiresAt, acceptedAt])
+  @@index([organizationId, email])
+}
+
+model OAuthLoginTransaction {
+  id           String    @id @default(uuid()) @db.Uuid
+  stateHash    String    @unique
+  nonceHash    String
+  verifierHash String
+  redirectPath String
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([expiresAt, consumedAt])
 }
 
 model OAuthAccount {

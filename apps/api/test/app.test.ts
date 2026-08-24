@@ -14,6 +14,10 @@ const config: AppConfig = {
   googleClientId: 'client',
   googleClientSecret: 'secret',
   googleAllowedDomains: [],
+  googleRedirectUri: 'http://localhost:4000/api/v1/auth/callback',
+  authAdmissionMode: 'DENY_UNKNOWN',
+
+  sessionTtlHours: 24,
   logLevel: 'info',
 };
 
@@ -54,7 +58,7 @@ describe('API', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
       name: 'learnspace-api',
-      version: '0.1.0-alpha.2',
+      version: '0.1.0-beta.1',
     });
   });
 

@@ -1,17 +1,62 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { AppShell } from './components/layout/AppShell';
 import { DashboardView } from './components/dashboard/DashboardView';
-import { AttendanceView } from './components/attendance/AttendanceView';
-import { LearningJourneyCalendar } from './components/learning-journey/LearningJourneyCalendar';
-import { LearningJourneyStatusTracker } from './components/learning-journey/LearningJourneyStatusTracker';
-import { LearningJourneyEditor } from './components/learning-journey/LearningJourneyEditor';
-import { ObservationToolsView } from './components/special-ed/ObservationToolsView';
-import { IEPPlanView } from './components/special-ed/IEPPlanView';
-import { WeeklyReportView } from './components/special-ed/WeeklyReportView';
-import { ReportsAnalyticsView } from './components/dashboard/ReportsAnalyticsView';
-import { ObservationReferenceDrawer } from './components/common/ObservationReferenceDrawer';
 import { ToastContainer } from './components/common/ToastContainer';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthGate } from './components/auth/AuthGate';
+
+const AttendanceView = lazy(() =>
+  import('./components/attendance/AttendanceView').then((module) => ({
+    default: module.AttendanceView,
+  })),
+);
+const LearningJourneyCalendar = lazy(() =>
+  import('./components/learning-journey/LearningJourneyCalendar').then(
+    (module) => ({ default: module.LearningJourneyCalendar }),
+  ),
+);
+const LearningJourneyStatusTracker = lazy(() =>
+  import('./components/learning-journey/LearningJourneyStatusTracker').then(
+    (module) => ({ default: module.LearningJourneyStatusTracker }),
+  ),
+);
+const LearningJourneyEditor = lazy(() =>
+  import('./components/learning-journey/LearningJourneyEditor').then(
+    (module) => ({ default: module.LearningJourneyEditor }),
+  ),
+);
+const ObservationToolsView = lazy(() =>
+  import('./components/special-ed/ObservationToolsView').then((module) => ({
+    default: module.ObservationToolsView,
+  })),
+);
+const IEPPlanView = lazy(() =>
+  import('./components/special-ed/IEPPlanView').then((module) => ({
+    default: module.IEPPlanView,
+  })),
+);
+const WeeklyReportView = lazy(() =>
+  import('./components/special-ed/WeeklyReportView').then((module) => ({
+    default: module.WeeklyReportView,
+  })),
+);
+const ReportsAnalyticsView = lazy(() =>
+  import('./components/dashboard/ReportsAnalyticsView').then((module) => ({
+    default: module.ReportsAnalyticsView,
+  })),
+);
+const ObservationReferenceDrawer = lazy(() =>
+  import('./components/common/ObservationReferenceDrawer').then((module) => ({
+    default: module.ObservationReferenceDrawer,
+  })),
+);
+
+const ContentFallback = () => (
+  <div className="grid min-h-48 place-items-center text-sm font-semibold text-stone-500">
+    Loading workspace…
+  </div>
+);
 
 const MainContent: React.FC = () => {
   const {
@@ -49,22 +94,38 @@ const MainContent: React.FC = () => {
 
   return (
     <AppShell>
-      {renderTabContent()}
-      <ObservationReferenceDrawer
-        isOpen={isObservationDrawerOpen}
-        onClose={() => setIsObservationDrawerOpen(false)}
-        studentId={selectedStudentId}
-        onNavigateToFull={navigateToObservation}
-      />
+      <Suspense fallback={<ContentFallback />}>
+        {renderTabContent()}
+        {isObservationDrawerOpen && (
+          <ObservationReferenceDrawer
+            isOpen
+            onClose={() => setIsObservationDrawerOpen(false)}
+            studentId={selectedStudentId}
+            onNavigateToFull={navigateToObservation}
+          />
+        )}
+      </Suspense>
       <ToastContainer />
     </AppShell>
   );
 };
 
-export default function App() {
+const AuthenticatedApplication: React.FC = () => {
+  const { currentUser } = useAuth();
+  if (!currentUser) return null;
   return (
-    <AppProvider>
+    <AppProvider authenticatedUser={currentUser}>
       <MainContent />
     </AppProvider>
+  );
+};
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AuthGate>
+        <AuthenticatedApplication />
+      </AuthGate>
+    </AuthProvider>
   );
 }

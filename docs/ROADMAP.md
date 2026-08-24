@@ -537,7 +537,7 @@ Existing documentation:
 
 ## P3-001 — Document Google OAuth setup
 
-- [ ] **Dependencies:** P2-003
+- [x] **Dependencies:** P2-003
 - **Change:**
   - Add `docs/auth/google-oauth.md` with development, staging, and production client setup.
   - Document exact authorized origins and callback URLs.
@@ -547,7 +547,7 @@ Existing documentation:
 
 ## P3-002 — Implement session storage and cookie handling
 
-- [ ] **Dependencies:** P2-003, P1-005
+- [x] **Dependencies:** P2-003, P1-005
 - **Change:**
   - Implement cryptographically random opaque session tokens.
   - Store only token hashes in PostgreSQL.
@@ -558,7 +558,7 @@ Existing documentation:
 
 ## P3-003 — Implement Google authorization and callback routes
 
-- [ ] **Dependencies:** P3-001, P3-002
+- [x] **Dependencies:** P3-001, P3-002
 - **Change:**
   - Add login and callback routes using authorization code, state, nonce, and PKCE.
   - Validate issuer, audience, redirect URI, state, nonce, and token timestamps.
@@ -568,7 +568,7 @@ Existing documentation:
 
 ## P3-004 — Implement user admission policy
 
-- [ ] **Dependencies:** P3-003
+- [x] **Dependencies:** P3-003
 - **Change:**
   - Add explicit policy modes: deny unknown users, invite-only provisioning, and optional allowed-domain admission.
   - Default to deny unknown users.
@@ -579,7 +579,7 @@ Existing documentation:
 
 ## P3-005 — Add authentication middleware and session endpoints
 
-- [ ] **Dependencies:** P3-004
+- [x] **Dependencies:** P3-004
 - **Change:**
   - Add current-session and logout endpoints.
   - Add required-authentication middleware that loads active user and memberships.
@@ -589,7 +589,7 @@ Existing documentation:
 
 ## P3-006 — Define the permission matrix
 
-- [ ] **Dependencies:** P2-001
+- [x] **Dependencies:** P2-001
 - **Change:**
   - Add `docs/auth/authorization-matrix.md` covering Director, Principal, Grade Teacher, Subject Teacher, Special Education Coordinator, GPK/Special Education Teacher, and Specialist.
   - Define read/write/submit/review/approve/admin/export permissions.
@@ -599,7 +599,7 @@ Existing documentation:
 
 ## P3-007 — Implement authorization primitives
 
-- [ ] **Dependencies:** P3-005, P3-006
+- [x] **Dependencies:** P3-005, P3-006
 - **Change:**
   - Add permission guards and organization scope helpers.
   - Add repository query helpers that require organization and record scope.
@@ -610,7 +610,7 @@ Existing documentation:
 
 ## P3-008 — Add authenticated web application shell
 
-- [ ] **Dependencies:** P3-005
+- [x] **Dependencies:** P3-005
 - **Change:**
   - Add login, callback loading, access denied, disabled account, and authenticated application states.
   - Load current user from the API instead of `storageService.getCurrentUser()`.
@@ -620,7 +620,7 @@ Existing documentation:
 
 ## P3-009 — Isolate the prototype role switcher
 
-- [ ] **Dependencies:** P3-008
+- [x] **Dependencies:** P3-008
 - **Change:**
   - Remove role switching from production builds.
   - If retained for demos, require an explicit development-only build flag and fake-data mode.
@@ -630,11 +630,13 @@ Existing documentation:
 
 ## P3-010 — Complete authentication security tests
 
-- [ ] **Dependencies:** P3-007, P3-009
+- [x] **Dependencies:** P3-007, P3-009
 - **Change:**
   - Add tests for login CSRF, session fixation, session replay after logout, callback replay, cross-organization access, and privilege escalation payloads.
 - **Acceptance:** all listed attacks are denied and produce safe logs/audit events.
 - **Validate:** full API and E2E authentication test suites.
+- **Note (2026-08-20):** Completed Milestone 3 with documented per-environment Google OAuth configuration, authorization-code flow with state/nonce/PKCE and signed ID-token validation, one-time callback transactions, explicit deny/invite/domain admission modes, hashed and revocable PostgreSQL sessions, secure cookies and CSRF protection, server-derived memberships and permissions, organization-scoped repository helpers, safe authorization audit events, authenticated web states, real logout, and a development-only fake-data role switcher.
+- **Validated with:** Prisma format/validate/generate and migration deployment against PostgreSQL; API type checking, unit/security suites for session lifecycle, state mismatch, callback replay, admission, CSRF, permissions and audit denial; web type checking and authenticated-shell tests; lint, formatting, production builds, Compose configuration, and production bundle inspection proving the role-switcher labels are absent.
 
 ---
 

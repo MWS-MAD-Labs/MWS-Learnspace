@@ -24,6 +24,12 @@ const rawEnvironmentSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1),
   GOOGLE_CLIENT_SECRET: z.string().min(1),
   GOOGLE_ALLOWED_DOMAINS: z.string().default(''),
+  GOOGLE_REDIRECT_URI: z.string().url(),
+  AUTH_ADMISSION_MODE: z
+    .enum(['DENY_UNKNOWN', 'INVITE_ONLY', 'ALLOWED_DOMAIN'])
+    .default('DENY_UNKNOWN'),
+
+  SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(24),
   ALLOW_DEVELOPMENT_AUTH_PLACEHOLDERS: z
     .enum(['true', 'false'])
     .default('false'),
@@ -39,6 +45,10 @@ export type AppConfig = {
   googleClientId: string;
   googleClientSecret: string;
   googleAllowedDomains: string[];
+  googleRedirectUri: string;
+  authAdmissionMode: 'DENY_UNKNOWN' | 'INVITE_ONLY' | 'ALLOWED_DOMAIN';
+
+  sessionTtlHours: number;
   logLevel: (typeof logLevels)[number];
 };
 
@@ -91,8 +101,12 @@ export function loadConfig(
     googleClientId: values.GOOGLE_CLIENT_ID,
     googleClientSecret: values.GOOGLE_CLIENT_SECRET,
     googleAllowedDomains: values.GOOGLE_ALLOWED_DOMAINS.split(',')
-      .map((domain) => domain.trim())
+      .map((domain) => domain.trim().toLowerCase())
       .filter(Boolean),
+    googleRedirectUri: values.GOOGLE_REDIRECT_URI,
+    authAdmissionMode: values.AUTH_ADMISSION_MODE,
+
+    sessionTtlHours: values.SESSION_TTL_HOURS,
     logLevel: values.LOG_LEVEL,
   };
 }

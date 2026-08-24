@@ -64,14 +64,18 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
-  const [currentUser, setCurrentUser] = useState<User>(() =>
-    storageService.getCurrentUser(),
-  );
+const demoRoleSwitcherEnabled =
+  import.meta.env.DEV &&
+  import.meta.env.VITE_ENABLE_DEMO_ROLE_SWITCHER === 'true' &&
+  import.meta.env.VITE_FAKE_DATA_MODE === 'true';
+
+export const AppProvider: React.FC<{
+  children: ReactNode;
+  authenticatedUser: User;
+}> = ({ children, authenticatedUser }) => {
+  const [currentUser, setCurrentUser] = useState<User>(authenticatedUser);
   const [allUsers, setAllUsers] = useState<User[]>(() =>
-    storageService.getUsers(),
+    demoRoleSwitcherEnabled ? storageService.getUsers() : [authenticatedUser],
   );
   const [students, setStudents] = useState<Student[]>(() =>
     storageService.getStudents(),
@@ -98,15 +102,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const refreshData = () => {
-    const user = storageService.getCurrentUser();
+    const user = demoRoleSwitcherEnabled
+      ? storageService.getCurrentUser()
+      : authenticatedUser;
     setCurrentUser(user);
-    setAllUsers(storageService.getUsers());
+    setAllUsers(demoRoleSwitcherEnabled ? storageService.getUsers() : [user]);
     const allStuds = storageService.getStudents();
     setStudents(allStuds);
     setAssignedStudents(storageService.getStudentsForUser(user));
   };
 
   const switchRole = (userId: string) => {
+    if (!demoRoleSwitcherEnabled) return;
     const updated = storageService.setCurrentUser(userId);
     setCurrentUser(updated);
     const userAssigned = storageService.getStudentsForUser(updated);
