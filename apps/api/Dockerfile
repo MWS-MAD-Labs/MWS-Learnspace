@@ -6,8 +6,10 @@ COPY apps/web/package.json apps/web/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 RUN npm ci
 COPY apps/api apps/api
+COPY apps/web/src apps/web/src
 COPY packages/contracts packages/contracts
 COPY prisma prisma
+COPY scripts scripts
 
 RUN npm run build -w @learnspace/api
 

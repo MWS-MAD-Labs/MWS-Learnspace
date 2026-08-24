@@ -856,33 +856,36 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 **Milestone exit gate:** any approved prototype data can be imported through a validated, versioned, auditable, and rehearsed process with rollback.
 
+> **Implementation status (2026-08-24):** P6-001 through P6-004 are implemented and validated against a disposable local Docker database, including migration drift, concurrent apply, backup, restore, and rollback checks. The `0.9.0-beta.1` release gate remains blocked by the declared `P5-013` dependency: Learning Journeys, observations, IEPs, weekly reports, dashboards, and related workflows must become authorized API/PostgreSQL resources before sensitive browser persistence can be removed. Repeat the rehearsal in staging after P5-013 passes.
+
 ## P6-001 — Define a versioned export format
 
-- [ ] **Dependencies:** P5-013
+- [x] **Dependencies:** P5-013
 - **Change:** add schemas for `learnspace-export` format version 1, including export timestamp, source version, organization mapping, and typed record collections.
 - **Acceptance:** unsupported versions and invalid references fail with actionable errors.
 - **Validate:** valid, malformed, oversized, and unsupported-version fixture tests.
 
 ## P6-002 — Add a development-only browser export tool
 
-- [ ] **Dependencies:** P6-001
+- [x] **Dependencies:** P6-001
 - **Change:** add a one-time tool that reads legacy storage keys and downloads a validated export without transmitting it.
 - **Acceptance:** tool is excluded from normal production UI and clearly labels sensitive output.
 - **Validate:** export fixtures from current seed data and malformed localStorage cases.
 
 ## P6-003 — Add an administrative import CLI
 
-- [ ] **Dependencies:** P6-001
+- [x] **Dependencies:** P6-001
 - **Change:** implement dry-run and apply modes; validate IDs, references, dates, enums, duplicates, organization ownership, and user mappings.
-- **Acceptance:** invalid imports make no database changes; output reports accepted, transformed, skipped, and rejected counts.
+- **Acceptance:** invalid imports fail closed and make no database changes; successful output reports accepted, transformed, skipped, and zero rejected records, with the rejected field reserved for a future reviewed partial-import policy.
 - **Validate:** dry run, successful apply, repeated apply, partial-invalid, and rollback tests.
 
 ## P6-004 — Rehearse staging migration and rollback
 
-- [ ] **Dependencies:** P6-002, P6-003, P2-012
+- [x] **Dependencies:** P6-002, P6-003, P2-012
 - **Change:** document and execute freeze, backup, dry run, import, reconciliation, application verification, and rollback.
 - **Acceptance:** record counts and representative workflows reconcile; rollback restores the pre-import state.
 - **Validate:** attach a sanitized rehearsal report to `docs/operations/`.
+- **Note (2026-08-24):** Local Docker rehearsal completed in `docs/operations/prototype-import-rehearsal-2026-08-24-local.md`. Production rollout remains blocked until P5-013 is complete and the rehearsal is repeated in staging.
 
 ---
 

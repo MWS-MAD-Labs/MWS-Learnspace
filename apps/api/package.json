@@ -22,7 +22,8 @@
     "db:seed": "tsx ../../prisma/seed.ts",
     "db:seed:e2e": "tsx ../../prisma/e2e-seed.ts",
     "openapi:generate": "tsx src/openapi.ts",
-    "openapi:check": "vitest run test/openapi.test.ts"
+    "openapi:check": "vitest run test/openapi.test.ts",
+    "db:import": "tsx src/importerCli.ts"
   },
   "dependencies": {
     "@learnspace/contracts": "*",

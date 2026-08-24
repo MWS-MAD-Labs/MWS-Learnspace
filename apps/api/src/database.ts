@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-export const requiredMigration = '20260820000000_google_oauth_authorization';
+export const requiredMigration = '20260824000000_prototype_import_runs';
 const databaseTimeoutMs = 2_000;
 
 export class IncompatibleDatabaseSchemaError extends Error {

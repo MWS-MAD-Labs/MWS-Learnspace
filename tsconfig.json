@@ -6,7 +6,13 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "vite/client"]
   },
-  "include": ["prisma/*.ts", "playwright.config.ts", "e2e/**/*.ts"]
+  "include": [
+    "prisma/*.ts",
+    "scripts/**/*.ts",
+    "playwright.config.ts",
+    "e2e/**/*.ts"
+  ]
 }

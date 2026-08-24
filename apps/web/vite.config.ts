@@ -6,6 +6,11 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    define: {
+      __APP_VERSION__: JSON.stringify(
+        process.env.npm_package_version ?? 'unknown',
+      ),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

@@ -34,7 +34,9 @@
     "db:backup": "sh scripts/db-backup.sh",
     "db:restore": "sh scripts/db-restore.sh",
     "openapi:generate": "npm run openapi:generate -w @learnspace/api",
-    "openapi:check": "npm run openapi:check -w @learnspace/api"
+    "openapi:check": "npm run openapi:check -w @learnspace/api",
+    "db:import": "npm run db:import -w @learnspace/api --",
+    "db:import:prepare-local": "tsx scripts/prepare-local-import-rehearsal.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

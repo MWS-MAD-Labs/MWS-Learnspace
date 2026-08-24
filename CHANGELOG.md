@@ -36,6 +36,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Strict shared contracts and generated OpenAPI operations for organization staff directories, rich authorized student reads, privileged student creation/updates, and GPK assignment lifecycle commands.
 - Transactional GPK assignment capacity enforcement with PostgreSQL row locking, atomic reassignment/end behavior, session-derived actors, audit events, and concurrency integration tests.
 - API-backed web student/staff loading with initial loading and retry states, non-blocking refresh failure feedback, and contract-validated GPK assignment mutations.
+- Versioned and bounded `learnspace-export` v1 contracts with duplicate and cross-record reference validation.
+- Explicitly gated development-only browser exporter that validates raw legacy storage and downloads sensitive migration artifacts without transmitting them.
+- Fail-closed administrative import CLI with approved target manifests, serializable dry-run/apply transactions, deterministic legacy ID mapping, idempotent source-key ledger, safe aggregate auditing, and a documented local Docker backup/import/rollback rehearsal.
 
 ### Changed
 

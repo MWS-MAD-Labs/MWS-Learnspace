@@ -11,7 +11,7 @@ import {
   IEPReport,
   ObservationAssignment,
   ObservationFormDefinition,
-} from '../types';
+} from '../types.js';
 
 export const SEED_USERS: User[] = [
   {

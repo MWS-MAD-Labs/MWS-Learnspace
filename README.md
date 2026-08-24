@@ -5,7 +5,7 @@ Learnspace is an educator portal for academic planning, attendance, special-educ
 The repository is currently at **`0.2.0`**. Milestone 4 delivered the first fully migrated product vertical, and Milestone 5 is now underway with API-backed authorized student directories, privileged student administration, and transactional GPK staff assignments in addition to PostgreSQL attendance.
 
 > [!IMPORTANT]
-> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, and attendance are server-backed, but Learning Journey, observations, IEPs, and weekly reports still use seeded browser `localStorage`. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
+> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, attendance, and the controlled prototype import tooling are server-backed, but Learning Journey, observations, IEPs, and weekly reports still use seeded browser `localStorage`. P6 tooling is implemented locally, but its release gate remains blocked until P5-013 removes sensitive browser persistence. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
 
 ## Current capabilities
 
@@ -24,7 +24,8 @@ The repository is currently at **`0.2.0`**. Milestone 4 delivered the first full
 - Seeded demo records for evaluating the workflows
 - Express API foundation with liveness, PostgreSQL readiness, version, structured logging, request IDs, and safe error responses
 - Docker Compose services for the web application, API, PostgreSQL, and a one-shot Prisma migration job
-- Normalized Prisma models for tenant ownership, academics, attendance, planning, observations, IEPs, weekly reports, workflows, sessions, and audit events
+- Normalized Prisma models for tenant ownership, academics, attendance, planning, observations, IEPs, weekly reports, workflows, sessions, audit events, and prototype import runs
+- Versioned legacy-browser export, fail-closed administrative import CLI, and documented local Docker backup/import/rollback rehearsal
 
 ## Current architecture
 
@@ -75,6 +76,7 @@ Frontend role checks are presentation behavior only and are not authorization. T
 │   ├── api/conventions.md          # Versioned API conventions
 │   ├── api/openapi.json            # Generated OpenAPI 3.1 specification
 │   ├── operations/backup-and-restore.md
+│   ├── operations/prototype-import-rollout.md
 │   ├── domain-model.md
 │   ├── ROADMAP.md
 │   └── VERSIONING.md
@@ -165,7 +167,20 @@ npm run openapi:check
 npm run e2e:attendance # Disposable Compose-backed Playwright run
 npm run db:backup -- --database SOURCE --output FILE
 npm run db:restore -- --archive FILE --database NEW_TARGET
+npm run db:import:prepare-local -- OUTPUT_DIRECTORY
+npm run db:import -- --file EXPORT --manifest MANIFEST --dry-run
+npm run db:import -- --file EXPORT --manifest MANIFEST --apply --confirm-organization UUID
 ```
+
+### Development-only legacy browser export
+
+To extract approved prototype data from a browser profile, explicitly enable the local-only exporter:
+
+```bash
+VITE_ENABLE_LEGACY_EXPORT_TOOL=true npm run dev
+```
+
+Open <http://localhost:3000/__dev/legacy-export>. The route is unavailable without the development flag and is excluded from normal production UI. Its downloaded JSON is clearly marked sensitive; follow [`docs/operations/prototype-import-rollout.md`](docs/operations/prototype-import-rollout.md) for the target mapping manifest, dry-run, apply, reconciliation, and rollback process.
 
 ### Workspace-local commands
 
@@ -200,7 +215,7 @@ The API also:
 - propagates a valid incoming `X-Request-ID` or generates one;
 - returns the request ID in response headers and error envelopes;
 - limits JSON request bodies to `100kb` and returns a safe `413 PAYLOAD_TOO_LARGE` envelope when exceeded;
-- bounds the Prisma readiness operation to two seconds and requires migration `20260819000000_initial`;
+- bounds the Prisma readiness operation to two seconds and requires migration `20260824000000_prototype_import_runs`;
 - disables Express's `X-Powered-By` header;
 - returns structured `404`, invalid-JSON, payload-too-large, and internal-error responses without production stack traces.
 

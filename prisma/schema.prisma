@@ -124,6 +124,7 @@ model Organization {
   goalEvents          GoalAchievementEvent[]
   auditEvents         AuditEvent[]
   invitations         UserInvitation[]
+  importRuns          ImportRun[]
 }
 
 model User {
@@ -151,6 +152,7 @@ model User {
   workflowEvents        WorkflowEvent[]
   auditEvents           AuditEvent[]
   goalEvents            GoalAchievementEvent[]
+  importRuns            ImportRun[]
 }
 
 model Membership {
@@ -887,6 +889,27 @@ model GoalAchievementEvent {
   actor          User          @relation(fields: [actorId], references: [id], onDelete: Restrict)
 
   @@index([organizationId, goalId, occurredAt])
+}
+
+model ImportRun {
+  id               String       @id @default(uuid()) @db.Uuid
+  organizationId   String       @db.Uuid
+  sourceKey        String
+  format           String
+  formatVersion    Int
+  exportSha256     String
+  operatorId       String?      @db.Uuid
+  acceptedCount    Int
+  transformedCount Int
+  skippedCount     Int
+  rejectedCount    Int
+  summary          Json
+  appliedAt        DateTime     @default(now())
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  operator         User?        @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, sourceKey])
+  @@index([organizationId, appliedAt])
 }
 
 model AuditEvent {
