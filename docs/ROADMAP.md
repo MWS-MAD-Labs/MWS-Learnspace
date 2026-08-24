@@ -64,12 +64,12 @@ These decisions reduce ambiguity for implementation agents. Change them only thr
 The current application has a useful React UI and domain inventory, but its educator workflows remain a prototype:
 
 - the npm workspace contains `apps/web`, `apps/api`, and `packages/contracts`;
-- data is initialized from `apps/web/src/data/seedData.ts` and persisted by `apps/web/src/services/storageService.ts` in browser `localStorage`;
-- the role switcher in `apps/web/src/components/layout/AppShell.tsx` simulates identity;
-- authorization is primarily implemented with frontend conditionals;
-- an active Express API, shared response contracts, PostgreSQL Compose service, and production-oriented web/API images now provide the Milestone 1 foundation;
-- PostgreSQL is not yet authoritative for educator workflow data, and Prisma, OAuth, sessions, and protected domain APIs are not implemented;
-- `apps/web/src/types.ts` contains overlapping status representations that must be normalized;
+- non-attendance prototype domains are initialized from `apps/web/src/data/seedData.ts` and persisted by `apps/web/src/services/storageService.ts` in browser `localStorage`;
+- authenticated identity, memberships, permissions, and record scopes come from Google OAuth and PostgreSQL-backed server sessions; the role switcher is isolated to explicit development fake-data builds;
+- authorization is enforced by the API for implemented protected resources; remaining prototype domains still contain presentation-only frontend role checks until they migrate;
+- the Express API, shared response contracts, PostgreSQL Compose service, Prisma lifecycle, production-oriented images, OAuth, sessions, and authorization foundation are implemented;
+- PostgreSQL is authoritative for attendance, while Learning Journey, observations, IEPs, and weekly reports remain browser-backed until Milestone 5;
+- `apps/web/src/types.ts` still contains overlapping status representations for remaining prototype domains that must be normalized;
 - no active Gemini integration exists; Google AI Studio provenance remains only in `metadata.json`;
 - Milestone 0 provides a dependency lockfile, CI pipeline, formatting and linting, type checking, and frontend smoke tests.
 
@@ -646,9 +646,11 @@ Existing documentation:
 
 **Milestone exit gate:** attendance is fully multi-user and PostgreSQL-backed; no production attendance path reads or writes `localStorage`.
 
+**Status:** Complete on 2026-08-24. API conventions and generated OpenAPI, a typed web client, membership-scoped academic/student endpoints, transactional attendance reads/writes with optimistic concurrency and audit events, an API-backed attendance UI, Compose-backed Playwright coverage, and removal of browser attendance persistence were validated.
+
 ## P4-001 — Define API conventions and OpenAPI generation
 
-- [ ] **Dependencies:** P3-007
+- [x] **Dependencies:** P3-007
 - **Change:**
   - Add `docs/api/conventions.md` for resource names, IDs, dates, pagination, filtering, errors, commands, and idempotency.
   - Generate OpenAPI from runtime schemas or verify schemas against the specification in CI.
@@ -657,7 +659,7 @@ Existing documentation:
 
 ## P4-002 — Add the typed web API client
 
-- [ ] **Dependencies:** P4-001
+- [x] **Dependencies:** P4-001
 - **Change:**
   - Add a web API client using shared contract types.
   - Centralize credentials, CSRF headers, JSON parsing, error mapping, cancellation, and request IDs.
@@ -667,7 +669,7 @@ Existing documentation:
 
 ## P4-003 — Add authorized academic structure endpoints
 
-- [ ] **Dependencies:** P4-001, P3-007
+- [x] **Dependencies:** P4-001, P3-007
 - **Change:**
   - Add read endpoints for organizations available to the user, academic years, classes, grades, and subjects.
   - Scope every query through membership.
@@ -676,7 +678,7 @@ Existing documentation:
 
 ## P4-004 — Add authorized student listing endpoints
 
-- [ ] **Dependencies:** P4-003
+- [x] **Dependencies:** P4-003
 - **Change:**
   - Add student list/detail contracts and endpoints.
   - Return only fields required by the calling view.
@@ -686,7 +688,7 @@ Existing documentation:
 
 ## P4-005 — Add attendance read endpoint
 
-- [ ] **Dependencies:** P2-005, P4-004
+- [x] **Dependencies:** P2-005, P4-004
 - **Change:**
   - Add an endpoint for attendance by authorized class and school date.
   - Return students plus existing status in a form suitable for the current attendance UI.
@@ -696,7 +698,7 @@ Existing documentation:
 
 ## P4-006 — Add transactional attendance write endpoint
 
-- [ ] **Dependencies:** P4-005
+- [x] **Dependencies:** P4-005
 - **Change:**
   - Add a bulk upsert command for one class/date.
   - Set recorder identity from the session, never from the request body.
@@ -708,7 +710,7 @@ Existing documentation:
 
 ## P4-007 — Migrate the attendance UI to the API
 
-- [ ] **Dependencies:** P4-002, P4-005, P4-006
+- [x] **Dependencies:** P4-002, P4-005, P4-006
 - **Change:**
   - Replace attendance `storageService` reads/writes with API queries and mutations.
   - Add loading, empty, retry, validation, conflict, and save-success states.
@@ -718,7 +720,7 @@ Existing documentation:
 
 ## P4-008 — Add attendance E2E tests
 
-- [ ] **Dependencies:** P4-007
+- [x] **Dependencies:** P4-007
 - **Change:**
   - Add Playwright infrastructure.
   - Test authorized attendance entry, persistence, validation error, forbidden class, and logout.
@@ -727,13 +729,15 @@ Existing documentation:
 
 ## P4-009 — Remove attendance browser persistence
 
-- [ ] **Dependencies:** P4-008
+- [x] **Dependencies:** P4-008
 - **Change:**
   - Delete attendance keys and methods from `storageService`.
   - Remove attendance seed initialization from browser startup.
   - Retain only server seed data for attendance demos/tests.
 - **Acceptance:** searching the production web source finds no attendance `localStorage` path.
 - **Validate:** grep, unit tests, E2E tests, type check, and production build.
+- **Note (2026-08-24):** Completed Milestone 4 with documented `/api/v1` conventions and generated OpenAPI, shared runtime contracts, a typed web API client, membership-scoped academic and minimal student endpoints, canonical PostgreSQL attendance statuses, strict class/date roster reads, atomic audited bulk upserts, serializable optimistic concurrency, API-backed attendance loading/editing/conflict states, and removal of all production attendance browser persistence.
+- **Validated with:** OpenAPI drift validation; formatting, linting, root/workspace type checking, unit tests, and production builds; PostgreSQL 16 migration deployment and all 15 API integration tests; attendance-specific production-source grep; and the Compose-backed Playwright attendance project covering validation, save, refresh and second-session persistence, forbidden class denial, and logout.
 
 ---
 

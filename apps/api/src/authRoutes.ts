@@ -101,6 +101,13 @@ export function createRequiredAuthentication(
           assignedStudentIds: membership.staffAssignments.map(
             (assignment) => assignment.studentId,
           ),
+          assignedStudentScopes: membership.staffAssignments.map(
+            (assignment) => ({
+              studentId: assignment.studentId,
+              startsOn: assignment.startsOn,
+              endsOn: assignment.endsOn,
+            }),
+          ),
         })),
       };
       response.locals.session = session;

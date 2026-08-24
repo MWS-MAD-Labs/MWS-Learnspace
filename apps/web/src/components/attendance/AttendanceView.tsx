@@ -1,679 +1,760 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
-import { AttendanceRecord, AttendanceStatus, Student } from '../../types';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import type {
+  AttendanceRosterResponse,
+  AttendanceStatus,
+  ClassesResponse,
+} from '@learnspace/contracts';
 import {
+  AlertCircle,
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
+  RefreshCw,
   Save,
-  CheckCircle2,
-  Clock,
-  HeartCrack,
-  Plane,
-  AlertCircle,
-  FileText,
   Search,
-  CheckCheck,
-  X,
+  ShieldAlert,
+  Users,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { ApiClientError, isRequestCancelled } from '../../services/apiClient';
+import { attendanceService } from '../../services/attendanceService';
 
-interface StatusOptionConfig {
-  label: string;
-  badgeClass: string;
-  ringClass: string;
-  icon: React.ComponentType<{ className?: string }>;
-  description: string;
-}
-
-const STATUS_CONFIG: Record<AttendanceStatus, StatusOptionConfig> = {
-  PRESENT: {
-    label: 'Present',
-    badgeClass:
-      'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
-    ringClass: 'ring-emerald-500/40 border-emerald-500',
-    icon: CheckCircle2,
-    description: 'On time in class',
-  },
-  LATE: {
-    label: 'Late',
-    badgeClass:
-      'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
-    ringClass: 'ring-amber-500/40 border-amber-500',
-    icon: Clock,
-    description: 'Arrived after bell',
-  },
-  SICK: {
-    label: 'Sick',
-    badgeClass: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100',
-    ringClass: 'ring-rose-500/40 border-rose-500',
-    icon: HeartCrack,
-    description: 'Medical / illness',
-  },
-  HOLIDAY: {
-    label: 'Holiday',
-    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
-    ringClass: 'ring-blue-500/40 border-blue-500',
-    icon: Plane,
-    description: 'Approved leave',
-  },
-  ABSENCE: {
-    label: 'Absence',
-    badgeClass: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100',
-    ringClass: 'ring-red-500/40 border-red-500',
-    icon: AlertCircle,
-    description: 'Unexcused absence',
-  },
-  EXPLAINED: {
-    label: 'Explained',
-    badgeClass:
-      'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
-    ringClass: 'ring-purple-500/40 border-purple-500',
-    icon: FileText,
-    description: 'Permitted absence',
-  },
-  UNEXPLAINED: {
-    label: 'Unexplained',
-    badgeClass:
-      'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200',
-    ringClass: 'ring-stone-400/40 border-stone-400',
-    icon: AlertCircle,
-    description: 'No reason provided',
-  },
-};
-
-const AVAILABLE_STATUSES: AttendanceStatus[] = [
+const STATUSES: AttendanceStatus[] = [
   'PRESENT',
   'LATE',
   'SICK',
-  'HOLIDAY',
-  'ABSENCE',
-  'EXPLAINED',
+  'EXCUSED_ABSENCE',
+  'UNEXCUSED_ABSENCE',
 ];
 
-export const AttendanceView: React.FC = () => {
-  const { students, currentUser, showToast } = useApp();
-  const [selectedDate, setSelectedDate] = useState('2026-10-24');
-  const [selectedClass, setSelectedClass] = useState('1-A Sequoia');
-  const [searchFilter, setSearchFilter] = useState('');
+const STATUS_LABELS: Record<AttendanceStatus, string> = {
+  PRESENT: 'Present',
+  LATE: 'Late',
+  SICK: 'Sick',
+  EXCUSED_ABSENCE: 'Excused absence',
+  UNEXCUSED_ABSENCE: 'Unexcused absence',
+};
 
-  // Track which student's status popover is currently open
-  const [openStudentId, setOpenStudentId] = useState<string | null>(null);
-  const popoverRef = useRef<HTMLDivElement | null>(null);
+type DraftRecord = {
+  status: AttendanceStatus;
+  minutesLate: number | null;
+  notes: string;
+};
 
-  // Available classes extracted from students
-  const classOptions = Array.from(
-    new Set(students.map((s) => s.className)),
-  ).filter(Boolean);
-  if (!classOptions.includes('1-A Sequoia'))
-    classOptions.unshift('1-A Sequoia');
+type DraftMap = Record<string, DraftRecord>;
+type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'denied';
+type SaveState =
+  'idle' | 'saving' | 'success' | 'validation' | 'conflict' | 'error';
 
-  // Filter students based on selected class and search query
-  const filteredStudents = students.filter((student) => {
-    const matchesClass =
-      selectedClass === 'ALL' || student.className === selectedClass;
-    const matchesSearch =
-      !searchFilter ||
-      student.fullName.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      (student.nickname &&
-        student.nickname.toLowerCase().includes(searchFilter.toLowerCase()));
-    return matchesClass && matchesSearch;
-  });
-
-  // Local state for current attendance records mapped by studentId
-  const [records, setRecords] = useState<Record<string, AttendanceRecord>>({});
-
-  // Sync records when date or class changes
-  useEffect(() => {
-    const existing = storageService.getAttendanceRecords(selectedDate);
-    const map: Record<string, AttendanceRecord> = {};
-
-    students.forEach((stu) => {
-      const match = existing.find(
-        (e) => e.studentId === stu.id && e.date === selectedDate,
-      );
-      if (match) {
-        map[stu.id] = match;
-      } else {
-        // By default all students are PRESENT
-        map[stu.id] = {
-          id: `att-${stu.id}-${selectedDate}`,
-          studentId: stu.id,
-          date: selectedDate,
-          status: 'PRESENT',
-          className: stu.className,
-          recordedBy: currentUser.id,
-        };
-      }
-    });
-
-    setRecords(map);
-  }, [selectedDate, students, currentUser.id]);
-
-  // Click-outside listener to close popover
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node)
-      ) {
-        setOpenStudentId(null);
-      }
-    };
-    if (openStudentId) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [openStudentId]);
-
-  const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
-    const currentRec = records[studentId];
-    setRecords((prev) => ({
-      ...prev,
-      [studentId]: {
-        ...(prev[studentId] || {
-          id: `att-${studentId}-${selectedDate}`,
-          studentId,
-          date: selectedDate,
-          className: selectedClass,
-          recordedBy: currentUser.id,
-        }),
-        status,
-        minutesLate:
-          status === 'LATE' ? currentRec?.minutesLate || 10 : undefined,
-      },
-    }));
-  };
-
-  const handleMinutesLateChange = (studentId: string, minutes: number) => {
-    setRecords((prev) => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        minutesLate: minutes,
-      },
-    }));
-  };
-
-  const handleNotesChange = (studentId: string, notes: string) => {
-    setRecords((prev) => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        notes,
-      },
-    }));
-  };
-
-  const handleMarkAllPresent = () => {
-    setRecords((prev) => {
-      const updated = { ...prev };
-      filteredStudents.forEach((student) => {
-        updated[student.id] = {
-          ...(updated[student.id] || {
-            id: `att-${student.id}-${selectedDate}`,
-            studentId: student.id,
-            date: selectedDate,
-            className: student.className,
-            recordedBy: currentUser.id,
-          }),
-          status: 'PRESENT',
-          notes: undefined,
-          minutesLate: undefined,
-        };
-      });
-      return updated;
-    });
-    showToast(
-      'info',
-      'All Marked Present',
-      `Set all ${filteredStudents.length} students to Present.`,
-    );
-  };
-
-  const handleSaveAttendance = () => {
-    const recordsList: AttendanceRecord[] = Object.values(
-      records,
-    ) as AttendanceRecord[];
-    storageService.saveAttendance(recordsList);
-    showToast(
-      'success',
-      'Attendance Saved',
-      `Successfully logged attendance for ${recordsList.length} students on ${selectedDate}.`,
-    );
-  };
-
-  // Date shifting helpers
-  const handleShiftDate = (days: number) => {
-    const current = new Date(selectedDate);
-    current.setDate(current.getDate() + days);
-    const formatted = current.toISOString().split('T')[0];
-    setSelectedDate(formatted);
-  };
-
-  // Summary counts for current filtered students
-  const activeStudentIds = new Set(filteredStudents.map((s) => s.id));
-  const allRecordsList: AttendanceRecord[] = Object.values(
-    records,
-  ) as AttendanceRecord[];
-  const activeRecords = allRecordsList.filter((r: AttendanceRecord) =>
-    activeStudentIds.has(r.studentId),
+function localToday(): string {
+  const today = new Date();
+  return formatDateParts(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    today.getDate(),
   );
+}
 
-  const presentCount = activeRecords.filter(
-    (r: AttendanceRecord) => (r.status || 'PRESENT') === 'PRESENT',
-  ).length;
-  const lateCount = activeRecords.filter(
-    (r: AttendanceRecord) => r.status === 'LATE',
-  ).length;
-  const sickCount = activeRecords.filter(
-    (r: AttendanceRecord) => r.status === 'SICK',
-  ).length;
-  const absenceCount = activeRecords.filter(
-    (r: AttendanceRecord) =>
-      r.status === 'ABSENCE' || r.status === 'UNEXPLAINED',
-  ).length;
-  const otherCount = activeRecords.filter(
-    (r: AttendanceRecord) => r.status === 'EXPLAINED' || r.status === 'HOLIDAY',
-  ).length;
+function formatDateParts(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
 
-  const formattedDisplayDate = new Date(
-    selectedDate + 'T00:00:00',
-  ).toLocaleDateString('en-US', {
+function parseSchoolDate(value: string): {
+  year: number;
+  month: number;
+  day: number;
+} {
+  const [year, month, day] = value.split('-').map(Number);
+  return { year, month, day };
+}
+
+function shiftSchoolDate(value: string, days: number): string {
+  const { year, month, day } = parseSchoolDate(value);
+  const date = new Date(year, month - 1, day + days, 12);
+  return formatDateParts(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    date.getDate(),
+  );
+}
+
+function displaySchoolDate(value: string): string {
+  const { year, month, day } = parseSchoolDate(value);
+  return new Date(year, month - 1, day, 12).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+function draftsFromRoster(response: AttendanceRosterResponse): DraftMap {
+  return Object.fromEntries(
+    response.data.roster.map(({ student, attendance }) => [
+      student.id,
+      attendance
+        ? {
+            status: attendance.status,
+            minutesLate: attendance.minutesLate,
+            notes: attendance.notes ?? '',
+          }
+        : { status: 'PRESENT' as const, minutesLate: null, notes: '' },
+    ]),
+  );
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    const reference = error.requestId ? ` Reference: ${error.requestId}.` : '';
+    return `${error.message}${reference}`;
+  }
+  return 'An unexpected error occurred.';
+}
+
+export const AttendanceView: React.FC = () => {
+  const { session, currentUser } = useAuth();
+  const membership = session?.memberships[0];
+  const organizationId = membership?.organizationId;
+  const canRead = membership?.permissions.includes('attendance:read') ?? false;
+  const canWrite =
+    membership?.permissions.includes('attendance:write') ?? false;
+
+  const [schoolDate, setSchoolDate] = useState(localToday);
+  const [classes, setClasses] = useState<ClassesResponse['data']>([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [classesState, setClassesState] = useState<LoadState>('idle');
+  const [classesError, setClassesError] = useState('');
+  const [rosterState, setRosterState] = useState<LoadState>('idle');
+  const [rosterError, setRosterError] = useState('');
+  const [rosterResponse, setRosterResponse] =
+    useState<AttendanceRosterResponse>();
+  const [serverVersion, setServerVersion] = useState('');
+  const [serverSnapshot, setServerSnapshot] = useState<DraftMap>({});
+  const [drafts, setDrafts] = useState<DraftMap>({});
+  const [search, setSearch] = useState('');
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [saveMessage, setSaveMessage] = useState('');
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
+  const [classesReloadKey, setClassesReloadKey] = useState(0);
+  const [rosterReloadKey, setRosterReloadKey] = useState(0);
+  const preserveDraftsOnNextLoad = useRef(false);
+
+  useEffect(() => {
+    if (!organizationId || !canRead) {
+      setClassesState('denied');
+      return;
+    }
+    const controller = new AbortController();
+    setClassesState('loading');
+    setClassesError('');
+    attendanceService
+      .getClasses(organizationId, controller.signal)
+      .then((response) => {
+        setClasses(response.data);
+        setSelectedClassId((current) =>
+          response.data.some((item) => item.id === current)
+            ? current
+            : (response.data[0]?.id ?? ''),
+        );
+        setClassesState('ready');
+      })
+      .catch((error: unknown) => {
+        if (isRequestCancelled(error)) return;
+        setClassesState(
+          error instanceof ApiClientError && error.category === 'authz'
+            ? 'denied'
+            : 'error',
+        );
+        setClassesError(errorMessage(error));
+      });
+    return () => controller.abort();
+  }, [organizationId, canRead, classesReloadKey]);
+
+  const loadRoster = useCallback(
+    (keepDrafts: boolean) => {
+      if (!organizationId || !selectedClassId || !canRead)
+        return () => undefined;
+      const controller = new AbortController();
+      setRosterState('loading');
+      setRosterError('');
+      if (!keepDrafts) setSaveState('idle');
+      attendanceService
+        .getRoster(
+          organizationId,
+          selectedClassId,
+          schoolDate,
+          controller.signal,
+        )
+        .then((response) => {
+          const loadedDrafts = draftsFromRoster(response);
+          setRosterResponse(response);
+          setServerVersion(response.data.version);
+          setServerSnapshot(loadedDrafts);
+          setDrafts((current) => {
+            if (!keepDrafts) return loadedDrafts;
+            return Object.fromEntries(
+              response.data.roster.map(({ student }) => [
+                student.id,
+                current[student.id] ?? loadedDrafts[student.id],
+              ]),
+            );
+          });
+          setRosterState('ready');
+          if (keepDrafts) {
+            setSaveState('idle');
+            setSaveMessage(
+              'Latest server version loaded; your draft changes were kept.',
+            );
+          }
+        })
+        .catch((error: unknown) => {
+          if (isRequestCancelled(error)) return;
+          setRosterState(
+            error instanceof ApiClientError && error.category === 'authz'
+              ? 'denied'
+              : 'error',
+          );
+          setRosterError(errorMessage(error));
+        });
+      return () => controller.abort();
+    },
+    [canRead, organizationId, schoolDate, selectedClassId],
+  );
+
+  useEffect(() => {
+    const keepDrafts = preserveDraftsOnNextLoad.current;
+    preserveDraftsOnNextLoad.current = false;
+    return loadRoster(keepDrafts);
+  }, [loadRoster, rosterReloadKey]);
+
+  const roster = rosterResponse?.data.roster ?? [];
+  const filteredRoster = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return roster;
+    return roster.filter(({ student }) =>
+      [student.fullName, student.nickname ?? '', student.studentNumber].some(
+        (value) => value.toLowerCase().includes(query),
+      ),
+    );
+  }, [roster, search]);
+
+  const dirtyCount = roster.filter(({ student, attendance }) => {
+    const draft = drafts[student.id];
+    const snapshot = serverSnapshot[student.id];
+    if (!draft || !snapshot) return false;
+    if (!attendance) return true;
+    return JSON.stringify(draft) !== JSON.stringify(snapshot);
+  }).length;
+
+  const updateDraft = (studentId: string, update: Partial<DraftRecord>) => {
+    setDrafts((current) => ({
+      ...current,
+      [studentId]: { ...current[studentId], ...update },
+    }));
+    setValidationErrors((current) => {
+      const next = { ...current };
+      delete next[studentId];
+      return next;
+    });
+    setSaveState('idle');
+    setSaveMessage('');
+  };
+
+  const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
+    updateDraft(studentId, {
+      status,
+      minutesLate:
+        status === 'LATE' ? (drafts[studentId]?.minutesLate ?? null) : null,
+    });
+  };
+
+  const validateDrafts = (): boolean => {
+    const errors: Record<string, string> = {};
+    roster.forEach(({ student }) => {
+      const draft = drafts[student.id];
+      if (
+        draft?.status === 'LATE' &&
+        (!Number.isInteger(draft.minutesLate) ||
+          draft.minutesLate == null ||
+          draft.minutesLate < 1 ||
+          draft.minutesLate > 1440)
+      ) {
+        errors[student.id] = 'Enter whole minutes from 1 to 1440 for Late.';
+      }
+    });
+    setValidationErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setSaveState('validation');
+      setSaveMessage('Fix the highlighted late-minute values before saving.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!organizationId || !selectedClassId || !canWrite || roster.length === 0)
+      return;
+    if (!validateDrafts()) return;
+
+    const savedDrafts = Object.fromEntries(
+      roster.map(({ student }) => {
+        const draft = drafts[student.id] ?? {
+          status: 'PRESENT' as const,
+          minutesLate: null,
+          notes: '',
+        };
+        return [
+          student.id,
+          {
+            status: draft.status,
+            minutesLate: draft.status === 'LATE' ? draft.minutesLate : null,
+            notes: draft.notes.trim(),
+          },
+        ];
+      }),
+    ) satisfies DraftMap;
+
+    setSaveState('saving');
+    setSaveMessage('Saving attendance…');
+    try {
+      const response = await attendanceService.saveRoster(
+        organizationId,
+        selectedClassId,
+        {
+          schoolDate,
+          expectedVersion: serverVersion,
+          records: roster.map(({ student }) => {
+            const draft = savedDrafts[student.id];
+            return {
+              studentId: student.id,
+              status: draft.status,
+              minutesLate: draft.minutesLate,
+              notes: draft.notes || null,
+            };
+          }),
+        },
+      );
+      const savedAt = new Date().toISOString();
+      setRosterResponse((current) =>
+        current
+          ? {
+              data: {
+                ...current.data,
+                version: response.data.version,
+                roster: current.data.roster.map((item) => {
+                  const draft = savedDrafts[item.student.id];
+                  return {
+                    ...item,
+                    attendance: {
+                      id: item.attendance?.id ?? crypto.randomUUID(),
+                      status: draft.status,
+                      minutesLate: draft.minutesLate,
+                      notes: draft.notes || null,
+                      updatedAt: savedAt,
+                    },
+                  };
+                }),
+              },
+            }
+          : current,
+      );
+      setServerVersion(response.data.version);
+      setServerSnapshot(savedDrafts);
+      setDrafts(savedDrafts);
+      setSaveState('success');
+      setSaveMessage(
+        `Saved attendance for ${response.data.savedCount} students.`,
+      );
+    } catch (error) {
+      if (error instanceof ApiClientError && error.category === 'conflict') {
+        setSaveState('conflict');
+        setSaveMessage(
+          'Attendance changed on the server. Reload the latest version; your drafts will be preserved.',
+        );
+      } else if (
+        error instanceof ApiClientError &&
+        error.category === 'validation'
+      ) {
+        setSaveState('validation');
+        setSaveMessage(errorMessage(error));
+      } else if (
+        error instanceof ApiClientError &&
+        error.category === 'authz'
+      ) {
+        setSaveState('error');
+        setSaveMessage(`Authorization denied. ${errorMessage(error)}`);
+      } else {
+        setSaveState('error');
+        setSaveMessage(errorMessage(error));
+      }
+    }
+  };
+
+  const reloadRoster = (keepDrafts: boolean) => {
+    preserveDraftsOnNextLoad.current = keepDrafts;
+    setRosterReloadKey((value) => value + 1);
+  };
+
+  if (!membership || !currentUser || !canRead || classesState === 'denied') {
+    return (
+      <StateCard icon={ShieldAlert} title="Attendance access denied">
+        Your authenticated membership does not allow attendance access for this
+        organization.
+      </StateCard>
+    );
+  }
+
+  if (classesState === 'loading' || classesState === 'idle') {
+    return (
+      <StateCard icon={RefreshCw} title="Loading authorized classes…">
+        Please wait while Learnspace loads your class access.
+      </StateCard>
+    );
+  }
+
+  if (classesState === 'error') {
+    return (
+      <StateCard icon={AlertCircle} title="Could not load classes">
+        <p>{classesError}</p>
+        <RetryButton
+          onClick={() => setClassesReloadKey((value) => value + 1)}
+        />
+      </StateCard>
+    );
+  }
+
+  if (classes.length === 0) {
+    return (
+      <StateCard icon={Users} title="No authorized classes">
+        No attendance classes are available for your current membership.
+      </StateCard>
+    );
+  }
 
   return (
     <div
+      className="mx-auto max-w-7xl space-y-5 pb-12"
       id="attendance-view-container"
-      className="space-y-6 max-w-7xl mx-auto pb-12"
     >
-      {/* Header & Controls Bar */}
-      <div className="bg-white border border-[#EFE7DC] rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#6E161E] bg-[#6E161E]/10 px-2.5 py-0.5 rounded-full">
-              Class Attendance
-            </span>
-            <span className="text-xs text-stone-500">
-              Academic Year 2026–2027
-            </span>
+      <header className="rounded-3xl border border-[#EFE7DC] bg-white p-5 shadow-xs">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#6E161E]">
+              Class attendance
+            </p>
+            <h1 className="mt-1 text-2xl font-black text-stone-900">
+              Daily Attendance Roster
+            </h1>
+            <p className="mt-1 text-xs text-stone-500">
+              Signed in as {currentUser.name} · {membership.organizationName}
+            </p>
           </div>
-          <h1 className="text-2xl font-black font-heading text-stone-900 mt-1">
-            Daily Attendance Roster
-          </h1>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-          {/* Class Selector */}
-          <select
-            id="attendance-class-select"
-            value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
-            className="px-3.5 py-2 text-xs font-bold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-800 focus:outline-hidden focus:ring-2 focus:ring-[#6E161E]/20 cursor-pointer"
-          >
-            {classOptions.map((cls) => (
-              <option key={cls} value={cls}>
-                Class: {cls}
-              </option>
-            ))}
-            <option value="ALL">All Classes</option>
-          </select>
-
-          {/* Date Selector */}
-          <div className="flex items-center gap-1 bg-[#FAF5EF] border border-[#E8DFC8] p-1 rounded-xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-xs font-bold text-stone-600">
+              <span className="sr-only">Class</span>
+              <select
+                aria-label="Class"
+                className="rounded-xl border border-[#E8DFC8] bg-[#FAF5EF] px-3 py-2"
+                value={selectedClassId}
+                onChange={(event) => {
+                  preserveDraftsOnNextLoad.current = false;
+                  setSelectedClassId(event.target.value);
+                }}
+              >
+                {classes.map((schoolClass) => (
+                  <option key={schoolClass.id} value={schoolClass.id}>
+                    {schoolClass.name} ({schoolClass.code})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-center rounded-xl border border-[#E8DFC8] bg-[#FAF5EF] p-1">
+              <button
+                aria-label="Previous day"
+                className="rounded-lg p-1.5"
+                onClick={() =>
+                  setSchoolDate((value) => shiftSchoolDate(value, -1))
+                }
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <CalendarIcon className="ml-1 h-4 w-4 text-[#6E161E]" />
+              <input
+                aria-label="School date"
+                className="w-32 bg-transparent px-2 text-xs font-bold"
+                type="date"
+                value={schoolDate}
+                onChange={(event) => setSchoolDate(event.target.value)}
+              />
+              <button
+                aria-label="Next day"
+                className="rounded-lg p-1.5"
+                onClick={() =>
+                  setSchoolDate((value) => shiftSchoolDate(value, 1))
+                }
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
             <button
-              onClick={() => handleShiftDate(-1)}
-              className="p-1.5 hover:bg-stone-200/60 rounded-lg text-stone-600 transition-colors"
-              title="Previous Day"
+              className="flex items-center gap-2 rounded-xl bg-[#6E161E] px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={
+                !canWrite ||
+                rosterState !== 'ready' ||
+                roster.length === 0 ||
+                saveState === 'saving'
+              }
+              onClick={() => void handleSave()}
             >
-              <ChevronLeft className="w-4 h-4" />
+              {saveState === 'saving' ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {saveState === 'saving' ? 'Saving…' : 'Save attendance'}
             </button>
-            <div className="flex items-center gap-1.5 px-2">
-              <CalendarIcon className="w-3.5 h-3.5 text-[#6E161E] shrink-0" />
-              <span className="text-xs font-bold text-stone-800 whitespace-nowrap">
-                {formattedDisplayDate}
-              </span>
-            </div>
-            <button
-              onClick={() => handleShiftDate(1)}
-              className="p-1.5 hover:bg-stone-200/60 rounded-lg text-stone-600 transition-colors"
-              title="Next Day"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
-
-          {/* Quick Mark All Present */}
-          <button
-            id="attendance-mark-all-btn"
-            onClick={handleMarkAllPresent}
-            className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5"
-            title="Reset all students to Present"
-          >
-            <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="hidden sm:inline">Mark All</span> Present
-          </button>
-
-          {/* Save Button */}
-          <button
-            id="attendance-save-btn"
-            onClick={handleSaveAttendance}
-            className="px-4 py-2 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            Save
-          </button>
         </div>
-      </div>
+      </header>
 
-      {/* Minimal Stat Strip & Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Status Counter Pills */}
-        <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-          <div className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>Present:</span>
-            <span className="font-extrabold text-emerald-950">
-              {presentCount}
-            </span>
-          </div>
-          {lateCount > 0 && (
-            <div className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span>Late:</span>
-              <span className="font-extrabold text-amber-950">{lateCount}</span>
-            </div>
-          )}
-          {sickCount > 0 && (
-            <div className="px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-              <span>Sick:</span>
-              <span className="font-extrabold text-rose-950">{sickCount}</span>
-            </div>
-          )}
-          {absenceCount > 0 && (
-            <div className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-800 rounded-xl flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-500"></span>
-              <span>Absence:</span>
-              <span className="font-extrabold text-red-950">
-                {absenceCount}
-              </span>
-            </div>
-          )}
-          {otherCount > 0 && (
-            <div className="px-3 py-1.5 bg-purple-50 border border-purple-200 text-purple-800 rounded-xl flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-              <span>Other:</span>
-              <span className="font-extrabold text-purple-950">
-                {otherCount}
-              </span>
-            </div>
-          )}
-          <span className="text-stone-400 font-medium text-xs ml-1">
-            Total: {filteredStudents.length} students
-          </span>
-        </div>
-
-        {/* Filter Input */}
-        <div className="relative w-full sm:w-64">
-          <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search student..."
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#E8DFC8] rounded-xl text-stone-800 placeholder-stone-400 focus:outline-hidden focus:ring-2 focus:ring-[#6E161E]/20"
-          />
-          {searchFilter && (
+      {!canWrite && (
+        <Banner tone="neutral" title="Read-only attendance">
+          You can view this roster, but your membership does not include
+          attendance:write.
+        </Banner>
+      )}
+      {saveMessage && (
+        <Banner
+          tone={
+            saveState === 'success'
+              ? 'success'
+              : saveState === 'conflict' ||
+                  saveState === 'validation' ||
+                  saveState === 'error'
+                ? 'error'
+                : 'neutral'
+          }
+          title={
+            saveState === 'success'
+              ? 'Attendance saved'
+              : saveState === 'conflict'
+                ? 'Save conflict'
+                : saveState === 'validation'
+                  ? 'Validation required'
+                  : 'Attendance update'
+          }
+        >
+          <span>{saveMessage}</span>
+          {saveState === 'conflict' && (
             <button
-              onClick={() => setSearchFilter('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+              className="ml-3 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-[#6E161E]"
+              onClick={() => reloadRoster(true)}
             >
-              <X className="w-3.5 h-3.5" />
+              Reload latest and keep drafts
             </button>
           )}
-        </div>
-      </div>
+        </Banner>
+      )}
 
-      {/* Minimalist Student Grid */}
-      <div
-        id="attendance-student-grid"
-        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
-      >
-        {filteredStudents.map((student: Student) => {
-          const rec = records[student.id];
-          const currentStatus: AttendanceStatus = rec?.status || 'PRESENT';
-          const config = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.PRESENT;
-          const StatusIcon = config.icon;
-          const isMenuOpen = openStudentId === student.id;
+      {rosterState === 'loading' && (
+        <StateCard icon={RefreshCw} title="Loading attendance roster…">
+          Loading {displaySchoolDate(schoolDate)}.
+        </StateCard>
+      )}
+      {rosterState === 'denied' && (
+        <StateCard icon={ShieldAlert} title="Authorization denied">
+          You are not authorized to view this class roster.
+        </StateCard>
+      )}
+      {rosterState === 'error' && (
+        <StateCard icon={AlertCircle} title="Could not load attendance">
+          <p>{rosterError}</p>
+          <RetryButton onClick={() => reloadRoster(false)} />
+        </StateCard>
+      )}
 
-          return (
-            <div
-              key={student.id}
-              id={`attendance-grid-card-${student.id}`}
-              className={`relative bg-white border rounded-2xl p-4 flex flex-col items-center text-center transition-all duration-200 shadow-xs hover:shadow-md ${
-                isMenuOpen
-                  ? 'border-[#6E161E] ring-2 ring-[#6E161E]/15 z-30'
-                  : 'border-[#EFE7DC] hover:border-stone-300'
-              }`}
-            >
-              {/* Profile Picture */}
-              <div className="relative group">
-                <img
-                  src={
-                    student.avatarUrl ||
-                    'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=150&auto=format&fit=crop&q=80'
-                  }
-                  alt={student.fullName}
-                  className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 shadow-xs transition-transform duration-200 group-hover:scale-105 ${config.ringClass}`}
-                />
-                {/* Micro status icon badge on avatar */}
-                <div
-                  className={`absolute -bottom-1 -right-1 p-1 rounded-full border-2 border-white shadow-xs ${
-                    currentStatus === 'PRESENT'
-                      ? 'bg-emerald-600 text-white'
-                      : currentStatus === 'LATE'
-                        ? 'bg-amber-500 text-white'
-                        : currentStatus === 'SICK'
-                          ? 'bg-rose-500 text-white'
-                          : currentStatus === 'ABSENCE'
-                            ? 'bg-red-600 text-white'
-                            : 'bg-purple-600 text-white'
-                  }`}
-                >
-                  <StatusIcon className="w-3 h-3" />
-                </div>
-              </div>
+      {rosterState === 'ready' && roster.length === 0 && (
+        <StateCard icon={Users} title="No students enrolled">
+          This class has no active students on {displaySchoolDate(schoolDate)}.
+        </StateCard>
+      )}
 
-              {/* Student Name */}
-              <div className="mt-3 w-full">
-                <h3
-                  className="text-sm font-bold text-stone-900 truncate px-1"
-                  title={student.fullName}
-                >
-                  {student.fullName}
-                </h3>
-              </div>
-
-              {/* Active Status Button (Click to change status) */}
-              <div className="mt-3 w-full">
-                <button
-                  id={`status-toggle-${student.id}`}
-                  onClick={() =>
-                    setOpenStudentId(isMenuOpen ? null : student.id)
-                  }
-                  className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 shadow-2xs ${config.badgeClass}`}
-                  title="Click to change status"
-                >
-                  <StatusIcon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{config.label}</span>
-                  {currentStatus === 'LATE' && rec?.minutesLate && (
-                    <span className="text-[10px] opacity-80">
-                      ({rec.minutesLate}m)
-                    </span>
-                  )}
-                  <ChevronDown
-                    className={`w-3 h-3 shrink-0 opacity-60 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
-              </div>
-
-              {/* Minimal Popover Menu for Changing Status */}
-              {isMenuOpen && (
-                <div
-                  ref={popoverRef}
-                  id={`status-menu-${student.id}`}
-                  className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 sm:w-72 bg-white border border-[#E8DFC8] rounded-2xl shadow-xl p-3 z-50 text-left animate-in fade-in zoom-in-95 duration-150"
-                >
-                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-100">
-                    <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">
-                      Set Status for{' '}
-                      {student.nickname || student.fullName.split(' ')[0]}
-                    </span>
-                    <button
-                      onClick={() => setOpenStudentId(null)}
-                      className="p-1 text-stone-400 hover:text-stone-600 rounded-md"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Status Options Grid */}
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {AVAILABLE_STATUSES.map((st) => {
-                      const isSelected = currentStatus === st;
-                      const optConfig = STATUS_CONFIG[st];
-                      const OptIcon = optConfig.icon;
-
-                      return (
-                        <button
-                          key={st}
-                          id={`select-status-${student.id}-${st.toLowerCase()}`}
-                          onClick={() => {
-                            handleStatusChange(student.id, st);
-                            if (
-                              st !== 'LATE' &&
-                              st !== 'SICK' &&
-                              st !== 'ABSENCE' &&
-                              st !== 'EXPLAINED'
-                            ) {
-                              setOpenStudentId(null);
-                            }
-                          }}
-                          className={`flex items-center gap-2 p-2 rounded-xl text-xs font-bold border transition-all text-left ${
-                            isSelected
-                              ? `${optConfig.badgeClass} ring-2 ring-[#6E161E]/20`
-                              : 'bg-[#FAF6F0] border-transparent hover:border-stone-200 text-stone-700'
-                          }`}
-                        >
-                          <OptIcon className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">{optConfig.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Contextual input for Late */}
-                  {currentStatus === 'LATE' && (
-                    <div className="mt-2.5 pt-2.5 border-t border-stone-100 bg-amber-50/60 p-2.5 rounded-xl space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-amber-900 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-700" />
-                          Minutes Late:
-                        </span>
-                        <input
-                          type="number"
-                          min="1"
-                          max="180"
-                          value={rec?.minutesLate || 10}
-                          onChange={(e) =>
-                            handleMinutesLateChange(
+      {rosterState === 'ready' && roster.length > 0 && (
+        <>
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div className="text-xs font-semibold text-stone-500">
+              {roster.length} students · {dirtyCount} unsaved{' '}
+              {dirtyCount === 1 ? 'draft' : 'drafts'} · server version{' '}
+              {serverVersion}
+            </div>
+            <label className="relative block sm:w-72">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              <input
+                aria-label="Search students"
+                className="w-full rounded-xl border border-[#E8DFC8] bg-white py-2 pl-9 pr-3 text-xs"
+                placeholder="Search name or student number"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </label>
+          </div>
+          {filteredRoster.length === 0 ? (
+            <StateCard icon={Search} title="No students found">
+              No loaded students match your search.
+            </StateCard>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredRoster.map(({ student, attendance }) => {
+                const draft = drafts[student.id];
+                if (!draft) return null;
+                return (
+                  <article
+                    key={student.id}
+                    className="rounded-2xl border border-[#EFE7DC] bg-white p-4 shadow-xs"
+                  >
+                    <div className="flex items-start gap-3">
+                      {student.avatarUrl ? (
+                        <img
+                          alt=""
+                          className="h-12 w-12 rounded-full object-cover"
+                          src={student.avatarUrl}
+                        />
+                      ) : (
+                        <div className="grid h-12 w-12 place-items-center rounded-full bg-stone-100 font-bold text-stone-500">
+                          {student.fullName.slice(0, 1)}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h2 className="truncate text-sm font-bold text-stone-900">
+                          {student.fullName}
+                        </h2>
+                        <p className="text-xs text-stone-500">
+                          {student.studentNumber}
+                        </p>
+                        {!attendance && (
+                          <p className="mt-1 text-[11px] font-semibold text-amber-700">
+                            Unsaved draft defaults to Present
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      <label className="block text-xs font-bold text-stone-600">
+                        Status
+                        <select
+                          aria-label={`Status for ${student.fullName}`}
+                          className="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm"
+                          disabled={!canWrite}
+                          value={draft.status}
+                          onChange={(event) =>
+                            handleStatusChange(
                               student.id,
-                              parseInt(e.target.value) || 0,
+                              event.target.value as AttendanceStatus,
                             )
                           }
-                          className="w-16 px-2 py-0.5 text-xs bg-white border border-amber-300 rounded-lg text-stone-900 font-bold focus:outline-hidden text-right"
+                        >
+                          {STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {STATUS_LABELS[status]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {draft.status === 'LATE' && (
+                        <label className="block text-xs font-bold text-stone-600">
+                          Minutes late
+                          <input
+                            aria-label={`Minutes late for ${student.fullName}`}
+                            className="mt-1 w-full rounded-xl border border-stone-200 px-3 py-2 text-sm"
+                            disabled={!canWrite}
+                            min="1"
+                            max="1440"
+                            step="1"
+                            type="number"
+                            value={draft.minutesLate ?? ''}
+                            onChange={(event) =>
+                              updateDraft(student.id, {
+                                minutesLate:
+                                  event.target.value === ''
+                                    ? null
+                                    : Number(event.target.value),
+                              })
+                            }
+                          />
+                          {validationErrors[student.id] && (
+                            <span className="mt-1 block text-xs font-medium text-red-700">
+                              {validationErrors[student.id]}
+                            </span>
+                          )}
+                        </label>
+                      )}
+                      <label className="block text-xs font-bold text-stone-600">
+                        Notes
+                        <textarea
+                          aria-label={`Notes for ${student.fullName}`}
+                          className="mt-1 min-h-16 w-full resize-y rounded-xl border border-stone-200 px-3 py-2 text-sm"
+                          disabled={!canWrite}
+                          maxLength={1000}
+                          value={draft.notes}
+                          onChange={(event) =>
+                            updateDraft(student.id, {
+                              notes: event.target.value,
+                            })
+                          }
                         />
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Reason (optional)..."
-                        value={rec?.notes || ''}
-                        onChange={(e) =>
-                          handleNotesChange(student.id, e.target.value)
-                        }
-                        className="w-full px-2.5 py-1 text-xs bg-white border border-amber-300 rounded-lg text-stone-800 focus:outline-hidden placeholder-stone-400"
-                      />
+                      </label>
                     </div>
-                  )}
-
-                  {/* Contextual input for Sick / Absence / Explained */}
-                  {(currentStatus === 'SICK' ||
-                    currentStatus === 'ABSENCE' ||
-                    currentStatus === 'EXPLAINED' ||
-                    currentStatus === 'HOLIDAY') && (
-                    <div className="mt-2.5 pt-2.5 border-t border-stone-100 bg-stone-50 p-2.5 rounded-xl space-y-1.5">
-                      <span className="text-[11px] font-bold text-stone-600 block">
-                        Remarks / Reason (Optional):
-                      </span>
-                      <input
-                        type="text"
-                        placeholder="e.g. Doctor note / Fever / Family event..."
-                        value={rec?.notes || ''}
-                        onChange={(e) =>
-                          handleNotesChange(student.id, e.target.value)
-                        }
-                        className="w-full px-2.5 py-1 text-xs bg-white border border-stone-300 rounded-lg text-stone-800 focus:outline-hidden placeholder-stone-400"
-                      />
-                    </div>
-                  )}
-
-                  {/* Done button to close popover */}
-                  <div className="mt-2.5 pt-2 border-t border-stone-100 flex justify-end">
-                    <button
-                      onClick={() => setOpenStudentId(null)}
-                      className="px-3 py-1 bg-[#6E161E] text-white text-xs font-bold rounded-lg hover:bg-[#581117] transition-colors"
-                    >
-                      Done
-                    </button>
-                  </div>
-                </div>
-              )}
+                  </article>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
-
-      {/* Empty State when search has no results */}
-      {filteredStudents.length === 0 && (
-        <div className="bg-white border border-[#EFE7DC] rounded-3xl p-12 text-center max-w-md mx-auto">
-          <div className="w-12 h-12 rounded-full bg-stone-100 text-stone-400 mx-auto flex items-center justify-center mb-3">
-            <Search className="w-6 h-6" />
-          </div>
-          <h4 className="text-base font-bold text-stone-900">
-            No students found
-          </h4>
-          <p className="text-xs text-stone-500 mt-1">
-            No students match your selected class and search filter.
-          </p>
-          <button
-            onClick={() => {
-              setSelectedClass('ALL');
-              setSearchFilter('');
-            }}
-            className="mt-4 px-4 py-2 bg-[#6E161E] text-white text-xs font-bold rounded-xl"
-          >
-            Clear Filters
-          </button>
-        </div>
+          )}
+        </>
       )}
     </div>
   );
 };
+
+const StateCard: React.FC<{
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  children: React.ReactNode;
+}> = ({ icon: Icon, title, children }) => (
+  <div className="mx-auto max-w-2xl rounded-3xl border border-[#EFE7DC] bg-white p-10 text-center shadow-xs">
+    <Icon className="mx-auto h-8 w-8 text-[#6E161E]" />
+    <h2 className="mt-3 text-lg font-bold text-stone-900">{title}</h2>
+    <div className="mt-2 text-sm text-stone-600">{children}</div>
+  </div>
+);
+
+const RetryButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button
+    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#6E161E] px-4 py-2 text-xs font-bold text-white"
+    onClick={onClick}
+  >
+    <RefreshCw className="h-4 w-4" />
+    Retry
+  </button>
+);
+
+const Banner: React.FC<{
+  tone: 'neutral' | 'success' | 'error';
+  title: string;
+  children: React.ReactNode;
+}> = ({ tone, title, children }) => (
+  <div
+    role="status"
+    className={`rounded-2xl border px-4 py-3 text-sm ${tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : tone === 'error' ? 'border-red-200 bg-red-50 text-red-900' : 'border-stone-200 bg-stone-50 text-stone-700'}`}
+  >
+    <span className="font-bold">{title}: </span>
+    {children}
+  </div>
+);

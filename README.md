@@ -2,15 +2,15 @@
 
 Learnspace is an educator portal for academic planning, attendance, special-education observations, Individualized Education Programs (IEPs), and weekly progress reporting.
 
-The repository is currently at **`0.1.0-beta.1`**. Milestone 3 adds Google OpenID Connect login, revocable server-side sessions, explicit user admission policy, server-derived roles and scopes, authorization primitives, an authenticated web shell, and authentication security tests.
+The repository is currently at **`0.2.0`**. Milestone 4 delivers the first fully migrated product vertical: versioned academic/student APIs and multi-user attendance backed by PostgreSQL, with typed web contracts, transactional writes, optimistic concurrency, and Compose-backed Playwright coverage.
 
 > [!IMPORTANT]
-> The educator workflows are still a frontend prototype and are **not production-ready**. Application records are seeded in the browser and stored in each browser profile's `localStorage`; identity is simulated through a role switcher; and the UI has not yet migrated its records or authentication to the API. Do not use real student, family, educational, or disability-related information.
+> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup, and attendance are server-backed, but Learning Journey, observations, IEPs, and weekly reports still use seeded browser `localStorage`. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
 
 ## Current capabilities
 
 - Educator dashboard and reporting overview
-- Student attendance entry
+- Multi-user PostgreSQL-backed student attendance entry with class/date authorization, audit events, and concurrent-edit detection
 - Learning Journey calendar, editor, and approval workflow
 - Special-education observation tools:
   - Functional Emotional Developmental Capacities (FEDC)
@@ -29,7 +29,8 @@ The repository is currently at **`0.1.0-beta.1`**. Milestone 3 adds Google OpenI
 ```mermaid
 flowchart TB
     Browser[Browser] --> Web[React/Vite web application]
-    Web --> LocalStorage[(Browser localStorage prototype data)]
+    Web --> LocalStorage[(Browser localStorage for remaining prototype domains)]
+    Web -->|typed attendance and academic requests| Proxy
     Browser -->|same-origin /api traffic in Compose| Proxy[Non-root nginx web container]
     Proxy --> API[Express TypeScript API]
     API --> DB[(PostgreSQL 16)]
@@ -39,12 +40,12 @@ flowchart TB
 
 The workspace and service boundary are implemented, but the migration is intentionally incremental:
 
-- `apps/web` contains the existing React/Vite prototype. Its domain records still use `apps/web/src/services/storageService.ts` and `localStorage`.
-- `apps/api` is an active Express/TypeScript service. It validates runtime configuration, emits structured JSON logs, assigns request IDs, checks PostgreSQL connectivity and required migration compatibility through Prisma, handles shutdown signals, and returns shared response schemas.
-- `packages/contracts` provides shared Zod schemas and inferred TypeScript types for health, version, and API error responses.
+- `apps/web` contains the React/Vite application. Attendance uses the typed API client; remaining prototype domains still use `apps/web/src/services/storageService.ts` and `localStorage`.
+- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, academic/student resources, transactional attendance endpoints, runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
+- `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, academic resources, students, and attendance.
 - `compose.yaml` defines production-oriented `web`, `api`, `migrate`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation. API startup waits for the one-shot migration job.
 - `compose.dev.yaml` is an optional override that publishes PostgreSQL on host port `5432` for database tools or a host-run API.
-- PostgreSQL now has the authoritative normalized schema and lifecycle tooling, but educator workflow reads/writes still use browser `localStorage` until later feature API milestones. OAuth, authorization, and domain endpoints also remain future work.
+- PostgreSQL is authoritative for authentication, authorization scope, academic/student lookup, and attendance. Learning Journey, observations, IEPs, and weekly reports remain browser-backed until Milestone 5.
 
 Frontend role checks are presentation behavior only and are not authorization. The API is the intended security boundary for protected operations as those operations are implemented.
 
@@ -63,17 +64,21 @@ Frontend role checks are presentation behavior only and are not authorization. T
 ├── packages/
 │   └── contracts/                 # Shared Zod wire schemas and types
 ├── prisma/                        # Schema, committed migrations, guarded seed
-├── scripts/                       # Guarded database backup and restore tools
+├── e2e/                           # Compose-backed Playwright attendance tests
+├── scripts/                       # Database operations and E2E lifecycle tools
 ├── docker/
 │   └── web/nginx.conf             # SPA fallback, caching, health, and /api proxy
 ├── docs/
 │   ├── adr/0001-application-architecture.md
+│   ├── api/conventions.md          # Versioned API conventions
+│   ├── api/openapi.json            # Generated OpenAPI 3.1 specification
 │   ├── operations/backup-and-restore.md
 │   ├── domain-model.md
 │   ├── ROADMAP.md
 │   └── VERSIONING.md
 ├── compose.yaml                   # Web, API, and internal PostgreSQL stack
 ├── compose.dev.yaml               # Optional host PostgreSQL port override
+├── compose.e2e.yaml               # Disposable attendance E2E stack
 ├── .env.example                   # Safe environment template
 └── package.json                   # npm workspace orchestration
 ```
@@ -153,6 +158,9 @@ npm run prisma:generate
 npm run db:migrate:deploy
 npm run db:migrate:status
 npm run db:seed        # Requires explicit non-production seed opt-in
+npm run openapi:generate
+npm run openapi:check
+npm run e2e:attendance # Disposable Compose-backed Playwright run
 npm run db:backup -- --database SOURCE --output FILE
 npm run db:restore -- --archive FILE --database NEW_TARGET
 ```
@@ -181,7 +189,9 @@ npm run preview -w @learnspace/web
 | ------ | ----------------- | ------------------------------------------ | ----------------- |
 | `GET`  | `/health/live`    | Process liveness (`{"status":"live"}`)     | No                |
 | `GET`  | `/health/ready`   | PostgreSQL readiness and dependency status | Yes               |
-| `GET`  | `/api/v1/version` | API name and current alpha version         | No                |
+| `GET`  | `/api/v1/version` | API name and current application version   | No                |
+
+Protected `/api/v1/organizations/...` resources provide membership-scoped organizations, academic years, units, grades, classes, subjects, minimal student list/detail responses, and class/date attendance reads and bulk writes. See [`docs/api/conventions.md`](docs/api/conventions.md) and the generated [`docs/api/openapi.json`](docs/api/openapi.json).
 
 The API also:
 

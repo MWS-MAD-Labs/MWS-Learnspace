@@ -62,7 +62,7 @@ describe('App authentication shell', () => {
         name: /good morning, demo principal/i,
       }),
     ).toBeVisible();
-    expect(screen.getByText("Today's Attendance")).toBeVisible();
+    expect(screen.getByText('Attendance workspace')).toBeVisible();
     expect(
       screen.queryByRole('button', { name: /simulate role/i }),
     ).not.toBeInTheDocument();

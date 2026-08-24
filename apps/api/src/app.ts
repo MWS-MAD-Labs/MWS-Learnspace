@@ -12,6 +12,9 @@ import type { Logger } from './logger.js';
 import { createAuthRouter } from './authRoutes.js';
 import { OAuthService } from './oauthService.js';
 import { SessionService } from './sessionService.js';
+import { HttpError } from './httpErrors.js';
+import { createResourceRouter } from './resourceRoutes.js';
+import { createTestAuthRouter } from './testAuthRoutes.js';
 
 export type AppDependencies = {
   config: AppConfig;
@@ -28,7 +31,7 @@ export function createApp({
   config,
   database,
   logger,
-  version = '0.1.0-beta.1',
+  version = '0.2.0',
   auth,
 }: AppDependencies) {
   const app = express();
@@ -112,6 +115,22 @@ export function createApp({
         logger,
       ),
     );
+    if (database.client) {
+      if (
+        config.nodeEnv === 'test' &&
+        config.e2eAuthSecret &&
+        config.e2eAuthUserEmail
+      ) {
+        app.use(
+          '/api/v1/test-auth',
+          createTestAuthRouter(config, database.client, authServices.sessions),
+        );
+      }
+      app.use(
+        '/api/v1',
+        createResourceRouter(database.client, authServices.sessions),
+      );
+    }
   }
 
   app.get('/api/v1/version', (_request, response) => {
@@ -156,17 +175,30 @@ export function createApp({
       httpError.statusCode === 413 ||
       httpError.type === 'entity.too.large';
     const isInvalidJson = error instanceof SyntaxError && 'body' in httpError;
-    const status = isPayloadTooLarge ? 413 : isInvalidJson ? 400 : 500;
-    const code = isPayloadTooLarge
-      ? 'PAYLOAD_TOO_LARGE'
-      : isInvalidJson
-        ? 'INVALID_JSON'
-        : 'INTERNAL_SERVER_ERROR';
-    const message = isPayloadTooLarge
-      ? 'The request body exceeds the allowed size.'
-      : isInvalidJson
-        ? 'The request body is not valid JSON.'
-        : 'An unexpected error occurred.';
+    const status =
+      error instanceof HttpError
+        ? error.status
+        : isPayloadTooLarge
+          ? 413
+          : isInvalidJson
+            ? 400
+            : 500;
+    const code =
+      error instanceof HttpError
+        ? error.code
+        : isPayloadTooLarge
+          ? 'PAYLOAD_TOO_LARGE'
+          : isInvalidJson
+            ? 'INVALID_JSON'
+            : 'INTERNAL_SERVER_ERROR';
+    const message =
+      error instanceof HttpError
+        ? error.message
+        : isPayloadTooLarge
+          ? 'The request body exceeds the allowed size.'
+          : isInvalidJson
+            ? 'The request body is not valid JSON.'
+            : 'An unexpected error occurred.';
 
     logger.error(
       {
@@ -185,6 +217,9 @@ export function createApp({
           code,
           message,
           requestId,
+          ...(error instanceof HttpError && error.details !== undefined
+            ? { details: error.details }
+            : {}),
         },
       }),
     );

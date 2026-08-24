@@ -34,6 +34,8 @@ const rawEnvironmentSchema = z.object({
     .enum(['true', 'false'])
     .default('false'),
   LOG_LEVEL: z.enum(logLevels).default('info'),
+  E2E_AUTH_SECRET: z.string().min(32).optional(),
+  E2E_AUTH_USER_EMAIL: z.string().email().optional(),
 });
 
 export type AppConfig = {
@@ -50,6 +52,8 @@ export type AppConfig = {
 
   sessionTtlHours: number;
   logLevel: (typeof logLevels)[number];
+  e2eAuthSecret?: string;
+  e2eAuthUserEmail?: string;
 };
 
 const placeholderValues = new Set([
@@ -86,10 +90,25 @@ export function loadConfig(
 
   if (
     !allowsPlaceholders &&
+    values.NODE_ENV !== 'test' &&
     (placeholderValues.has(values.GOOGLE_CLIENT_ID) ||
       placeholderValues.has(values.GOOGLE_CLIENT_SECRET))
   ) {
     throw new Error('Invalid runtime configuration: Google OAuth credentials');
+  }
+
+  if (
+    values.NODE_ENV !== 'test' &&
+    (values.E2E_AUTH_SECRET !== undefined ||
+      values.E2E_AUTH_USER_EMAIL !== undefined)
+  ) {
+    throw new Error('Invalid runtime configuration: E2E authentication');
+  }
+  if (
+    (values.E2E_AUTH_SECRET === undefined) !==
+    (values.E2E_AUTH_USER_EMAIL === undefined)
+  ) {
+    throw new Error('Invalid runtime configuration: E2E authentication');
   }
 
   return {
@@ -108,5 +127,7 @@ export function loadConfig(
 
     sessionTtlHours: values.SESSION_TTL_HOURS,
     logLevel: values.LOG_LEVEL,
+    e2eAuthSecret: values.E2E_AUTH_SECRET,
+    e2eAuthUserEmail: values.E2E_AUTH_USER_EMAIL?.toLowerCase(),
   };
 }

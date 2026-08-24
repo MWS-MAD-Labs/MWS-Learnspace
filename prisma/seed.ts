@@ -35,6 +35,30 @@ export async function seedDatabase(prisma: PrismaClient) {
     },
   });
 
+  const gradeTeacher = await prisma.user.upsert({
+    where: { email: 'grade.teacher@example.test' },
+    update: { displayName: 'Demo Grade Teacher' },
+    create: {
+      email: 'grade.teacher@example.test',
+      displayName: 'Demo Grade Teacher',
+    },
+  });
+
+  const gradeTeacherMembership = await prisma.membership.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: organization.id,
+        userId: gradeTeacher.id,
+      },
+    },
+    update: { role: 'GRADE_TEACHER', status: 'ACTIVE' },
+    create: {
+      organizationId: organization.id,
+      userId: gradeTeacher.id,
+      role: 'GRADE_TEACHER',
+    },
+  });
+
   const academicYear = await prisma.academicYear.upsert({
     where: {
       organizationId_name: {
@@ -80,6 +104,43 @@ export async function seedDatabase(prisma: PrismaClient) {
     },
   });
 
+  await prisma.membershipUnit.upsert({
+    where: {
+      membershipId_unitId: {
+        membershipId: gradeTeacherMembership.id,
+        unitId: unit.id,
+      },
+    },
+    update: {},
+    create: { membershipId: gradeTeacherMembership.id, unitId: unit.id },
+  });
+
+  await prisma.membershipGrade.upsert({
+    where: {
+      membershipId_gradeId: {
+        membershipId: gradeTeacherMembership.id,
+        gradeId: grade.id,
+      },
+    },
+    update: {},
+    create: { membershipId: gradeTeacherMembership.id, gradeId: grade.id },
+  });
+
+  await prisma.subject.upsert({
+    where: {
+      organizationId_code: {
+        organizationId: organization.id,
+        code: 'GENERAL',
+      },
+    },
+    update: { name: 'General Studies' },
+    create: {
+      organizationId: organization.id,
+      code: 'GENERAL',
+      name: 'General Studies',
+    },
+  });
+
   const schoolClass = await prisma.schoolClass.upsert({
     where: {
       organizationId_code: { organizationId: organization.id, code: 'G1-A' },
@@ -94,40 +155,91 @@ export async function seedDatabase(prisma: PrismaClient) {
     },
   });
 
-  const student = await prisma.student.upsert({
-    where: {
-      organizationId_studentNumber: {
-        organizationId: organization.id,
-        studentNumber: 'DEMO-001',
-      },
+  const seededRoster = [
+    {
+      number: 'DEMO-001',
+      name: 'Demo Present Student',
+      status: 'PRESENT' as const,
     },
-    update: { fullName: 'Demo Student' },
-    create: {
-      organizationId: organization.id,
-      studentNumber: 'DEMO-001',
-      fullName: 'Demo Student',
-      dateOfBirth: new Date('2019-01-15T00:00:00.000Z'),
+    { number: 'DEMO-002', name: 'Demo Late Student', status: 'LATE' as const },
+    { number: 'DEMO-003', name: 'Demo Sick Student', status: 'SICK' as const },
+    {
+      number: 'DEMO-004',
+      name: 'Demo Excused Student',
+      status: 'EXCUSED_ABSENCE' as const,
     },
-  });
+    {
+      number: 'DEMO-005',
+      name: 'Demo Unexcused Student',
+      status: 'UNEXCUSED_ABSENCE' as const,
+    },
+  ];
 
-  await prisma.enrollment.upsert({
-    where: {
-      studentId_academicYearId_classId_startsOn: {
+  for (const [index, rosterItem] of seededRoster.entries()) {
+    const student = await prisma.student.upsert({
+      where: {
+        organizationId_studentNumber: {
+          organizationId: organization.id,
+          studentNumber: rosterItem.number,
+        },
+      },
+      update: { fullName: rosterItem.name, status: 'ACTIVE' },
+      create: {
+        organizationId: organization.id,
+        studentNumber: rosterItem.number,
+        fullName: rosterItem.name,
+        dateOfBirth: new Date(
+          `2019-01-${String(15 + index).padStart(2, '0')}T00:00:00.000Z`,
+        ),
+      },
+    });
+
+    const enrollment = await prisma.enrollment.upsert({
+      where: {
+        studentId_academicYearId_classId_startsOn: {
+          studentId: student.id,
+          academicYearId: academicYear.id,
+          classId: schoolClass.id,
+          startsOn: new Date('2026-07-01T00:00:00.000Z'),
+        },
+      },
+      update: {},
+      create: {
+        organizationId: organization.id,
         studentId: student.id,
         academicYearId: academicYear.id,
         classId: schoolClass.id,
         startsOn: new Date('2026-07-01T00:00:00.000Z'),
       },
-    },
-    update: {},
-    create: {
-      organizationId: organization.id,
-      studentId: student.id,
-      academicYearId: academicYear.id,
-      classId: schoolClass.id,
-      startsOn: new Date('2026-07-01T00:00:00.000Z'),
-    },
-  });
+    });
+
+    await prisma.attendanceRecord.upsert({
+      where: {
+        organizationId_studentId_classId_schoolDate: {
+          organizationId: organization.id,
+          studentId: student.id,
+          classId: schoolClass.id,
+          schoolDate: new Date('2026-08-24T00:00:00.000Z'),
+        },
+      },
+      update: {
+        enrollmentId: enrollment.id,
+        status: rosterItem.status,
+        minutesLate: rosterItem.status === 'LATE' ? 10 : null,
+        recordedById: gradeTeacher.id,
+      },
+      create: {
+        organizationId: organization.id,
+        studentId: student.id,
+        enrollmentId: enrollment.id,
+        classId: schoolClass.id,
+        schoolDate: new Date('2026-08-24T00:00:00.000Z'),
+        status: rosterItem.status,
+        minutesLate: rosterItem.status === 'LATE' ? 10 : null,
+        recordedById: gradeTeacher.id,
+      },
+    });
+  }
 }
 
 async function main() {

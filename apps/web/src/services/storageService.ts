@@ -7,7 +7,6 @@ import {
   SFAObservationRecord,
   IEPRecord,
   IEPReport,
-  AttendanceRecord,
   WorkflowHistoryEntry,
   ObservationAssignment,
   ObservationFormDefinition,
@@ -17,7 +16,6 @@ import {
   SEED_USERS,
   SEED_STUDENTS,
   SEED_LEARNING_JOURNEYS,
-  SEED_ATTENDANCE,
   SEED_ALL_FEDC_OBSERVATIONS,
   SEED_ALL_SENSORY_PROFILES,
   SEED_SFA_OBSERVATION,
@@ -32,7 +30,6 @@ const STORAGE_KEYS = {
   CURRENT_USER_ID: 'mws_current_user_id_v2',
   STUDENTS: 'mws_students_v2',
   LEARNING_JOURNEYS: 'mws_learning_journeys_v2',
-  ATTENDANCE: 'mws_attendance_v2',
   FEDC_OBSERVATIONS: 'mws_fedc_observations_v2',
   SENSORY_PROFILES: 'mws_sensory_profiles_v2',
   SFA_OBSERVATIONS: 'mws_sfa_observations_v2',
@@ -71,12 +68,7 @@ class StorageService {
         JSON.stringify(SEED_LEARNING_JOURNEYS),
       );
     }
-    if (forceReset || !localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) {
-      localStorage.setItem(
-        STORAGE_KEYS.ATTENDANCE,
-        JSON.stringify(SEED_ATTENDANCE),
-      );
-    }
+
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.FEDC_OBSERVATIONS)) {
       localStorage.setItem(
         STORAGE_KEYS.FEDC_OBSERVATIONS,
@@ -351,46 +343,6 @@ class StorageService {
     }
 
     return this.saveLearningJourney(updated);
-  }
-
-  // Attendance
-  public getAttendanceRecords(
-    date?: string,
-    className?: string,
-  ): AttendanceRecord[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
-      let records: AttendanceRecord[] = data
-        ? JSON.parse(data)
-        : SEED_ATTENDANCE;
-      if (date) {
-        records = records.filter((r) => r.date === date);
-      }
-      if (className) {
-        records = records.filter((r) => r.className === className);
-      }
-      return records;
-    } catch {
-      return SEED_ATTENDANCE;
-    }
-  }
-
-  public saveAttendance(records: AttendanceRecord[]): void {
-    const existing = this.getAttendanceRecords();
-    const updated = [...existing];
-
-    records.forEach((newRec) => {
-      const idx = updated.findIndex(
-        (r) => r.studentId === newRec.studentId && r.date === newRec.date,
-      );
-      if (idx >= 0) {
-        updated[idx] = newRec;
-      } else {
-        updated.push(newRec);
-      }
-    });
-
-    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(updated));
   }
 
   // FEDC Observations

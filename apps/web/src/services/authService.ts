@@ -1,24 +1,25 @@
-import type { CurrentSessionResponse } from '@learnspace/contracts';
+import {
+  currentSessionResponseSchema,
+  type CurrentSessionResponse,
+} from '@learnspace/contracts';
+import { apiClient, ApiClientError } from './apiClient';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
 
-function readCookie(name: string): string | undefined {
-  return document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${name}=`))
-    ?.slice(name.length + 1);
-}
-
 export const authService = {
-  async getSession(): Promise<CurrentSessionResponse | undefined> {
-    const response = await fetch(`${apiBaseUrl}/api/v1/auth/session`, {
-      credentials: 'include',
-      headers: { accept: 'application/json' },
-    });
-    if (response.status === 401) return undefined;
-    if (!response.ok) throw new Error('Unable to load the current session.');
-    return (await response.json()) as CurrentSessionResponse;
+  async getSession(
+    signal?: AbortSignal,
+  ): Promise<CurrentSessionResponse | undefined> {
+    try {
+      return await apiClient.request('/api/v1/auth/session', {
+        schema: currentSessionResponseSchema,
+        signal,
+      });
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 401)
+        return undefined;
+      throw error;
+    }
   },
 
   login(returnTo = '/') {
@@ -30,17 +31,15 @@ export const authService = {
     window.location.assign(url);
   },
 
-  async logout(): Promise<void> {
-    const csrfToken = readCookie('learnspace_csrf');
-    const response = await fetch(`${apiBaseUrl}/api/v1/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: csrfToken
-        ? { 'x-csrf-token': decodeURIComponent(csrfToken) }
-        : {},
-    });
-    if (!response.ok && response.status !== 401) {
-      throw new Error('Unable to sign out.');
+  async logout(signal?: AbortSignal): Promise<void> {
+    try {
+      await apiClient.request('/api/v1/auth/logout', {
+        method: 'POST',
+        signal,
+      });
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 401) return;
+      throw error;
     }
   },
 };

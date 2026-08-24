@@ -9,7 +9,6 @@ import {
   BookOpen,
   GraduationCap,
   Users,
-  CheckCircle2,
   MapPin,
   Sparkles,
   CalendarCheck,
@@ -29,13 +28,6 @@ export const DashboardView: React.FC = () => {
   const [announcements, setAnnouncements] = useState(SEED_ANNOUNCEMENTS);
   const journeys = storageService.getLearningJourneys();
   const iepRecords = storageService.getIEPRecords();
-  const attendanceToday = storageService.getAttendanceRecords('2026-10-24');
-
-  const presentCount = attendanceToday.filter(
-    (a) => a.status === 'PRESENT' || a.status === 'LATE',
-  ).length;
-  const totalAttended = attendanceToday.length || 6;
-  const attendanceRate = Math.round((presentCount / totalAttended) * 100);
 
   // Active IEP goal stats
   const activeIep = iepRecords[0];
@@ -109,24 +101,19 @@ export const DashboardView: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
-              Today's Attendance
+              Attendance workspace
             </span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4" />
+              <CalendarCheck className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-stone-900">
-              {attendanceRate}%
-            </span>
-            <span className="text-xs font-semibold text-emerald-700">
-              Present
+            <span className="text-lg font-black text-stone-900">
+              Open roster
             </span>
           </div>
           <p className="text-xs text-stone-500 mt-2 flex items-center justify-between">
-            <span>
-              Grade 1 Sequoia ({presentCount}/{totalAttended})
-            </span>
+            <span>Choose an authorized class and school date</span>
             <ArrowRight className="w-3.5 h-3.5 text-stone-400 group-hover:translate-x-1 transition-transform" />
           </p>
         </div>

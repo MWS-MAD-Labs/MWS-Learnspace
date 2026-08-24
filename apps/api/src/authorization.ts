@@ -76,6 +76,11 @@ export type MembershipScope = {
   gradeIds: string[];
   subjectIds: string[];
   assignedStudentIds: string[];
+  assignedStudentScopes?: Array<{
+    studentId: string;
+    startsOn: Date;
+    endsOn: Date | null;
+  }>;
 };
 
 export function requireOrganizationScope(

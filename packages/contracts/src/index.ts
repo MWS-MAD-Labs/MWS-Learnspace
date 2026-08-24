@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export * from './resources.js';
+
 export const apiErrorSchema = z.object({
   error: z.object({
     code: z.string().min(1),

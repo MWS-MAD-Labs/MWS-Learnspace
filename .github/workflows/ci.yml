@@ -69,3 +69,40 @@ jobs:
 
       - name: Build migration image
         run: docker build --file apps/api/Dockerfile --target migration --tag learnspace-migrate:ci .
+
+  attendance-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Compose-backed attendance E2E
+        run: npm run e2e:attendance
+
+      - name: Upload E2E artifacts and Compose logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: attendance-e2e-artifacts
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Tear down attendance E2E stack
+        if: always()
+        run: npm run e2e:attendance:stop

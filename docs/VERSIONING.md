@@ -4,7 +4,7 @@ This document defines how Learnspace versions application releases, APIs, databa
 
 ## Current maturity
 
-Learnspace is currently a frontend prototype with package version `0.0.0`. Until authentication, server-side authorization, database persistence, tests, and deployment controls are complete, releases should be considered pre-production.
+Learnspace is currently at `0.2.0`. Authentication, server-side authorization, deployment foundations, and the attendance vertical slice are implemented, but remaining educator domains still require API migration and operational hardening. Releases remain pre-production until the roadmap's stable-release gates are complete.
 
 Recommended first milestones:
 

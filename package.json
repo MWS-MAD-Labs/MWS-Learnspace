@@ -1,7 +1,7 @@
 {
   "name": "learnspace",
   "private": true,
-  "version": "0.1.0-beta.1",
+  "version": "0.2.0",
   "type": "module",
   "workspaces": [
     "apps/*",
@@ -27,11 +27,18 @@
     "db:migrate:deploy": "npm run db:migrate:deploy -w @learnspace/api",
     "db:migrate:status": "npm run db:migrate:status -w @learnspace/api",
     "db:seed": "npm run db:seed -w @learnspace/api",
+    "e2e:attendance:start": "docker compose -p learnspace-attendance-e2e -f compose.e2e.yaml up --build --wait --wait-timeout 240",
+    "e2e:attendance:test": "playwright test --project=attendance-chromium",
+    "e2e:attendance:stop": "docker compose -p learnspace-attendance-e2e -f compose.e2e.yaml down --volumes --remove-orphans",
+    "e2e:attendance": "sh scripts/e2e-attendance.sh",
     "db:backup": "sh scripts/db-backup.sh",
-    "db:restore": "sh scripts/db-restore.sh"
+    "db:restore": "sh scripts/db-restore.sh",
+    "openapi:generate": "npm run openapi:generate -w @learnspace/api",
+    "openapi:check": "npm run openapi:check -w @learnspace/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
+    "@playwright/test": "^1.62.1",
     "eslint": "^9.22.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.2.0",

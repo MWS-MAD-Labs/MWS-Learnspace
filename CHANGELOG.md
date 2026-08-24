@@ -28,6 +28,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Opaque PostgreSQL-backed sessions with hashed tokens, expiration, last-seen tracking, revocation, cleanup, secure cookie policy, logout, current-session endpoint, and double-submit CSRF protection.
 - Canonical server permission matrix, organization-scoped repository helpers, audited deny-by-default authorization guards, and a distinct Special Education Coordinator role.
 - Authenticated web loading, login, denied, disabled, active-session, and logout states; production builds no longer expose prototype impersonation controls.
+- Documented `/api/v1` resource, date, response, error, command, idempotency, and concurrency conventions with a generated and drift-validated OpenAPI 3.1 specification.
+- Shared academic, minimal student, and canonical attendance runtime contracts plus a typed browser API client with credentials, CSRF, cancellation, request IDs, runtime parsing, and categorized errors.
+- Membership-scoped organization, academic year, unit, grade, class, subject, student list/detail, and class/date attendance endpoints with non-enumerating cross-scope denials.
+- Atomic class/date attendance bulk upserts with server-derived recorder identity, same-transaction audit events, strict enrollment validation, and serializable optimistic concurrency.
+- Disposable Compose-backed Playwright attendance testing with deterministic test-only real sessions, PostgreSQL fixtures, validation, persistence, forbidden-scope, and logout coverage.
 
 ### Changed
 
@@ -40,10 +45,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Required SHA-256 sidecars for every database restore, failing before Docker access when integrity metadata is absent; backup archives and checksums are now published as a failure-safe pair only after verification and checksum generation succeed, with distinct infrastructure and missing-database errors.
 - Hardened tenant integrity with database triggers covering organization-owned relations and immutable tenant ownership; tenant actor references now require an active user and active organization membership when assigned, while unchanged historical attribution remains update-safe after an actor leaves. Membership user identity and audit actor attribution are immutable; audit actor deletion is restricted. Added composite IEP lineage for goal-achievement events, strict audit metadata schemas, and database immutability for completed observations and used definitions.
 - Replaced browser-selected startup identity with the API current-session response. The fake-data role switcher now requires both explicit development-only build flags and cannot change server identity.
+- Migrated the attendance workspace from browser seed/storage data to authorized API class rosters and PostgreSQL records, including loading, empty, retry, validation, read-only, conflict, and save-success states.
+- Updated the application and workspace package version to `0.2.0`, the first end-to-end feature migration release.
+
+### Fixed
+
+- Attendance saves now promote newly persisted draft rows into the local server snapshot immediately, clearing stale unsaved counts and draft-default labels while safely defaulting any missing draft entry.
 
 ### Removed
 
 - Unused direct Google GenAI, dotenv, and esbuild dependencies from the prototype manifest.
+- Attendance keys, methods, seed initialization, legacy browser attendance types, and all production attendance `localStorage` paths.
 
 ## [0.0.0] - Prototype
 

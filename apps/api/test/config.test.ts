@@ -50,7 +50,7 @@ describe('loadConfig', () => {
     ).toThrow(/SESSION_SECRET/);
   });
 
-  it('allows OAuth placeholders only when explicitly enabled in development', () => {
+  it('allows OAuth placeholders only when explicitly enabled in development or in test', () => {
     const developmentEnvironment = {
       ...validEnvironment,
       NODE_ENV: 'development',
@@ -63,5 +63,32 @@ describe('loadConfig', () => {
     expect(() =>
       loadConfig({ ...developmentEnvironment, NODE_ENV: 'production' }),
     ).toThrow(/OAuth credentials/);
+    expect(
+      loadConfig({
+        ...developmentEnvironment,
+        NODE_ENV: 'test',
+        ALLOW_DEVELOPMENT_AUTH_PLACEHOLDERS: 'false',
+      }).nodeEnv,
+    ).toBe('test');
+  });
+
+  it('allows paired E2E authentication configuration only in test', () => {
+    const e2eEnvironment = {
+      ...validEnvironment,
+      NODE_ENV: 'test',
+      E2E_AUTH_SECRET: 'e2e-only-secret-with-at-least-32-characters',
+      E2E_AUTH_USER_EMAIL: 'Attendance.Teacher@example.test',
+    };
+
+    expect(loadConfig(e2eEnvironment)).toMatchObject({
+      e2eAuthSecret: e2eEnvironment.E2E_AUTH_SECRET,
+      e2eAuthUserEmail: 'attendance.teacher@example.test',
+    });
+    expect(() =>
+      loadConfig({ ...e2eEnvironment, NODE_ENV: 'production' }),
+    ).toThrow(/E2E authentication/);
+    expect(() =>
+      loadConfig({ ...e2eEnvironment, E2E_AUTH_USER_EMAIL: undefined }),
+    ).toThrow(/E2E authentication/);
   });
 });

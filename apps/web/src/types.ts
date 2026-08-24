@@ -110,27 +110,6 @@ export interface SpecialNeedsAssignment {
   activeTo?: string;
 }
 
-// Attendance Types
-export type AttendanceStatus =
-  | 'PRESENT'
-  | 'LATE'
-  | 'SICK'
-  | 'HOLIDAY'
-  | 'ABSENCE'
-  | 'EXPLAINED'
-  | 'UNEXPLAINED';
-
-export interface AttendanceRecord {
-  id: string;
-  studentId: string;
-  date: string; // YYYY-MM-DD
-  status: AttendanceStatus;
-  minutesLate?: number;
-  notes?: string;
-  className: string;
-  recordedBy: string;
-}
-
 // Learning Journey Types
 export type LJDraftStatus =
   | 'Not Started'

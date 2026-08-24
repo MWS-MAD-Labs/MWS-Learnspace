@@ -22,6 +22,11 @@ Legend: **O** organization scope, **U** assigned unit, **G** assigned grade, **C
 
 | Capability                                   | Director | Principal | Grade Teacher | Subject Teacher | SE Coordinator | SE Teacher / GPK | Specialist |
 | -------------------------------------------- | -------- | --------- | ------------- | --------------- | -------------- | ---------------- | ---------- |
+| List available organizations                 | O        | O         | O             | O               | O              | O                | O          |
+| Read academic years                          | O        | O         | O             | O               | —              | —                | —          |
+| Read units, grades, and classes              | O        | O         | U/G/C         | —               | —              | —                | —          |
+| Read subjects                                | O        | O         | —             | S               | —              | —                | —          |
+| Read general student list/detail             | O        | O         | U/G/C         | —               | A              | A                | A          |
 | Read attendance                              | O        | O         | G/C           | —               | A              | A                | —          |
 | Write attendance                             | —        | —         | G/C           | —               | —              | —                | —          |
 | Read Learning Journeys                       | O        | O         | G/C           | S/C             | A              | A                | —          |
@@ -45,7 +50,7 @@ The initial authorization primitives expose these coarse permissions:
 
 A permission alone is insufficient. Every tenant-owned repository query must also include `organizationId`, and scoped roles must pass the applicable unit, grade, subject, class, or assigned-student check.
 
-The matrix above matches the current coarse permissions exactly. Finer capabilities — subject/class-scoped attendance reads for Subject Teachers, team-scoped special-education reads for Grade and Subject Teachers, and separating observation writes from IEP and weekly-report writes — require finer-grained permissions and remain denied until those permissions are introduced.
+Academic collection and general student reads use explicit endpoint policies in addition to the coarse permission set. They do not add browser-controlled permissions: leadership is organization-wide, Grade Teachers are constrained to assigned units/grades/classes, Subject Teachers can read only assigned subjects plus organization academic-year context, and assigned-student roles can read only active dated assignments. Finer capabilities — subject/class-scoped attendance reads for Subject Teachers, team-scoped special-education reads for Grade and Subject Teachers, and separating observation writes from IEP and weekly-report writes — remain denied until those permissions are introduced.
 
 ## Scope rules
 

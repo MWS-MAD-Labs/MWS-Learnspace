@@ -9,7 +9,6 @@ import {
   SFAObservationRecord,
   IEPRecord,
   IEPReport,
-  AttendanceRecord,
   ObservationAssignment,
   ObservationFormDefinition,
 } from '../types';
@@ -1346,60 +1345,6 @@ export const SEED_LEARNING_JOURNEYS: LearningJourney[] = [
     createdAt: '2026-08-08T11:30:00Z',
     updatedBy: 'usr-grade-teacher',
     updatedAt: '2026-08-08T11:30:00Z',
-  },
-];
-
-export const SEED_ATTENDANCE: AttendanceRecord[] = [
-  {
-    id: 'att-001',
-    studentId: 'stu-001',
-    date: '2026-10-24',
-    status: 'PRESENT',
-    className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher',
-  },
-  {
-    id: 'att-002',
-    studentId: 'stu-002',
-    date: '2026-10-24',
-    status: 'LATE',
-    minutesLate: 15,
-    notes: 'Traffic delay on river bridge route',
-    className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher',
-  },
-  {
-    id: 'att-003',
-    studentId: 'stu-003',
-    date: '2026-10-24',
-    status: 'PRESENT',
-    className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher',
-  },
-  {
-    id: 'att-004',
-    studentId: 'stu-004',
-    date: '2026-10-24',
-    status: 'SICK',
-    notes: 'Parent reported mild fever and rest at home',
-    className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher',
-  },
-  {
-    id: 'att-005',
-    studentId: 'stu-005',
-    date: '2026-10-24',
-    status: 'PRESENT',
-    className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher',
-  },
-  {
-    id: 'att-006',
-    studentId: 'stu-006',
-    date: '2026-10-24',
-    status: 'PRESENT',
-    className: '1-A Sequoia',
-    recordedBy: 'usr-grade-teacher',
   },
 ];
 
