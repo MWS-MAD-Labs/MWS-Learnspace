@@ -9,6 +9,7 @@ export type UserRole =
 
 export interface User {
   id: string;
+  membershipId?: string;
   name: string;
   email: string;
   role: UserRole;
@@ -30,7 +31,8 @@ export interface Student {
   studentNumber: string;
   fullName: string;
   nickname?: string;
-  gender: 'Male' | 'Female';
+  name?: string;
+  gender: 'Male' | 'Female' | 'Other' | 'Unspecified';
   dateOfBirth: string;
   age?: number;
   grade: string;
@@ -44,8 +46,11 @@ export interface Student {
   avatarUrl?: string;
   primaryClassification?: string;
   currentPlacement?: string;
+  primaryDiagnosis?: string;
   assignedGPKTeacherId?: string;
+  assignedGPKMembershipId?: string;
   assignedGPKTeacherName?: string;
+  gpkMaxCaseload?: number;
 }
 
 export type ObservationInstrumentType = 'FEDC' | 'SENSORY_PROFILE' | 'SFA';

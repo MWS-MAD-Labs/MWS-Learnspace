@@ -260,7 +260,7 @@ integration('academic, student, and attendance routes', () => {
           dateOfBirth: new Date('2019-01-01T00:00:00.000Z'),
           address: 'Must not be exposed',
           specialNeedsFlag: true,
-          primaryClassification: 'Must not be exposed',
+          primaryClassification: 'Learning support',
         },
       });
       rosterStudentIds.push(student.id);
@@ -385,26 +385,32 @@ integration('academic, student, and attendance routes', () => {
     expect(classes.status).toBe(403);
   });
 
-  it('returns minimal student fields and enforces grade and dated assigned-student scope', async () => {
+  it('returns authorized rich student fields without private contacts and enforces grade and dated assigned-student scope', async () => {
     const students = await get(
       `/api/v1/organizations/${organizationId}/students?schoolDate=2026-08-24`,
     );
     expect(students.status).toBe(200);
     expect(students.body.data).toHaveLength(2);
-    expect(Object.keys(students.body.data[0]).sort()).toEqual([
-      'avatarUrl',
-      'enrollments',
-      'fullName',
-      'id',
-      'nickname',
-      'organizationId',
-      'studentNumber',
-    ]);
-    expect(JSON.stringify(students.body)).not.toContain('address');
-    expect(JSON.stringify(students.body)).not.toContain('specialNeedsFlag');
-    expect(JSON.stringify(students.body)).not.toContain(
-      'primaryClassification',
+    expect(students.body.data[0]).toEqual(
+      expect.objectContaining({
+        gender: 'UNSPECIFIED',
+        dateOfBirth: '2019-01-01',
+        specialNeedsFlag: true,
+        primaryClassification: 'Learning support',
+        activeEnrollment: expect.objectContaining({ classId }),
+        activeGpkAssignment: null,
+      }),
     );
+    expect(JSON.stringify(students.body)).not.toContain('address');
+    expect(JSON.stringify(students.body)).not.toContain('guardians');
+    expect(JSON.stringify(students.body)).not.toContain('phone');
+    expect(JSON.stringify(students.body)).not.toContain('email');
+
+    const detail = await get(
+      `/api/v1/organizations/${organizationId}/students/${rosterStudentIds[0]}?schoolDate=2026-08-24`,
+    );
+    expect(detail.status).toBe(403);
+    expect(detail.body.error.code).toBe('AUTHORIZATION_DENIED');
 
     const assigned = await get(
       `/api/v1/organizations/${organizationId}/students?schoolDate=2026-08-24`,

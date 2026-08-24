@@ -2,15 +2,17 @@
 
 Learnspace is an educator portal for academic planning, attendance, special-education observations, Individualized Education Programs (IEPs), and weekly progress reporting.
 
-The repository is currently at **`0.2.0`**. Milestone 4 delivers the first fully migrated product vertical: versioned academic/student APIs and multi-user attendance backed by PostgreSQL, with typed web contracts, transactional writes, optimistic concurrency, and Compose-backed Playwright coverage.
+The repository is currently at **`0.2.0`**. Milestone 4 delivered the first fully migrated product vertical, and Milestone 5 is now underway with API-backed authorized student directories, privileged student administration, and transactional GPK staff assignments in addition to PostgreSQL attendance.
 
 > [!IMPORTANT]
-> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup, and attendance are server-backed, but Learning Journey, observations, IEPs, and weekly reports still use seeded browser `localStorage`. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
+> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, and attendance are server-backed, but Learning Journey, observations, IEPs, and weekly reports still use seeded browser `localStorage`. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
 
 ## Current capabilities
 
 - Educator dashboard and reporting overview
 - Multi-user PostgreSQL-backed student attendance entry with class/date authorization, audit events, and concurrent-edit detection
+- Authorized student directories and privileged student detail administration with guardian-contact gating
+- Transactional GPK assignment, reassignment, ending, server-enforced caseload capacity, and audited session-derived actors
 - Learning Journey calendar, editor, and approval workflow
 - Special-education observation tools:
   - Functional Emotional Developmental Capacities (FEDC)
@@ -30,7 +32,7 @@ The repository is currently at **`0.2.0`**. Milestone 4 delivers the first fully
 flowchart TB
     Browser[Browser] --> Web[React/Vite web application]
     Web --> LocalStorage[(Browser localStorage for remaining prototype domains)]
-    Web -->|typed attendance and academic requests| Proxy
+    Web -->|typed academic, student, assignment, and attendance requests| Proxy
     Browser -->|same-origin /api traffic in Compose| Proxy[Non-root nginx web container]
     Proxy --> API[Express TypeScript API]
     API --> DB[(PostgreSQL 16)]
@@ -40,12 +42,12 @@ flowchart TB
 
 The workspace and service boundary are implemented, but the migration is intentionally incremental:
 
-- `apps/web` contains the React/Vite application. Attendance uses the typed API client; remaining prototype domains still use `apps/web/src/services/storageService.ts` and `localStorage`.
-- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, academic/student resources, transactional attendance endpoints, runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
-- `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, academic resources, students, and attendance.
+- `apps/web` contains the React/Vite application. Attendance, authorized student loading, staff directory reads, and GPK assignment use typed API services; remaining prototype domains still use `apps/web/src/services/storageService.ts` and `localStorage`.
+- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
+- `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, academic resources, students, staff directories, GPK assignments, and attendance.
 - `compose.yaml` defines production-oriented `web`, `api`, `migrate`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation. API startup waits for the one-shot migration job.
 - `compose.dev.yaml` is an optional override that publishes PostgreSQL on host port `5432` for database tools or a host-run API.
-- PostgreSQL is authoritative for authentication, authorization scope, academic/student lookup, and attendance. Learning Journey, observations, IEPs, and weekly reports remain browser-backed until Milestone 5.
+- PostgreSQL is authoritative for authentication, authorization scope, academic/student lookup and administration, GPK assignments, and attendance. Learning Journey, observations, IEPs, and weekly reports remain browser-backed while Milestone 5 continues.
 
 Frontend role checks are presentation behavior only and are not authorization. The API is the intended security boundary for protected operations as those operations are implemented.
 

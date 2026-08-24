@@ -25,6 +25,11 @@ import {
   SEED_OBSERVATION_FORMS,
 } from '../data/seedData';
 
+const demoRoleSwitcherEnabled =
+  import.meta.env.DEV &&
+  import.meta.env.VITE_ENABLE_DEMO_ROLE_SWITCHER === 'true' &&
+  import.meta.env.VITE_FAKE_DATA_MODE === 'true';
+
 const STORAGE_KEYS = {
   USERS: 'mws_users_v2',
   CURRENT_USER_ID: 'mws_current_user_id_v2',
@@ -49,18 +54,20 @@ class StorageService {
   public init(forceReset = false) {
     if (typeof window === 'undefined') return;
 
-    if (forceReset || !localStorage.getItem(STORAGE_KEYS.USERS)) {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(SEED_USERS));
-    }
-    if (forceReset || !localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID)) {
-      // Default to Special Ed Coordinator or GPK
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, SEED_USERS[0].id);
-    }
-    if (forceReset || !localStorage.getItem(STORAGE_KEYS.STUDENTS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.STUDENTS,
-        JSON.stringify(SEED_STUDENTS),
-      );
+    if (demoRoleSwitcherEnabled) {
+      if (forceReset || !localStorage.getItem(STORAGE_KEYS.USERS)) {
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(SEED_USERS));
+      }
+      if (forceReset || !localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID)) {
+        // Default to Special Ed Coordinator or GPK
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, SEED_USERS[0].id);
+      }
+      if (forceReset || !localStorage.getItem(STORAGE_KEYS.STUDENTS)) {
+        localStorage.setItem(
+          STORAGE_KEYS.STUDENTS,
+          JSON.stringify(SEED_STUDENTS),
+        );
+      }
     }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.LEARNING_JOURNEYS)) {
       localStorage.setItem(

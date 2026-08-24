@@ -1,11 +1,12 @@
-import type {
-  AttendanceStatus,
-  MembershipRole,
+import {
   Prisma,
-  PrismaClient,
+  type AttendanceStatus,
+  type MembershipRole,
+  type PrismaClient,
 } from '@prisma/client';
 import type { Request, Router } from 'express';
 import { Router as createRouter } from 'express';
+import { z } from 'zod';
 import {
   academicYearsResponseSchema,
   attendanceBulkSaveCommandSchema,
@@ -13,13 +14,23 @@ import {
   attendanceQuerySchema,
   attendanceRosterResponseSchema,
   classesResponseSchema,
+  gpkAssignmentEndCommandSchema,
+  gpkAssignmentMutationResponseSchema,
+  gpkAssignmentQuerySchema,
+  gpkAssignmentsResponseSchema,
+  gpkAssignmentUpsertCommandSchema,
   gradesResponseSchema,
   organizationsResponseSchema,
+  staffDirectoryResponseSchema,
+  studentCreateCommandSchema,
   studentDetailResponseSchema,
   studentListQuerySchema,
+  studentMutationResponseSchema,
   studentsResponseSchema,
+  studentUpdateCommandSchema,
   subjectsResponseSchema,
   unitsResponseSchema,
+  uuidSchema,
 } from '@learnspace/contracts';
 import { createAuditRepository } from './audit.js';
 import {
@@ -43,6 +54,10 @@ const assignedStudentRoles: readonly MembershipRole[] = [
   'SPECIALIST',
 ];
 const serializableConflictCodes = new Set(['P2034']);
+const assignmentConflictCodes = new Set(['P2002', 'P2034']);
+const GPK_ROLE_CONTEXT = 'GPK';
+// P5-001 backend default. Every GPK assignment persists this value.
+export const DEFAULT_GPK_MAX_CASELOAD = 2;
 
 function isoDate(value: Date): string {
   return value.toISOString().slice(0, 10);
@@ -126,9 +141,15 @@ function membershipFor(
   }
 }
 
-function requireAttendancePermission(
+function requireResourcePermission(
   membership: MembershipScope,
-  permission: 'attendance:read' | 'attendance:write',
+  permission:
+    | 'attendance:read'
+    | 'attendance:write'
+    | 'student:admin'
+    | 'student:sensitive-read'
+    | 'staff-directory:read'
+    | 'staff-assignment:admin',
 ) {
   try {
     requirePermission(membership, permission);
@@ -142,6 +163,13 @@ function requireAttendancePermission(
     }
     throw error;
   }
+}
+
+function requireAttendancePermission(
+  membership: MembershipScope,
+  permission: 'attendance:read' | 'attendance:write',
+) {
+  requireResourcePermission(membership, permission);
 }
 
 function requireAcademicCollectionAccess(
@@ -164,6 +192,9 @@ function studentScopeWhere(
   enrollmentFilter: Prisma.EnrollmentWhereInput = {},
 ): Prisma.StudentWhereInput | undefined {
   if (isLeadership(membership)) return {};
+  if (membership.role === 'SPECIAL_ED_COORDINATOR') {
+    return { specialNeedsFlag: true };
+  }
   if (membership.role === 'GRADE_TEACHER') {
     const classScope = scopedClassWhere(membership);
     if (!classScope) return undefined;
@@ -211,45 +242,311 @@ function enrollmentSelect(
       classId: true,
       startsOn: true,
       endsOn: true,
-      schoolClass: { select: { name: true, unitId: true, gradeId: true } },
+      schoolClass: {
+        select: {
+          name: true,
+          unit: { select: { id: true, name: true } },
+          grade: { select: { id: true, name: true } },
+        },
+      },
     },
   };
 }
 
-function mapStudent(student: {
+function activeGpkAssignmentSelect(schoolDate: Date) {
+  const where: Prisma.StaffStudentAssignmentWhereInput = {
+    roleContext: GPK_ROLE_CONTEXT,
+    startsOn: { lte: schoolDate },
+    OR: [{ endsOn: null }, { endsOn: { gte: schoolDate } }],
+    membership: { status: 'ACTIVE', role: 'SPECIAL_ED_TEACHER' },
+  };
+  return {
+    where,
+    orderBy: [{ startsOn: 'desc' as const }, { id: 'asc' as const }],
+    take: 1,
+    select: {
+      id: true,
+      organizationId: true,
+      studentId: true,
+      roleContext: true,
+      startsOn: true,
+      endsOn: true,
+      maxCaseload: true,
+      membership: {
+        select: {
+          id: true,
+          roleTitle: true,
+          user: {
+            select: {
+              id: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+type SelectedEnrollment = {
+  id: string;
+  academicYearId: string;
+  classId: string;
+  startsOn: Date;
+  endsOn: Date | null;
+  schoolClass: {
+    name: string;
+    unit: { id: string; name: string };
+    grade: { id: string; name: string };
+  };
+};
+
+type SelectedGpkAssignment = {
+  id: string;
+  organizationId: string;
+  studentId: string;
+  roleContext: string;
+  startsOn: Date;
+  endsOn: Date | null;
+  maxCaseload: number | null;
+  membership: {
+    id: string;
+    roleTitle: string | null;
+    user: {
+      id: string;
+      displayName: string;
+      avatarUrl: string | null;
+    };
+  };
+};
+
+type SelectedStudent = {
   id: string;
   organizationId: string;
   studentNumber: string;
   fullName: string;
   nickname: string | null;
+  gender: 'MALE' | 'FEMALE' | 'OTHER' | 'UNSPECIFIED';
+  dateOfBirth: Date;
+  specialNeedsFlag: boolean;
+  status: 'ACTIVE' | 'DISABLED';
   avatarUrl: string | null;
-  enrollments: Array<{
-    id: string;
-    academicYearId: string;
-    classId: string;
-    startsOn: Date;
-    endsOn: Date | null;
-    schoolClass: { name: string; unitId: string; gradeId: string };
-  }>;
-}) {
+  primaryClassification: string | null;
+  currentPlacement: string | null;
+  enrollments: SelectedEnrollment[];
+  staffAssignments: SelectedGpkAssignment[];
+};
+
+function mapEnrollment(enrollment: SelectedEnrollment) {
+  return {
+    id: enrollment.id,
+    academicYearId: enrollment.academicYearId,
+    classId: enrollment.classId,
+    className: enrollment.schoolClass.name,
+    unitId: enrollment.schoolClass.unit.id,
+    unitName: enrollment.schoolClass.unit.name,
+    gradeId: enrollment.schoolClass.grade.id,
+    gradeName: enrollment.schoolClass.grade.name,
+    startsOn: isoDate(enrollment.startsOn),
+    endsOn: enrollment.endsOn ? isoDate(enrollment.endsOn) : null,
+  };
+}
+
+function mapGpkAssignment(assignment: SelectedGpkAssignment) {
+  return {
+    id: assignment.id,
+    organizationId: assignment.organizationId,
+    studentId: assignment.studentId,
+    roleContext: GPK_ROLE_CONTEXT,
+    startsOn: isoDate(assignment.startsOn),
+    endsOn: assignment.endsOn ? isoDate(assignment.endsOn) : null,
+    maxCaseload: assignment.maxCaseload ?? DEFAULT_GPK_MAX_CASELOAD,
+    staff: {
+      membershipId: assignment.membership.id,
+      userId: assignment.membership.user.id,
+      displayName: assignment.membership.user.displayName,
+      avatarUrl: assignment.membership.user.avatarUrl,
+      roleTitle: assignment.membership.roleTitle,
+    },
+  } as const;
+}
+
+function mapStudent(student: SelectedStudent) {
+  const enrollments = student.enrollments.map(mapEnrollment);
   return {
     id: student.id,
     organizationId: student.organizationId,
     studentNumber: student.studentNumber,
     fullName: student.fullName,
     nickname: student.nickname,
+    gender: student.gender,
+    dateOfBirth: isoDate(student.dateOfBirth),
+    specialNeedsFlag: student.specialNeedsFlag,
+    status: student.status,
     avatarUrl: student.avatarUrl,
-    enrollments: student.enrollments.map((enrollment) => ({
-      id: enrollment.id,
-      academicYearId: enrollment.academicYearId,
-      classId: enrollment.classId,
-      className: enrollment.schoolClass.name,
-      unitId: enrollment.schoolClass.unitId,
-      gradeId: enrollment.schoolClass.gradeId,
-      startsOn: isoDate(enrollment.startsOn),
-      endsOn: enrollment.endsOn ? isoDate(enrollment.endsOn) : null,
-    })),
+    primaryClassification: student.primaryClassification,
+    currentPlacement: student.currentPlacement,
+    enrollments,
+    activeEnrollment: enrollments[0] ?? null,
+    activeGpkAssignment: student.staffAssignments[0]
+      ? mapGpkAssignment(student.staffAssignments[0])
+      : null,
   };
+}
+
+function studentSelect(
+  schoolDate: Date,
+  enrollmentFilter: Prisma.EnrollmentWhereInput = {},
+) {
+  return {
+    id: true,
+    organizationId: true,
+    studentNumber: true,
+    fullName: true,
+    nickname: true,
+    gender: true,
+    dateOfBirth: true,
+    specialNeedsFlag: true,
+    status: true,
+    avatarUrl: true,
+    primaryClassification: true,
+    currentPlacement: true,
+    enrollments: enrollmentSelect(schoolDate, enrollmentFilter),
+    staffAssignments: activeGpkAssignmentSelect(schoolDate),
+  };
+}
+
+function mapStudentDetail(
+  student: SelectedStudent & {
+    address: string | null;
+    guardians: Array<{
+      id: string;
+      name: string;
+      relationship: string;
+      phone: string | null;
+      email: string | null;
+      address: string | null;
+      isPrimary: boolean;
+    }>;
+  },
+) {
+  return {
+    ...mapStudent(student),
+    address: student.address,
+    guardians: student.guardians,
+  };
+}
+
+function studentMutationSelect(schoolDate: Date) {
+  return {
+    ...studentSelect(schoolDate),
+    address: true,
+    guardians: {
+      orderBy: [{ isPrimary: 'desc' as const }, { name: 'asc' as const }],
+      select: {
+        id: true,
+        name: true,
+        relationship: true,
+        phone: true,
+        email: true,
+        address: true,
+        isPrimary: true,
+      },
+    },
+  };
+}
+
+async function validateEnrollmentCommand(
+  transaction: Prisma.TransactionClient,
+  organizationId: string,
+  command: {
+    academicYearId: string;
+    classId: string;
+    startsOn: string;
+    endsOn?: string | null;
+  },
+) {
+  const [academicYear, schoolClass] = await Promise.all([
+    transaction.academicYear.findFirst({
+      where: { id: command.academicYearId, organizationId },
+      select: { id: true, startsOn: true, endsOn: true },
+    }),
+    transaction.schoolClass.findFirst({
+      where: { id: command.classId, organizationId },
+      select: { id: true },
+    }),
+  ]);
+  if (!academicYear || !schoolClass) {
+    throw new HttpError(
+      400,
+      'INVALID_ENROLLMENT_REFERENCE',
+      'The academic year and class must belong to the organization.',
+    );
+  }
+  const startsOn = dateAtUtcMidnight(command.startsOn);
+  const endsOn = command.endsOn ? dateAtUtcMidnight(command.endsOn) : null;
+  if (
+    startsOn < academicYear.startsOn ||
+    startsOn > academicYear.endsOn ||
+    (endsOn && (endsOn < academicYear.startsOn || endsOn > academicYear.endsOn))
+  ) {
+    throw new HttpError(
+      400,
+      'INVALID_ENROLLMENT_DATES',
+      'Enrollment dates must be within the academic year.',
+    );
+  }
+  return { startsOn, endsOn };
+}
+
+async function loadAssignmentForResponse(
+  transaction: Prisma.TransactionClient,
+  organizationId: string,
+  assignmentId: string,
+) {
+  const assignment = await transaction.staffStudentAssignment.findFirstOrThrow({
+    where: { id: assignmentId, organizationId, roleContext: GPK_ROLE_CONTEXT },
+    select: {
+      id: true,
+      organizationId: true,
+      studentId: true,
+      roleContext: true,
+      startsOn: true,
+      endsOn: true,
+      maxCaseload: true,
+      membership: {
+        select: {
+          id: true,
+          roleTitle: true,
+          user: {
+            select: { id: true, displayName: true, avatarUrl: true },
+          },
+        },
+      },
+      student: {
+        select: {
+          id: true,
+          organizationId: true,
+          studentNumber: true,
+          fullName: true,
+          nickname: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
+  return {
+    ...mapGpkAssignment(assignment),
+    student: assignment.student,
+  };
+}
+
+function assignmentOverlapWhere(startsOn: Date, endsOn: Date | null) {
+  return {
+    startsOn: { lte: endsOn ?? new Date('9999-12-31T00:00:00.000Z') },
+    OR: [{ endsOn: null }, { endsOn: { gte: startsOn } }],
+  } satisfies Prisma.StaffStudentAssignmentWhereInput;
 }
 
 export function createResourceRouter(
@@ -461,6 +758,55 @@ export function createResourceRouter(
   );
 
   router.get(
+    '/organizations/:organizationId/staff',
+    async (request, response, next) => {
+      try {
+        const membership = membershipFor(
+          request,
+          request.params.organizationId,
+        );
+        requireResourcePermission(membership, 'staff-directory:read');
+        const rows = await prisma.membership.findMany({
+          where: {
+            organizationId: request.params.organizationId,
+            status: 'ACTIVE',
+            user: { status: 'ACTIVE' },
+          },
+          orderBy: [{ user: { displayName: 'asc' } }, { id: 'asc' }],
+          select: {
+            id: true,
+            organizationId: true,
+            role: true,
+            roleTitle: true,
+            status: true,
+            user: {
+              select: { id: true, displayName: true, avatarUrl: true },
+            },
+          },
+        });
+        const data = rows.map((row) => ({
+          membershipId: row.id,
+          userId: row.user.id,
+          organizationId: row.organizationId,
+          displayName: row.user.displayName,
+          avatarUrl: row.user.avatarUrl,
+          role: row.role,
+          roleTitle: row.roleTitle,
+          status: row.status,
+        }));
+        response.json(
+          staffDirectoryResponseSchema.parse({
+            data,
+            meta: { count: data.length },
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
     '/organizations/:organizationId/students',
     async (request, response, next) => {
       try {
@@ -524,15 +870,7 @@ export function createResourceRouter(
               : { enrollments: { some: enrollmentFilter } }),
           },
           orderBy: [{ fullName: 'asc' }, { id: 'asc' }],
-          select: {
-            id: true,
-            organizationId: true,
-            studentNumber: true,
-            fullName: true,
-            nickname: true,
-            avatarUrl: true,
-            enrollments: enrollmentSelect(schoolDate, selectedEnrollmentFilter),
-          },
+          select: studentSelect(schoolDate, selectedEnrollmentFilter),
         });
         const data = rows.map(mapStudent);
         response.json(
@@ -570,6 +908,7 @@ export function createResourceRouter(
           membership.role === 'GRADE_TEACHER'
             ? (scopedClassWhere(membership) ?? {})
             : {};
+        requireResourcePermission(membership, 'student:sensitive-read');
         const row = await prisma.student.findFirst({
           where: {
             id: request.params.studentId,
@@ -578,18 +917,28 @@ export function createResourceRouter(
             ...scope,
           },
           select: {
-            id: true,
-            organizationId: true,
-            studentNumber: true,
-            fullName: true,
-            nickname: true,
-            avatarUrl: true,
-            enrollments: enrollmentSelect(
+            ...studentSelect(
               schoolDate,
               Object.keys(authorizedClassScope).length
                 ? { schoolClass: authorizedClassScope }
                 : {},
             ),
+            address: true,
+            guardians: {
+              orderBy: [
+                { isPrimary: 'desc' as const },
+                { name: 'asc' as const },
+              ],
+              select: {
+                id: true,
+                name: true,
+                relationship: true,
+                phone: true,
+                email: true,
+                address: true,
+                isPrimary: true,
+              },
+            },
           },
         });
         if (!row)
@@ -599,7 +948,596 @@ export function createResourceRouter(
             'The request was denied.',
           );
         response.json(
-          studentDetailResponseSchema.parse({ data: mapStudent(row) }),
+          studentDetailResponseSchema.parse({ data: mapStudentDetail(row) }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/students',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const command = parseRequest(studentCreateCommandSchema, request.body);
+        const auth = requireAuth(request);
+        const membership = membershipFor(
+          request,
+          request.params.organizationId,
+        );
+        requireResourcePermission(membership, 'student:admin');
+        const responseDate = command.activeEnrollment?.startsOn
+          ? dateAtUtcMidnight(command.activeEnrollment.startsOn)
+          : new Date();
+        const result = await prisma.$transaction(async (transaction) => {
+          const enrollmentDates = command.activeEnrollment
+            ? await validateEnrollmentCommand(
+                transaction,
+                request.params.organizationId,
+                command.activeEnrollment,
+              )
+            : undefined;
+          const student = await transaction.student.create({
+            data: {
+              organizationId: request.params.organizationId,
+              studentNumber: command.studentNumber,
+              fullName: command.fullName,
+              nickname: command.nickname ?? null,
+              gender: command.gender,
+              dateOfBirth: dateAtUtcMidnight(command.dateOfBirth),
+              address: command.address ?? null,
+              specialNeedsFlag: command.specialNeedsFlag ?? false,
+              status: command.status ?? 'ACTIVE',
+              avatarUrl: command.avatarUrl ?? null,
+              primaryClassification: command.primaryClassification ?? null,
+              currentPlacement: command.currentPlacement ?? null,
+            },
+            select: { id: true },
+          });
+          if (command.activeEnrollment && enrollmentDates) {
+            await transaction.enrollment.create({
+              data: {
+                organizationId: request.params.organizationId,
+                studentId: student.id,
+                academicYearId: command.activeEnrollment.academicYearId,
+                classId: command.activeEnrollment.classId,
+                startsOn: enrollmentDates.startsOn,
+                endsOn: enrollmentDates.endsOn,
+              },
+            });
+          }
+          await createAuditRepository(transaction as PrismaClient).append({
+            organizationId: request.params.organizationId,
+            actorId: auth.userId,
+            action: 'student.create',
+            targetType: 'Student',
+            targetId: student.id,
+            requestId: String(response.locals.requestId),
+            result: 'SUCCEEDED',
+            metadata: { changedFields: Object.keys(command) },
+          });
+          return transaction.student.findFirstOrThrow({
+            where: {
+              id: student.id,
+              organizationId: request.params.organizationId,
+            },
+            select: studentMutationSelect(responseDate),
+          });
+        });
+        response.status(201).json(
+          studentMutationResponseSchema.parse({
+            data: mapStudentDetail(result),
+          }),
+        );
+      } catch (error) {
+        if (asPrismaErrorCode(error) === 'P2002') {
+          next(
+            new HttpError(
+              409,
+              'STUDENT_NUMBER_CONFLICT',
+              'The student number is already in use.',
+            ),
+          );
+          return;
+        }
+        next(error);
+      }
+    },
+  );
+
+  router.patch(
+    '/organizations/:organizationId/students/:studentId',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const command = parseRequest(studentUpdateCommandSchema, request.body);
+        const auth = requireAuth(request);
+        const membership = membershipFor(
+          request,
+          request.params.organizationId,
+        );
+        requireResourcePermission(membership, 'student:admin');
+        const responseDate = command.activeEnrollment?.startsOn
+          ? dateAtUtcMidnight(command.activeEnrollment.startsOn)
+          : new Date();
+        const result = await prisma.$transaction(async (transaction) => {
+          const existing = await transaction.student.findFirst({
+            where: {
+              id: request.params.studentId,
+              organizationId: request.params.organizationId,
+            },
+            select: { id: true },
+          });
+          if (!existing) {
+            throw new HttpError(404, 'STUDENT_NOT_FOUND', 'Student not found.');
+          }
+          const enrollmentDates = command.activeEnrollment
+            ? await validateEnrollmentCommand(
+                transaction,
+                request.params.organizationId,
+                command.activeEnrollment,
+              )
+            : undefined;
+          const { activeEnrollment, ...studentFields } = command;
+          await transaction.student.update({
+            where: { id: existing.id },
+            data: {
+              ...studentFields,
+              ...(studentFields.dateOfBirth
+                ? { dateOfBirth: dateAtUtcMidnight(studentFields.dateOfBirth) }
+                : {}),
+            },
+          });
+          if (activeEnrollment && enrollmentDates) {
+            const sameEnrollment = await transaction.enrollment.findFirst({
+              where: {
+                organizationId: request.params.organizationId,
+                studentId: existing.id,
+                academicYearId: activeEnrollment.academicYearId,
+                classId: activeEnrollment.classId,
+                startsOn: enrollmentDates.startsOn,
+              },
+              select: { id: true },
+            });
+            const sameDayConflict = await transaction.enrollment.findFirst({
+              where: {
+                organizationId: request.params.organizationId,
+                studentId: existing.id,
+                startsOn: enrollmentDates.startsOn,
+                ...(sameEnrollment ? { id: { not: sameEnrollment.id } } : {}),
+              },
+              select: { id: true },
+            });
+            if (sameDayConflict) {
+              throw new HttpError(
+                409,
+                'ENROLLMENT_START_CONFLICT',
+                'A different enrollment already starts on that date.',
+              );
+            }
+            const previousDay = new Date(
+              enrollmentDates.startsOn.getTime() - 24 * 60 * 60 * 1000,
+            );
+            await transaction.enrollment.updateMany({
+              where: {
+                organizationId: request.params.organizationId,
+                studentId: existing.id,
+                ...(sameEnrollment ? { id: { not: sameEnrollment.id } } : {}),
+                startsOn: { lt: enrollmentDates.startsOn },
+                OR: [
+                  { endsOn: null },
+                  { endsOn: { gte: enrollmentDates.startsOn } },
+                ],
+              },
+              data: { endsOn: previousDay },
+            });
+            if (sameEnrollment) {
+              await transaction.enrollment.update({
+                where: { id: sameEnrollment.id },
+                data: { endsOn: enrollmentDates.endsOn },
+              });
+            } else {
+              await transaction.enrollment.create({
+                data: {
+                  organizationId: request.params.organizationId,
+                  studentId: existing.id,
+                  academicYearId: activeEnrollment.academicYearId,
+                  classId: activeEnrollment.classId,
+                  startsOn: enrollmentDates.startsOn,
+                  endsOn: enrollmentDates.endsOn,
+                },
+              });
+            }
+          }
+          await createAuditRepository(transaction as PrismaClient).append({
+            organizationId: request.params.organizationId,
+            actorId: auth.userId,
+            action: 'student.update',
+            targetType: 'Student',
+            targetId: existing.id,
+            requestId: String(response.locals.requestId),
+            result: 'SUCCEEDED',
+            metadata: { changedFields: Object.keys(command) },
+          });
+          return transaction.student.findFirstOrThrow({
+            where: {
+              id: existing.id,
+              organizationId: request.params.organizationId,
+            },
+            select: studentMutationSelect(responseDate),
+          });
+        });
+        response.json(
+          studentMutationResponseSchema.parse({
+            data: mapStudentDetail(result),
+          }),
+        );
+      } catch (error) {
+        if (asPrismaErrorCode(error) === 'P2002') {
+          next(
+            new HttpError(
+              409,
+              'STUDENT_NUMBER_CONFLICT',
+              'The student number is already in use.',
+            ),
+          );
+          return;
+        }
+        next(error);
+      }
+    },
+  );
+
+  router.get(
+    '/organizations/:organizationId/gpk-assignments',
+    async (request, response, next) => {
+      try {
+        const query = parseRequest(gpkAssignmentQuerySchema, request.query);
+        const membership = membershipFor(
+          request,
+          request.params.organizationId,
+        );
+        requireResourcePermission(membership, 'staff-assignment:admin');
+        const schoolDate = dateAtUtcMidnight(
+          query.schoolDate ?? new Date().toISOString().slice(0, 10),
+        );
+        const rows = await prisma.staffStudentAssignment.findMany({
+          where: {
+            organizationId: request.params.organizationId,
+            roleContext: GPK_ROLE_CONTEXT,
+            startsOn: { lte: schoolDate },
+            OR: [{ endsOn: null }, { endsOn: { gte: schoolDate } }],
+            ...(query.studentId ? { studentId: query.studentId } : {}),
+            ...(query.membershipId ? { membershipId: query.membershipId } : {}),
+            membership: { status: 'ACTIVE', role: 'SPECIAL_ED_TEACHER' },
+            student: { status: 'ACTIVE' },
+          },
+          orderBy: [
+            { student: { fullName: 'asc' } },
+            { startsOn: 'desc' },
+            { id: 'asc' },
+          ],
+          select: {
+            id: true,
+            organizationId: true,
+            studentId: true,
+            roleContext: true,
+            startsOn: true,
+            endsOn: true,
+            maxCaseload: true,
+            membership: {
+              select: {
+                id: true,
+                roleTitle: true,
+                user: {
+                  select: { id: true, displayName: true, avatarUrl: true },
+                },
+              },
+            },
+            student: {
+              select: {
+                id: true,
+                organizationId: true,
+                studentNumber: true,
+                fullName: true,
+                nickname: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        });
+        const data = rows.map((row) => ({
+          ...mapGpkAssignment(row),
+          student: row.student,
+        }));
+        response.json(
+          gpkAssignmentsResponseSchema.parse({
+            data,
+            meta: { count: data.length },
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.put(
+    '/organizations/:organizationId/students/:studentId/gpk-assignment',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const command = parseRequest(
+          gpkAssignmentUpsertCommandSchema,
+          request.body,
+        );
+        const auth = requireAuth(request);
+        const path = parseRequest(
+          z
+            .object({ organizationId: uuidSchema, studentId: uuidSchema })
+            .strict(),
+          request.params,
+        );
+        const membership = membershipFor(request, path.organizationId);
+        requireResourcePermission(membership, 'staff-assignment:admin');
+        const startsOn = dateAtUtcMidnight(command.startsOn);
+        const endsOn = command.endsOn
+          ? dateAtUtcMidnight(command.endsOn)
+          : null;
+        const result = await prisma.$transaction(
+          async (transaction) => {
+            const lockedStudents = await transaction.$queryRaw<
+              Array<{ id: string; specialNeedsFlag: boolean }>
+            >(Prisma.sql`
+              SELECT id, "specialNeedsFlag"
+              FROM "Student"
+              WHERE id = ${path.studentId}::uuid
+                AND "organizationId" = ${path.organizationId}::uuid
+                AND status = 'ACTIVE'
+              FOR UPDATE
+            `);
+            const student = lockedStudents[0];
+            if (!student) {
+              throw new HttpError(
+                404,
+                'STUDENT_NOT_FOUND',
+                'Student not found.',
+              );
+            }
+            if (!student.specialNeedsFlag) {
+              throw new HttpError(
+                400,
+                'GPK_STUDENT_NOT_ELIGIBLE',
+                'GPK assignments require specialNeedsFlag.',
+              );
+            }
+            const lockedMemberships = await transaction.$queryRaw<
+              Array<{ id: string }>
+            >(Prisma.sql`
+              SELECT id
+              FROM "Membership"
+              WHERE id = ${command.membershipId}::uuid
+                AND "organizationId" = ${request.params.organizationId}::uuid
+                AND status = 'ACTIVE'
+                AND role = 'SPECIAL_ED_TEACHER'
+              FOR UPDATE
+            `);
+            if (!lockedMemberships.length) {
+              throw new HttpError(
+                400,
+                'INVALID_GPK_MEMBERSHIP',
+                'The target must be an active special education teacher membership in the organization.',
+              );
+            }
+
+            const overlaps = await transaction.staffStudentAssignment.findMany({
+              where: {
+                organizationId: request.params.organizationId,
+                studentId: student.id,
+                roleContext: GPK_ROLE_CONTEXT,
+                ...assignmentOverlapWhere(startsOn, endsOn),
+              },
+              orderBy: [{ startsOn: 'desc' }, { id: 'asc' }],
+              select: {
+                id: true,
+                membershipId: true,
+                startsOn: true,
+                endsOn: true,
+              },
+            });
+            const exact = overlaps.find(
+              (assignment) =>
+                assignment.startsOn.getTime() === startsOn.getTime(),
+            );
+            const futureOverlap = overlaps.find(
+              (assignment) => assignment.startsOn > startsOn,
+            );
+            if (futureOverlap) {
+              throw new HttpError(
+                409,
+                'GPK_ASSIGNMENT_OVERLAP',
+                'The requested assignment overlaps a future GPK assignment.',
+              );
+            }
+
+            // This default is currently the authoritative configured GPK limit;
+            // persisted maxCaseload mirrors the same enforcement value.
+            const capacityRows =
+              await transaction.staffStudentAssignment.findMany({
+                where: {
+                  organizationId: request.params.organizationId,
+                  membershipId: command.membershipId,
+                  roleContext: GPK_ROLE_CONTEXT,
+                  studentId: { not: student.id },
+                  ...assignmentOverlapWhere(startsOn, endsOn),
+                },
+                distinct: ['studentId'],
+                select: { studentId: true },
+              });
+            if (capacityRows.length >= DEFAULT_GPK_MAX_CASELOAD) {
+              throw new HttpError(
+                409,
+                'GPK_CASELOAD_CAPACITY',
+                'The GPK teacher has reached the configured caseload limit.',
+              );
+            }
+
+            const previousDay = new Date(
+              startsOn.getTime() - 24 * 60 * 60 * 1000,
+            );
+            await transaction.staffStudentAssignment.updateMany({
+              where: {
+                id: {
+                  in: overlaps
+                    .filter((row) => row.id !== exact?.id)
+                    .map((row) => row.id),
+                },
+                startsOn: { lt: startsOn },
+              },
+              data: { endsOn: previousDay },
+            });
+
+            const saved = exact
+              ? await transaction.staffStudentAssignment.update({
+                  where: { id: exact.id },
+                  data: {
+                    membershipId: command.membershipId,
+                    endsOn,
+                    maxCaseload: DEFAULT_GPK_MAX_CASELOAD,
+                  },
+                  select: { id: true },
+                })
+              : await transaction.staffStudentAssignment.create({
+                  data: {
+                    organizationId: request.params.organizationId,
+                    membershipId: command.membershipId,
+                    studentId: student.id,
+                    roleContext: GPK_ROLE_CONTEXT,
+                    startsOn,
+                    endsOn,
+                    maxCaseload: DEFAULT_GPK_MAX_CASELOAD,
+                  },
+                  select: { id: true },
+                });
+            await createAuditRepository(transaction as PrismaClient).append({
+              organizationId: request.params.organizationId,
+              actorId: auth.userId,
+              action: 'gpk_assignment.upsert',
+              targetType: 'StaffStudentAssignment',
+              targetId: saved.id,
+              requestId: String(response.locals.requestId),
+              result: 'SUCCEEDED',
+              metadata: {
+                changedFields: [
+                  'membershipId',
+                  'startsOn',
+                  'endsOn',
+                  'maxCaseload',
+                ],
+              },
+            });
+            return loadAssignmentForResponse(
+              transaction,
+              request.params.organizationId,
+              saved.id,
+            );
+          },
+          { isolationLevel: 'Serializable' },
+        );
+        response.json(
+          gpkAssignmentMutationResponseSchema.parse({ data: result }),
+        );
+      } catch (error) {
+        if (assignmentConflictCodes.has(asPrismaErrorCode(error) ?? '')) {
+          next(
+            new HttpError(
+              409,
+              'GPK_ASSIGNMENT_CONFLICT',
+              'The GPK assignment conflicted with another request.',
+            ),
+          );
+          return;
+        }
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/gpk-assignments/:assignmentId/end',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const command = parseRequest(
+          gpkAssignmentEndCommandSchema,
+          request.body,
+        );
+        const auth = requireAuth(request);
+        const path = parseRequest(
+          z
+            .object({ organizationId: uuidSchema, assignmentId: uuidSchema })
+            .strict(),
+          request.params,
+        );
+        const membership = membershipFor(request, path.organizationId);
+        requireResourcePermission(membership, 'staff-assignment:admin');
+        const endsOn = dateAtUtcMidnight(command.endsOn);
+        const result = await prisma.$transaction(async (transaction) => {
+          const assignment = await transaction.staffStudentAssignment.findFirst(
+            {
+              where: {
+                id: path.assignmentId,
+                organizationId: path.organizationId,
+                roleContext: GPK_ROLE_CONTEXT,
+              },
+              select: { id: true, startsOn: true, endsOn: true },
+            },
+          );
+          if (!assignment) {
+            throw new HttpError(
+              404,
+              'GPK_ASSIGNMENT_NOT_FOUND',
+              'GPK assignment not found.',
+            );
+          }
+          if (endsOn < assignment.startsOn) {
+            throw new HttpError(
+              400,
+              'INVALID_GPK_ASSIGNMENT_DATES',
+              'endsOn must be on or after startsOn.',
+            );
+          }
+          if (assignment.endsOn && endsOn > assignment.endsOn) {
+            throw new HttpError(
+              409,
+              'GPK_ASSIGNMENT_ALREADY_ENDED',
+              'An ended GPK assignment cannot be extended by the end command.',
+            );
+          }
+          await transaction.staffStudentAssignment.update({
+            where: { id: assignment.id },
+            data: { endsOn },
+          });
+          await createAuditRepository(transaction as PrismaClient).append({
+            organizationId: path.organizationId,
+            actorId: auth.userId,
+            action: 'gpk_assignment.end',
+            targetType: 'StaffStudentAssignment',
+            targetId: assignment.id,
+            requestId: String(response.locals.requestId),
+            result: 'SUCCEEDED',
+            metadata: { changedFields: ['endsOn'] },
+          });
+          return loadAssignmentForResponse(
+            transaction,
+            path.organizationId,
+            assignment.id,
+          );
+        });
+        response.json(
+          gpkAssignmentMutationResponseSchema.parse({ data: result }),
         );
       } catch (error) {
         next(error);

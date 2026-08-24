@@ -15,6 +15,11 @@ export const schoolDateSchema = z
     );
   }, 'Expected a valid calendar date.');
 
+export const strictBooleanSchema = z.custom<boolean>(
+  (value) => typeof value === 'boolean',
+  'Expected a boolean.',
+);
+
 export const attendanceStatusSchema = z.enum([
   'PRESENT',
   'LATE',
@@ -103,6 +108,37 @@ export const subjectsResponseSchema = z
   .object({ data: z.array(subjectSchema), meta: collectionMetaSchema })
   .strict();
 
+export const staffMembershipRoleSchema = z.enum([
+  'PRINCIPAL',
+  'DIRECTOR',
+  'GRADE_TEACHER',
+  'SUBJECT_TEACHER',
+  'SPECIAL_ED_COORDINATOR',
+  'SPECIAL_ED_TEACHER',
+  'SPECIALIST',
+]);
+export const accountStatusSchema = z.enum(['ACTIVE', 'DISABLED']);
+export const genderSchema = z.enum(['MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED']);
+
+export const staffDirectoryItemSchema = z
+  .object({
+    membershipId: uuidSchema,
+    userId: uuidSchema,
+    organizationId: uuidSchema,
+    displayName: z.string().min(1),
+    avatarUrl: z.string().url().nullable(),
+    role: staffMembershipRoleSchema,
+    roleTitle: z.string().nullable(),
+    status: z.literal('ACTIVE'),
+  })
+  .strict();
+export const staffDirectoryResponseSchema = z
+  .object({
+    data: z.array(staffDirectoryItemSchema),
+    meta: collectionMetaSchema,
+  })
+  .strict();
+
 export const studentEnrollmentSummarySchema = z
   .object({
     id: uuidSchema,
@@ -110,9 +146,34 @@ export const studentEnrollmentSummarySchema = z
     classId: uuidSchema,
     className: z.string().min(1),
     unitId: uuidSchema,
+    unitName: z.string().min(1),
     gradeId: uuidSchema,
+    gradeName: z.string().min(1),
     startsOn: schoolDateSchema,
     endsOn: schoolDateSchema.nullable(),
+  })
+  .strict();
+
+export const gpkStaffSummarySchema = z
+  .object({
+    membershipId: uuidSchema,
+    userId: uuidSchema,
+    displayName: z.string().min(1),
+    avatarUrl: z.string().url().nullable(),
+    roleTitle: z.string().nullable(),
+  })
+  .strict();
+
+export const activeGpkAssignmentSummarySchema = z
+  .object({
+    id: uuidSchema,
+    organizationId: uuidSchema,
+    studentId: uuidSchema,
+    roleContext: z.literal('GPK'),
+    startsOn: schoolDateSchema,
+    endsOn: schoolDateSchema.nullable(),
+    maxCaseload: z.number().int().positive(),
+    staff: gpkStaffSummarySchema,
   })
   .strict();
 
@@ -128,14 +189,132 @@ export const studentSummarySchema = z
   .strict();
 export const studentListItemSchema = studentSummarySchema
   .extend({
+    gender: genderSchema,
+    dateOfBirth: schoolDateSchema,
+    specialNeedsFlag: strictBooleanSchema,
+    status: accountStatusSchema,
+    primaryClassification: z.string().nullable(),
+    currentPlacement: z.string().nullable(),
     enrollments: z.array(studentEnrollmentSummarySchema),
+    activeEnrollment: studentEnrollmentSummarySchema.nullable(),
+    activeGpkAssignment: activeGpkAssignmentSummarySchema.nullable(),
   })
   .strict();
 export const studentsResponseSchema = z
   .object({ data: z.array(studentListItemSchema), meta: collectionMetaSchema })
   .strict();
+
+export const guardianContactSchema = z
+  .object({
+    id: uuidSchema,
+    name: z.string().min(1),
+    relationship: z.string().min(1),
+    phone: z.string().nullable(),
+    email: z.string().email().nullable(),
+    address: z.string().nullable(),
+    isPrimary: strictBooleanSchema,
+  })
+  .strict();
+export const studentDetailSchema = studentListItemSchema
+  .extend({
+    address: z.string().nullable(),
+    guardians: z.array(guardianContactSchema),
+  })
+  .strict();
 export const studentDetailResponseSchema = z
-  .object({ data: studentListItemSchema })
+  .object({ data: studentDetailSchema })
+  .strict();
+
+const nullableTrimmedText = (maximum: number) =>
+  z.string().trim().min(1).max(maximum).nullable();
+
+export const studentEnrollmentCommandSchema = z
+  .object({
+    academicYearId: uuidSchema,
+    classId: uuidSchema,
+    startsOn: schoolDateSchema,
+    endsOn: schoolDateSchema.nullable().optional(),
+  })
+  .strict()
+  .refine((value) => !value.endsOn || value.endsOn >= value.startsOn, {
+    path: ['endsOn'],
+    message: 'endsOn must be on or after startsOn.',
+  });
+
+export const studentCreateCommandSchema = z
+  .object({
+    studentNumber: z.string().trim().min(1).max(64),
+    fullName: z.string().trim().min(1).max(256),
+    nickname: nullableTrimmedText(128).optional(),
+    gender: genderSchema,
+    dateOfBirth: schoolDateSchema,
+    address: nullableTrimmedText(1000).optional(),
+    specialNeedsFlag: strictBooleanSchema.optional(),
+    status: accountStatusSchema.optional(),
+    avatarUrl: z.string().url().nullable().optional(),
+    primaryClassification: nullableTrimmedText(256).optional(),
+    currentPlacement: nullableTrimmedText(256).optional(),
+    activeEnrollment: studentEnrollmentCommandSchema.optional(),
+  })
+  .strict();
+
+export const studentUpdateCommandSchema = z
+  .object({
+    studentNumber: z.string().trim().min(1).max(64).optional(),
+    fullName: z.string().trim().min(1).max(256).optional(),
+    nickname: nullableTrimmedText(128).optional(),
+    gender: genderSchema.optional(),
+    dateOfBirth: schoolDateSchema.optional(),
+    address: nullableTrimmedText(1000).optional(),
+    specialNeedsFlag: strictBooleanSchema.optional(),
+    status: accountStatusSchema.optional(),
+    avatarUrl: z.string().url().nullable().optional(),
+    primaryClassification: nullableTrimmedText(256).optional(),
+    currentPlacement: nullableTrimmedText(256).optional(),
+    activeEnrollment: studentEnrollmentCommandSchema.optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one student field is required.',
+  });
+
+export const studentMutationResponseSchema = z
+  .object({ data: studentDetailSchema })
+  .strict();
+
+export const gpkAssignmentQuerySchema = z
+  .object({
+    schoolDate: schoolDateSchema.optional(),
+    studentId: uuidSchema.optional(),
+    membershipId: uuidSchema.optional(),
+  })
+  .strict();
+
+export const gpkAssignmentSchema = activeGpkAssignmentSummarySchema
+  .extend({
+    student: studentSummarySchema,
+  })
+  .strict();
+export const gpkAssignmentsResponseSchema = z
+  .object({ data: z.array(gpkAssignmentSchema), meta: collectionMetaSchema })
+  .strict();
+
+export const gpkAssignmentUpsertCommandSchema = z
+  .object({
+    membershipId: uuidSchema,
+    startsOn: schoolDateSchema,
+    endsOn: schoolDateSchema.nullable().optional(),
+  })
+  .strict()
+  .refine((value) => !value.endsOn || value.endsOn >= value.startsOn, {
+    path: ['endsOn'],
+    message: 'endsOn must be on or after startsOn.',
+  });
+export const gpkAssignmentEndCommandSchema = z
+  .object({ endsOn: schoolDateSchema })
+  .strict();
+export const gpkAssignmentMutationResponseSchema = z
+  .object({ data: gpkAssignmentSchema })
   .strict();
 
 export const studentListQuerySchema = z
@@ -244,9 +423,30 @@ export type UnitsResponse = z.infer<typeof unitsResponseSchema>;
 export type GradesResponse = z.infer<typeof gradesResponseSchema>;
 export type ClassesResponse = z.infer<typeof classesResponseSchema>;
 export type SubjectsResponse = z.infer<typeof subjectsResponseSchema>;
+export type StaffDirectoryResponse = z.infer<
+  typeof staffDirectoryResponseSchema
+>;
 export type StudentListQuery = z.infer<typeof studentListQuerySchema>;
 export type StudentsResponse = z.infer<typeof studentsResponseSchema>;
 export type StudentDetailResponse = z.infer<typeof studentDetailResponseSchema>;
+export type StudentCreateCommand = z.infer<typeof studentCreateCommandSchema>;
+export type StudentUpdateCommand = z.infer<typeof studentUpdateCommandSchema>;
+export type StudentMutationResponse = z.infer<
+  typeof studentMutationResponseSchema
+>;
+export type GpkAssignmentQuery = z.infer<typeof gpkAssignmentQuerySchema>;
+export type GpkAssignmentsResponse = z.infer<
+  typeof gpkAssignmentsResponseSchema
+>;
+export type GpkAssignmentUpsertCommand = z.infer<
+  typeof gpkAssignmentUpsertCommandSchema
+>;
+export type GpkAssignmentEndCommand = z.infer<
+  typeof gpkAssignmentEndCommandSchema
+>;
+export type GpkAssignmentMutationResponse = z.infer<
+  typeof gpkAssignmentMutationResponseSchema
+>;
 export type AttendanceQuery = z.infer<typeof attendanceQuerySchema>;
 export type AttendanceRosterResponse = z.infer<
   typeof attendanceRosterResponseSchema

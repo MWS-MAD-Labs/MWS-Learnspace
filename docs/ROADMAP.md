@@ -754,6 +754,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Special rules:** enforce the configured GPK assignment limit transactionally; do not expose guardian contacts broadly.
 - **Acceptance:** all student and assignment mutations are server-authorized and audited.
 - **Validate:** role/scope matrix tests and assignment concurrency tests.
+- **Progress (2026-08-24):** Added strict contracts and OpenAPI for scoped staff/student reads, privileged student mutations, and GPK assignment commands; implemented session-derived authorization, sensitive guardian-contact gating, transactional audited student writes, row-locked GPK reassignment/end commands with a server-enforced caseload limit, API-backed web loading/retry states, and removal of production user/student/GPK assignment browser persistence. PostgreSQL role/scope, audit, and concurrent-capacity tests pass. Remaining before completion: the user/membership administration UI/API flow and dedicated Compose-backed P5 E2E coverage.
 
 ## P5-002 — Migrate Learning Journey reads and editing
 

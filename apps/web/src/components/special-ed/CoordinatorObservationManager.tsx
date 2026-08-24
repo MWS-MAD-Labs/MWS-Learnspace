@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import { demoRoleSwitcherEnabled, useApp } from '../../context/AppContext';
+import { ApiClientError } from '../../services/apiClient';
 import { storageService } from '../../services/storageService';
+import { studentAdministrationService } from '../../services/studentAdministrationService';
 import {
   Student,
   ObservationAssignment,
@@ -26,6 +28,7 @@ type CoordinatorTab =
 
 export const CoordinatorObservationManager: React.FC = () => {
   const {
+    organizationId,
     currentUser,
     allUsers,
     students,
@@ -71,6 +74,7 @@ export const CoordinatorObservationManager: React.FC = () => {
   const [selectedStudentForGPK, setSelectedStudentForGPK] =
     useState<Student | null>(null);
   const [selectedGPKTeacherId, setSelectedGPKTeacherId] = useState<string>('');
+  const [isAssigningGPK, setIsAssigningGPK] = useState(false);
 
   // Selected student for "ALL_RESULTS" tab
   const specialStudents = students.filter((s) => s.specialNeedsFlag);
@@ -160,50 +164,85 @@ export const CoordinatorObservationManager: React.FC = () => {
     );
   };
 
-  // Handle GPK Assignment (Strictly enforce max 2 students per GPK)
-  const handleAssignGPK = (e: React.FormEvent) => {
+  const handleAssignGPK = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStudentForGPK || !selectedGPKTeacherId) return;
+    if (!selectedStudentForGPK || !selectedGPKTeacherId || isAssigningGPK)
+      return;
 
     const teacher = allUsers.find((u) => u.id === selectedGPKTeacherId);
     if (!teacher) return;
 
-    // Check count of assigned students for this teacher
-    const currentTeacherAssignedStudents = students.filter(
-      (s) =>
-        s.assignedGPKTeacherId === selectedGPKTeacherId &&
-        s.id !== selectedStudentForGPK.id,
-    );
+    setIsAssigningGPK(true);
+    try {
+      if (demoRoleSwitcherEnabled) {
+        const success = storageService.assignGPKTeacherToStudent(
+          selectedStudentForGPK.id,
+          teacher.id,
+          teacher.name,
+        );
+        if (!success) {
+          showToast(
+            'error',
+            'Capacity Limit Reached',
+            'The fake-data GPK teacher has reached the demo caseload limit.',
+          );
+          return;
+        }
+      } else {
+        if (!teacher.membershipId) {
+          showToast(
+            'error',
+            'Assignment Failed',
+            'This staff entry is missing the membership required for assignment.',
+          );
+          return;
+        }
+        const now = new Date();
+        const startsOn = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        await studentAdministrationService.assignGpkTeacher(
+          organizationId,
+          selectedStudentForGPK.id,
+          { membershipId: teacher.membershipId, startsOn },
+        );
+      }
 
-    if (currentTeacherAssignedStudents.length >= 2) {
-      showToast(
-        'error',
-        'Capacity Limit Reached',
-        `${teacher.name} is already assigned to ${currentTeacherAssignedStudents.length} special needs students. Maximum is 2 per GPK.`,
-      );
-      return;
-    }
-
-    const success = storageService.assignGPKTeacherToStudent(
-      selectedStudentForGPK.id,
-      teacher.id,
-      teacher.name,
-    );
-
-    if (success) {
-      refreshData();
+      await refreshData();
       setIsAssignGPKModalOpen(false);
+      setSelectedGPKTeacherId('');
       showToast(
         'success',
         'GPK Teacher Assigned',
-        `Assigned ${selectedStudentForGPK.name} to GPK Teacher ${teacher.name} (Capacity: ${currentTeacherAssignedStudents.length + 1}/2)`,
+        `Assigned ${selectedStudentForGPK.name} to GPK Teacher ${teacher.name}.`,
       );
-    } else {
-      showToast(
-        'error',
-        'Assignment Failed',
-        'Maximum 2 students allowed per GPK teacher.',
-      );
+    } catch (error) {
+      if (
+        error instanceof ApiClientError &&
+        error.code === 'GPK_CASELOAD_CAPACITY'
+      ) {
+        showToast(
+          'error',
+          'Capacity Limit Reached',
+          'This GPK teacher has reached the server-configured caseload limit. Choose another teacher or update an existing assignment.',
+        );
+      } else if (
+        error instanceof ApiClientError &&
+        (error.code === 'GPK_ASSIGNMENT_CONFLICT' ||
+          error.category === 'conflict')
+      ) {
+        showToast(
+          'error',
+          'Assignment Conflict',
+          'The assignment changed in another request. Refresh the data and try again.',
+        );
+      } else {
+        showToast(
+          'error',
+          'Assignment Failed',
+          'The GPK assignment could not be saved. Please try again.',
+        );
+      }
+    } finally {
+      setIsAssigningGPK(false);
     }
   };
 
@@ -308,13 +347,14 @@ export const CoordinatorObservationManager: React.FC = () => {
               const assigned = students.filter(
                 (s) => s.assignedGPKTeacherId === teacher.id,
               );
-              const isFull = assigned.length >= 2;
+              const maxCaseload = assigned[0]?.gpkMaxCaseload ?? 2;
+              const isAtDisplayedCapacity = assigned.length >= maxCaseload;
               return (
                 <div
                   key={teacher.id}
                   id={`gpk-card-${teacher.id}`}
                   className={`bg-white border rounded-2xl p-4 shadow-xs space-y-3 transition-all ${
-                    isFull
+                    isAtDisplayedCapacity
                       ? 'border-amber-300 bg-amber-50/20'
                       : 'border-[#EFE7DC]'
                   }`}
@@ -340,12 +380,12 @@ export const CoordinatorObservationManager: React.FC = () => {
                     </div>
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                        isFull
+                        isAtDisplayedCapacity
                           ? 'bg-amber-100 text-amber-900 border border-amber-300'
                           : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                       }`}
                     >
-                      {assigned.length} / 2 Students
+                      {assigned.length} / {maxCaseload} Students
                     </span>
                   </div>
 
@@ -355,7 +395,8 @@ export const CoordinatorObservationManager: React.FC = () => {
                     </span>
                     {assigned.length === 0 ? (
                       <p className="text-[11px] text-stone-400 italic">
-                        No students assigned currently (Capacity: 2 available)
+                        No students assigned currently (displayed capacity:{' '}
+                        {maxCaseload})
                       </p>
                     ) : (
                       assigned.map((s) => (
@@ -749,7 +790,7 @@ export const CoordinatorObservationManager: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: ASSIGN GPK TEACHER (WITH MAX 2 ENFORCEMENT) */}
+      {/* MODAL: ASSIGN GPK TEACHER */}
       {isAssignGPKModalOpen && selectedStudentForGPK && (
         <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
@@ -774,7 +815,7 @@ export const CoordinatorObservationManager: React.FC = () => {
             <form onSubmit={handleAssignGPK} className="space-y-4 text-xs">
               <div className="space-y-1.5">
                 <label className="font-bold text-stone-700">
-                  Select GPK Teacher (Max 2 Students / GPK):
+                  Select GPK Teacher (capacity is enforced by the server):
                 </label>
                 <div className="space-y-2">
                   {gpkTeachers.map((teacher) => {
@@ -783,16 +824,16 @@ export const CoordinatorObservationManager: React.FC = () => {
                         s.assignedGPKTeacherId === teacher.id &&
                         s.id !== selectedStudentForGPK.id,
                     );
-                    const isFull = assigned.length >= 2;
+                    const maxCaseload = assigned[0]?.gpkMaxCaseload ?? 2;
+                    const isAtDisplayedCapacity =
+                      assigned.length >= maxCaseload;
                     return (
                       <label
                         key={teacher.id}
                         className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
                           selectedGPKTeacherId === teacher.id
                             ? 'border-[#6E161E] bg-[#6E161E]/5 ring-1 ring-[#6E161E]'
-                            : isFull
-                              ? 'border-stone-200 bg-stone-100/70 opacity-60 cursor-not-allowed'
-                              : 'border-stone-200 hover:bg-stone-50'
+                            : 'border-stone-200 hover:bg-stone-50'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
@@ -800,7 +841,7 @@ export const CoordinatorObservationManager: React.FC = () => {
                             type="radio"
                             name="gpkTeacher"
                             value={teacher.id}
-                            disabled={isFull}
+                            disabled={isAssigningGPK}
                             checked={selectedGPKTeacherId === teacher.id}
                             onChange={() => setSelectedGPKTeacherId(teacher.id)}
                             className="accent-[#6E161E]"
@@ -816,12 +857,12 @@ export const CoordinatorObservationManager: React.FC = () => {
                         </div>
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            isFull
-                              ? 'bg-rose-100 text-rose-800'
+                            isAtDisplayedCapacity
+                              ? 'bg-amber-100 text-amber-800'
                               : 'bg-emerald-100 text-emerald-800'
                           }`}
                         >
-                          {assigned.length}/2 Assigned {isFull && '(Full)'}
+                          {assigned.length}/{maxCaseload} currently assigned
                         </span>
                       </label>
                     );
@@ -845,15 +886,17 @@ export const CoordinatorObservationManager: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAssignGPKModalOpen(false)}
-                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-bold"
+                  disabled={isAssigningGPK}
+                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-bold disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#6E161E] hover:bg-[#581118] text-white rounded-xl font-bold shadow-xs"
+                  disabled={!selectedGPKTeacherId || isAssigningGPK}
+                  className="px-4 py-2 bg-[#6E161E] hover:bg-[#581118] text-white rounded-xl font-bold shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Confirm Assignment
+                  {isAssigningGPK ? 'Assigning…' : 'Confirm Assignment'}
                 </button>
               </div>
             </form>

@@ -111,10 +111,14 @@ const MainContent: React.FC = () => {
 };
 
 const AuthenticatedApplication: React.FC = () => {
-  const { currentUser } = useAuth();
-  if (!currentUser) return null;
+  const { currentUser, session } = useAuth();
+  const organizationId = session?.memberships[0]?.organizationId;
+  if (!currentUser || !organizationId) return null;
   return (
-    <AppProvider authenticatedUser={currentUser}>
+    <AppProvider
+      authenticatedUser={currentUser}
+      organizationId={organizationId}
+    >
       <MainContent />
     </AppProvider>
   );

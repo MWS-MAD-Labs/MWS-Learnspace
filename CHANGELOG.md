@@ -33,6 +33,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Membership-scoped organization, academic year, unit, grade, class, subject, student list/detail, and class/date attendance endpoints with non-enumerating cross-scope denials.
 - Atomic class/date attendance bulk upserts with server-derived recorder identity, same-transaction audit events, strict enrollment validation, and serializable optimistic concurrency.
 - Disposable Compose-backed Playwright attendance testing with deterministic test-only real sessions, PostgreSQL fixtures, validation, persistence, forbidden-scope, and logout coverage.
+- Strict shared contracts and generated OpenAPI operations for organization staff directories, rich authorized student reads, privileged student creation/updates, and GPK assignment lifecycle commands.
+- Transactional GPK assignment capacity enforcement with PostgreSQL row locking, atomic reassignment/end behavior, session-derived actors, audit events, and concurrency integration tests.
+- API-backed web student/staff loading with initial loading and retry states, non-blocking refresh failure feedback, and contract-validated GPK assignment mutations.
 
 ### Changed
 
@@ -46,11 +49,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Hardened tenant integrity with database triggers covering organization-owned relations and immutable tenant ownership; tenant actor references now require an active user and active organization membership when assigned, while unchanged historical attribution remains update-safe after an actor leaves. Membership user identity and audit actor attribution are immutable; audit actor deletion is restricted. Added composite IEP lineage for goal-achievement events, strict audit metadata schemas, and database immutability for completed observations and used definitions.
 - Replaced browser-selected startup identity with the API current-session response. The fake-data role switcher now requires both explicit development-only build flags and cannot change server identity.
 - Migrated the attendance workspace from browser seed/storage data to authorized API class rosters and PostgreSQL records, including loading, empty, retry, validation, read-only, conflict, and save-success states.
+- Migrated production user/student directory reads and GPK assignment writes away from browser storage; development fake-data behavior remains available only behind the explicit demo flags.
+- Restricted broad student responses from exposing addresses or guardian contacts, and limited sensitive student detail to documented leadership and Special Education Coordinator scope.
 - Updated the application and workspace package version to `0.2.0`, the first end-to-end feature migration release.
 
 ### Fixed
 
 - Attendance saves now promote newly persisted draft rows into the local server snapshot immediately, clearing stale unsaved counts and draft-default labels while safely defaulting any missing draft entry.
+- Student enrollment updates now reject conflicting same-day class starts instead of leaving ambiguous simultaneous active enrollments.
+- GPK assignment routes now validate UUID path parameters before Prisma or raw PostgreSQL queries.
 
 ### Removed
 

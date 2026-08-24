@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
@@ -44,17 +44,18 @@ describe('App authentication shell', () => {
     expect(screen.queryByText("Today's Attendance")).not.toBeInTheDocument();
   });
 
-  it('renders the dashboard only after a valid API session loads', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify(session), {
-            status: 200,
-            headers: { 'content-type': 'application/json' },
-          }),
-      ),
-    );
+  it('renders the dashboard only after the session and authorized students load', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const payload = url.includes('/students')
+        ? { data: [], meta: { count: 0 } }
+        : session;
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
     render(<App />);
 
     expect(
@@ -63,9 +64,56 @@ describe('App authentication shell', () => {
       }),
     ).toBeVisible();
     expect(screen.getByText('Attendance workspace')).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '/api/v1/organizations/33333333-3333-4333-8333-333333333333/students',
+      ),
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(
+      fetchMock.mock.calls.some(([input]) => String(input).includes('/staff')),
+    ).toBe(false);
     expect(
       screen.queryByRole('button', { name: /simulate role/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('shows an actionable error and retries authorized student loading', async () => {
+    let studentAttempts = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (!String(input).includes('/students')) {
+          return new Response(JSON.stringify(session), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        studentAttempts += 1;
+        if (studentAttempts === 1) throw new TypeError('offline');
+        return new Response(JSON.stringify({ data: [], meta: { count: 0 } }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }),
+    );
+    render(<App />);
+
+    expect(
+      await screen.findByRole('heading', {
+        name: /student data could not be loaded/i,
+      }),
+    ).toBeVisible();
+    fireEvent.click(
+      screen.getByRole('button', { name: /retry loading data/i }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: /good morning, demo principal/i,
+      }),
+    ).toBeVisible();
+    expect(studentAttempts).toBe(2);
   });
 
   it('renders login instead of data when no session exists', async () => {

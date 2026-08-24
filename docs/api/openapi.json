@@ -476,6 +476,77 @@
         }
       }
     },
+    "/organizations/{organizationId}/staff": {
+      "get": {
+        "tags": [
+          "Staff administration"
+        ],
+        "operationId": "listOrganizationStaff",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDirectoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/organizations/{organizationId}/students": {
       "get": {
         "tags": [
@@ -582,6 +653,104 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Students"
+        ],
+        "operationId": "createStudent",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentCreateCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Student created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Student number conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/organizations/{organizationId}/students/{studentId}": {
@@ -653,6 +822,430 @@
           },
           "403": {
             "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Students"
+        ],
+        "operationId": "updateStudent",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentUpdateCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Student number conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/gpk-assignments": {
+      "get": {
+        "tags": [
+          "Staff administration"
+        ],
+        "operationId": "listGpkAssignments",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "schoolDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "membershipId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GpkAssignmentsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/students/{studentId}/gpk-assignment": {
+      "put": {
+        "tags": [
+          "Staff administration"
+        ],
+        "operationId": "assignGpkTeacher",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GpkAssignmentUpsertCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GpkAssignmentMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Assignment or capacity conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/gpk-assignments/{assignmentId}/end": {
+      "post": {
+        "tags": [
+          "Staff administration"
+        ],
+        "operationId": "endGpkAssignment",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "assignmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GpkAssignmentEndCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GpkAssignmentMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Assignment already ended",
             "content": {
               "application/json": {
                 "schema": {
@@ -1410,6 +2003,100 @@
         ],
         "additionalProperties": false
       },
+      "StaffDirectoryResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "membershipId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "userId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "organizationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "displayName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "avatarUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "PRINCIPAL",
+                    "DIRECTOR",
+                    "GRADE_TEACHER",
+                    "SUBJECT_TEACHER",
+                    "SPECIAL_ED_COORDINATOR",
+                    "SPECIAL_ED_TEACHER",
+                    "SPECIALIST"
+                  ]
+                },
+                "roleTitle": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "status": {
+                  "const": "ACTIVE"
+                }
+              },
+              "required": [
+                "membershipId",
+                "userId",
+                "organizationId",
+                "displayName",
+                "avatarUrl",
+                "role",
+                "roleTitle",
+                "status"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "count"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
       "StudentsResponse": {
         "type": "object",
         "properties": {
@@ -1455,6 +2142,47 @@
                     }
                   ]
                 },
+                "gender": {
+                  "type": "string",
+                  "enum": [
+                    "MALE",
+                    "FEMALE",
+                    "OTHER",
+                    "UNSPECIFIED"
+                  ]
+                },
+                "dateOfBirth": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "specialNeedsFlag": {},
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "DISABLED"
+                  ]
+                },
+                "primaryClassification": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "currentPlacement": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "enrollments": {
                   "type": "array",
                   "items": {
@@ -1480,9 +2208,17 @@
                         "type": "string",
                         "format": "uuid"
                       },
+                      "unitName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
                       "gradeId": {
                         "type": "string",
                         "format": "uuid"
+                      },
+                      "gradeName": {
+                        "type": "string",
+                        "minLength": 1
                       },
                       "startsOn": {
                         "type": "string",
@@ -1506,12 +2242,189 @@
                       "classId",
                       "className",
                       "unitId",
+                      "unitName",
                       "gradeId",
+                      "gradeName",
                       "startsOn",
                       "endsOn"
                     ],
                     "additionalProperties": false
                   }
+                },
+                "activeEnrollment": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "academicYearId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "classId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "className": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "unitId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "unitName": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "gradeId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "gradeName": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "startsOn": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "endsOn": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "academicYearId",
+                        "classId",
+                        "className",
+                        "unitId",
+                        "unitName",
+                        "gradeId",
+                        "gradeName",
+                        "startsOn",
+                        "endsOn"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "activeGpkAssignment": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "studentId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "roleContext": {
+                          "const": "GPK"
+                        },
+                        "startsOn": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "endsOn": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "maxCaseload": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "staff": {
+                          "type": "object",
+                          "properties": {
+                            "membershipId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "userId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "displayName": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "avatarUrl": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uri"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "roleTitle": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "membershipId",
+                            "userId",
+                            "displayName",
+                            "avatarUrl",
+                            "roleTitle"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "studentId",
+                        "roleContext",
+                        "startsOn",
+                        "endsOn",
+                        "maxCaseload",
+                        "staff"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
@@ -1521,7 +2434,15 @@
                 "fullName",
                 "nickname",
                 "avatarUrl",
-                "enrollments"
+                "gender",
+                "dateOfBirth",
+                "specialNeedsFlag",
+                "status",
+                "primaryClassification",
+                "currentPlacement",
+                "enrollments",
+                "activeEnrollment",
+                "activeGpkAssignment"
               ],
               "additionalProperties": false
             }
@@ -1589,6 +2510,47 @@
                   }
                 ]
               },
+              "gender": {
+                "type": "string",
+                "enum": [
+                  "MALE",
+                  "FEMALE",
+                  "OTHER",
+                  "UNSPECIFIED"
+                ]
+              },
+              "dateOfBirth": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "specialNeedsFlag": {},
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "DISABLED"
+                ]
+              },
+              "primaryClassification": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "currentPlacement": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "enrollments": {
                 "type": "array",
                 "items": {
@@ -1614,9 +2576,17 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "unitName": {
+                      "type": "string",
+                      "minLength": 1
+                    },
                     "gradeId": {
                       "type": "string",
                       "format": "uuid"
+                    },
+                    "gradeName": {
+                      "type": "string",
+                      "minLength": 1
                     },
                     "startsOn": {
                       "type": "string",
@@ -1640,9 +2610,258 @@
                     "classId",
                     "className",
                     "unitId",
+                    "unitName",
                     "gradeId",
+                    "gradeName",
                     "startsOn",
                     "endsOn"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "activeEnrollment": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "academicYearId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "classId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "className": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "unitId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "unitName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "gradeId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "gradeName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "startsOn": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "endsOn": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "academicYearId",
+                      "classId",
+                      "className",
+                      "unitId",
+                      "unitName",
+                      "gradeId",
+                      "gradeName",
+                      "startsOn",
+                      "endsOn"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "activeGpkAssignment": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "organizationId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "studentId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "roleContext": {
+                        "const": "GPK"
+                      },
+                      "startsOn": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "endsOn": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "maxCaseload": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "staff": {
+                        "type": "object",
+                        "properties": {
+                          "membershipId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "userId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "avatarUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "roleTitle": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "membershipId",
+                          "userId",
+                          "displayName",
+                          "avatarUrl",
+                          "roleTitle"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "organizationId",
+                      "studentId",
+                      "roleContext",
+                      "startsOn",
+                      "endsOn",
+                      "maxCaseload",
+                      "staff"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "address": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "guardians": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "relationship": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "phone": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "email": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "address": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "isPrimary": {}
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "relationship",
+                    "phone",
+                    "email",
+                    "address",
+                    "isPrimary"
                   ],
                   "additionalProperties": false
                 }
@@ -1655,7 +2874,1083 @@
               "fullName",
               "nickname",
               "avatarUrl",
-              "enrollments"
+              "gender",
+              "dateOfBirth",
+              "specialNeedsFlag",
+              "status",
+              "primaryClassification",
+              "currentPlacement",
+              "enrollments",
+              "activeEnrollment",
+              "activeGpkAssignment",
+              "address",
+              "guardians"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "StudentCreateCommand": {
+        "type": "object",
+        "properties": {
+          "studentNumber": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "MALE",
+              "FEMALE",
+              "OTHER",
+              "UNSPECIFIED"
+            ]
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "specialNeedsFlag": {},
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ]
+          },
+          "avatarUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "primaryClassification": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currentPlacement": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activeEnrollment": {
+            "type": "object",
+            "properties": {
+              "academicYearId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "classId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "startsOn": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "endsOn": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "academicYearId",
+              "classId",
+              "startsOn"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "studentNumber",
+          "fullName",
+          "gender",
+          "dateOfBirth"
+        ],
+        "additionalProperties": false
+      },
+      "StudentUpdateCommand": {
+        "type": "object",
+        "properties": {
+          "studentNumber": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "MALE",
+              "FEMALE",
+              "OTHER",
+              "UNSPECIFIED"
+            ]
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "specialNeedsFlag": {},
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ]
+          },
+          "avatarUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "primaryClassification": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currentPlacement": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activeEnrollment": {
+            "type": "object",
+            "properties": {
+              "academicYearId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "classId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "startsOn": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "endsOn": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "academicYearId",
+              "classId",
+              "startsOn"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "StudentMutationResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "organizationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "studentNumber": {
+                "type": "string",
+                "minLength": 1
+              },
+              "fullName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "nickname": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "avatarUrl": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "gender": {
+                "type": "string",
+                "enum": [
+                  "MALE",
+                  "FEMALE",
+                  "OTHER",
+                  "UNSPECIFIED"
+                ]
+              },
+              "dateOfBirth": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "specialNeedsFlag": {},
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "DISABLED"
+                ]
+              },
+              "primaryClassification": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "currentPlacement": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "enrollments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "academicYearId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "classId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "className": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "unitId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "unitName": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "gradeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "gradeName": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "startsOn": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "endsOn": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "academicYearId",
+                    "classId",
+                    "className",
+                    "unitId",
+                    "unitName",
+                    "gradeId",
+                    "gradeName",
+                    "startsOn",
+                    "endsOn"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "activeEnrollment": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "academicYearId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "classId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "className": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "unitId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "unitName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "gradeId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "gradeName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "startsOn": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "endsOn": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "academicYearId",
+                      "classId",
+                      "className",
+                      "unitId",
+                      "unitName",
+                      "gradeId",
+                      "gradeName",
+                      "startsOn",
+                      "endsOn"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "activeGpkAssignment": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "organizationId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "studentId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "roleContext": {
+                        "const": "GPK"
+                      },
+                      "startsOn": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "endsOn": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "maxCaseload": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "staff": {
+                        "type": "object",
+                        "properties": {
+                          "membershipId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "userId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "avatarUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "roleTitle": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "membershipId",
+                          "userId",
+                          "displayName",
+                          "avatarUrl",
+                          "roleTitle"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "organizationId",
+                      "studentId",
+                      "roleContext",
+                      "startsOn",
+                      "endsOn",
+                      "maxCaseload",
+                      "staff"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "address": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "guardians": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "relationship": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "phone": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "email": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "address": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "isPrimary": {}
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "relationship",
+                    "phone",
+                    "email",
+                    "address",
+                    "isPrimary"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "organizationId",
+              "studentNumber",
+              "fullName",
+              "nickname",
+              "avatarUrl",
+              "gender",
+              "dateOfBirth",
+              "specialNeedsFlag",
+              "status",
+              "primaryClassification",
+              "currentPlacement",
+              "enrollments",
+              "activeEnrollment",
+              "activeGpkAssignment",
+              "address",
+              "guardians"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GpkAssignmentsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "organizationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "studentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "roleContext": {
+                  "const": "GPK"
+                },
+                "startsOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "endsOn": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxCaseload": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "staff": {
+                  "type": "object",
+                  "properties": {
+                    "membershipId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "userId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "avatarUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "roleTitle": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "membershipId",
+                    "userId",
+                    "displayName",
+                    "avatarUrl",
+                    "roleTitle"
+                  ],
+                  "additionalProperties": false
+                },
+                "student": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "studentNumber": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "fullName": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "nickname": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "avatarUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "organizationId",
+                    "studentNumber",
+                    "fullName",
+                    "nickname",
+                    "avatarUrl"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "studentId",
+                "roleContext",
+                "startsOn",
+                "endsOn",
+                "maxCaseload",
+                "staff",
+                "student"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "count"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "GpkAssignmentUpsertCommand": {
+        "type": "object",
+        "properties": {
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endsOn": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "membershipId",
+          "startsOn"
+        ],
+        "additionalProperties": false
+      },
+      "GpkAssignmentEndCommand": {
+        "type": "object",
+        "properties": {
+          "endsOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "required": [
+          "endsOn"
+        ],
+        "additionalProperties": false
+      },
+      "GpkAssignmentMutationResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "organizationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "studentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "roleContext": {
+                "const": "GPK"
+              },
+              "startsOn": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "endsOn": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "maxCaseload": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "staff": {
+                "type": "object",
+                "properties": {
+                  "membershipId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "avatarUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "roleTitle": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "membershipId",
+                  "userId",
+                  "displayName",
+                  "avatarUrl",
+                  "roleTitle"
+                ],
+                "additionalProperties": false
+              },
+              "student": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "studentNumber": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "nickname": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "avatarUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "organizationId",
+                  "studentNumber",
+                  "fullName",
+                  "nickname",
+                  "avatarUrl"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "organizationId",
+              "studentId",
+              "roleContext",
+              "startsOn",
+              "endsOn",
+              "maxCaseload",
+              "staff",
+              "student"
             ],
             "additionalProperties": false
           }

@@ -9,10 +9,18 @@ import {
   attendanceRosterResponseSchema,
   classesResponseSchema,
   currentSessionResponseSchema,
+  gpkAssignmentEndCommandSchema,
+  gpkAssignmentMutationResponseSchema,
+  gpkAssignmentsResponseSchema,
+  gpkAssignmentUpsertCommandSchema,
   gradesResponseSchema,
   organizationsResponseSchema,
+  staffDirectoryResponseSchema,
+  studentCreateCommandSchema,
   studentDetailResponseSchema,
+  studentMutationResponseSchema,
   studentsResponseSchema,
+  studentUpdateCommandSchema,
   subjectsResponseSchema,
   unitsResponseSchema,
   versionResponseSchema,
@@ -34,8 +42,16 @@ const components: Record<string, ZodTypeAny> = {
   GradesResponse: gradesResponseSchema,
   ClassesResponse: classesResponseSchema,
   SubjectsResponse: subjectsResponseSchema,
+  StaffDirectoryResponse: staffDirectoryResponseSchema,
   StudentsResponse: studentsResponseSchema,
   StudentDetailResponse: studentDetailResponseSchema,
+  StudentCreateCommand: studentCreateCommandSchema,
+  StudentUpdateCommand: studentUpdateCommandSchema,
+  StudentMutationResponse: studentMutationResponseSchema,
+  GpkAssignmentsResponse: gpkAssignmentsResponseSchema,
+  GpkAssignmentUpsertCommand: gpkAssignmentUpsertCommandSchema,
+  GpkAssignmentEndCommand: gpkAssignmentEndCommandSchema,
+  GpkAssignmentMutationResponse: gpkAssignmentMutationResponseSchema,
   AttendanceRosterResponse: attendanceRosterResponseSchema,
   AttendanceBulkSaveCommand: attendanceBulkSaveCommandSchema,
   AttendanceBulkSaveResponse: attendanceBulkSaveResponseSchema,
@@ -205,6 +221,18 @@ const studentParameter = {
   required: true,
   schema: { type: 'string', format: 'uuid' },
 };
+const assignmentParameter = {
+  name: 'assignmentId',
+  in: 'path',
+  required: true,
+  schema: { type: 'string', format: 'uuid' },
+};
+const csrfParameter = {
+  name: 'x-csrf-token',
+  in: 'header',
+  required: true,
+  schema: { type: 'string', minLength: 1 },
+};
 const schoolDateParameter = {
   name: 'schoolDate',
   in: 'query',
@@ -299,6 +327,13 @@ export function generateOpenApiDocument() {
           'SubjectsResponse',
         ),
       },
+      '/organizations/{organizationId}/staff': {
+        get: collectionOperation(
+          'Staff administration',
+          'listOrganizationStaff',
+          'StaffDirectoryResponse',
+        ),
+      },
       '/organizations/{organizationId}/students': {
         get: {
           tags: ['Students'],
@@ -318,6 +353,24 @@ export function generateOpenApiDocument() {
             ...errorResponses,
           },
         },
+        post: {
+          tags: ['Students'],
+          operationId: 'createStudent',
+          parameters: [organizationParameter, csrfParameter],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/StudentCreateCommand' },
+              },
+            },
+          },
+          responses: {
+            '201': jsonResponse('StudentMutationResponse', 'Student created'),
+            ...errorResponses,
+            '409': jsonResponse('ApiError', 'Student number conflict'),
+          },
+        },
       },
       '/organizations/{organizationId}/students/{studentId}': {
         get: {
@@ -331,6 +384,92 @@ export function generateOpenApiDocument() {
           responses: {
             '200': jsonResponse('StudentDetailResponse'),
             ...errorResponses,
+          },
+        },
+        patch: {
+          tags: ['Students'],
+          operationId: 'updateStudent',
+          parameters: [organizationParameter, studentParameter, csrfParameter],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/StudentUpdateCommand' },
+              },
+            },
+          },
+          responses: {
+            '200': jsonResponse('StudentMutationResponse'),
+            ...errorResponses,
+            '409': jsonResponse('ApiError', 'Student number conflict'),
+          },
+        },
+      },
+      '/organizations/{organizationId}/gpk-assignments': {
+        get: {
+          tags: ['Staff administration'],
+          operationId: 'listGpkAssignments',
+          parameters: [
+            organizationParameter,
+            { ...schoolDateParameter, required: false },
+            ...['studentId', 'membershipId'].map((name) => ({
+              name,
+              in: 'query',
+              required: false,
+              schema: { type: 'string', format: 'uuid' },
+            })),
+          ],
+          responses: {
+            '200': jsonResponse('GpkAssignmentsResponse'),
+            ...errorResponses,
+          },
+        },
+      },
+      '/organizations/{organizationId}/students/{studentId}/gpk-assignment': {
+        put: {
+          tags: ['Staff administration'],
+          operationId: 'assignGpkTeacher',
+          parameters: [organizationParameter, studentParameter, csrfParameter],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/GpkAssignmentUpsertCommand',
+                },
+              },
+            },
+          },
+          responses: {
+            '200': jsonResponse('GpkAssignmentMutationResponse'),
+            ...errorResponses,
+            '409': jsonResponse('ApiError', 'Assignment or capacity conflict'),
+          },
+        },
+      },
+      '/organizations/{organizationId}/gpk-assignments/{assignmentId}/end': {
+        post: {
+          tags: ['Staff administration'],
+          operationId: 'endGpkAssignment',
+          parameters: [
+            organizationParameter,
+            assignmentParameter,
+            csrfParameter,
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/GpkAssignmentEndCommand',
+                },
+              },
+            },
+          },
+          responses: {
+            '200': jsonResponse('GpkAssignmentMutationResponse'),
+            ...errorResponses,
+            '409': jsonResponse('ApiError', 'Assignment already ended'),
           },
         },
       },
@@ -351,16 +490,7 @@ export function generateOpenApiDocument() {
         put: {
           tags: ['Attendance'],
           operationId: 'saveAttendanceRoster',
-          parameters: [
-            organizationParameter,
-            classParameter,
-            {
-              name: 'x-csrf-token',
-              in: 'header',
-              required: true,
-              schema: { type: 'string', minLength: 1 },
-            },
-          ],
+          parameters: [organizationParameter, classParameter, csrfParameter],
           requestBody: {
             required: true,
             content: {

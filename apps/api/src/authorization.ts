@@ -12,6 +12,10 @@ export type Permission =
   | 'special-ed:write'
   | 'special-ed:review'
   | 'report:export'
+  | 'student:admin'
+  | 'student:sensitive-read'
+  | 'staff-directory:read'
+  | 'staff-assignment:admin'
   | 'organization:admin';
 
 const permissionsByRole: Record<MembershipRole, readonly Permission[]> = {
@@ -22,6 +26,10 @@ const permissionsByRole: Record<MembershipRole, readonly Permission[]> = {
     'special-ed:read',
     'special-ed:review',
     'report:export',
+    'student:admin',
+    'student:sensitive-read',
+    'staff-directory:read',
+    'staff-assignment:admin',
     'organization:admin',
   ],
   PRINCIPAL: [
@@ -31,6 +39,8 @@ const permissionsByRole: Record<MembershipRole, readonly Permission[]> = {
     'special-ed:read',
     'special-ed:review',
     'report:export',
+    'student:sensitive-read',
+    'staff-directory:read',
   ],
   GRADE_TEACHER: [
     'attendance:read',
@@ -46,6 +56,9 @@ const permissionsByRole: Record<MembershipRole, readonly Permission[]> = {
     'special-ed:write',
     'special-ed:review',
     'report:export',
+    'student:sensitive-read',
+    'staff-directory:read',
+    'staff-assignment:admin',
   ],
   SPECIAL_ED_TEACHER: [
     'attendance:read',

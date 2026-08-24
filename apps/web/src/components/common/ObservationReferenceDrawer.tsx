@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
 import { FEDC_MILESTONES } from '../../data/seedData';
 import {
@@ -26,8 +27,9 @@ export const ObservationReferenceDrawer: React.FC<
     'FEDC' | 'SENSORY_PROFILE' | 'SFA'
   >('FEDC');
   const [expandedMilestone, setExpandedMilestone] = useState<number | null>(1);
+  const { students } = useApp();
 
-  const student = storageService.getStudent(studentId);
+  const student = students.find((candidate) => candidate.id === studentId);
   const fedcRecords = storageService.getFEDCObservations(studentId);
   const latestFedc = fedcRecords[0];
 

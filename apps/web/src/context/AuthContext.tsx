@@ -30,6 +30,7 @@ function mapSessionToUser(session: CurrentSessionResponse): User | undefined {
   if (!membership) return undefined;
   return {
     id: session.user.id,
+    membershipId: membership.id,
     name: session.user.name,
     email: session.user.email,
     role: membership.role as UserRole,

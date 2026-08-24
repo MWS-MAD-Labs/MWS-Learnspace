@@ -20,25 +20,29 @@ Server authorization is deny-by-default. Browser fields such as `role`, `permiss
 
 Legend: **O** organization scope, **U** assigned unit, **G** assigned grade, **C** assigned class through grade/unit or an explicit future class assignment, **S** assigned subject, **A** assigned student, **—** denied.
 
-| Capability                                   | Director | Principal | Grade Teacher | Subject Teacher | SE Coordinator | SE Teacher / GPK | Specialist |
-| -------------------------------------------- | -------- | --------- | ------------- | --------------- | -------------- | ---------------- | ---------- |
-| List available organizations                 | O        | O         | O             | O               | O              | O                | O          |
-| Read academic years                          | O        | O         | O             | O               | —              | —                | —          |
-| Read units, grades, and classes              | O        | O         | U/G/C         | —               | —              | —                | —          |
-| Read subjects                                | O        | O         | —             | S               | —              | —                | —          |
-| Read general student list/detail             | O        | O         | U/G/C         | —               | A              | A                | A          |
-| Read attendance                              | O        | O         | G/C           | —               | A              | A                | —          |
-| Write attendance                             | —        | —         | G/C           | —               | —              | —                | —          |
-| Read Learning Journeys                       | O        | O         | G/C           | S/C             | A              | A                | —          |
-| Write/submit Learning Journeys               | —        | —         | G/C           | S/C             | —              | —                | —          |
-| Review Learning Journeys                     | —        | O         | —             | —               | —              | —                | —          |
-| Approve Learning Journeys                    | O        | —         | —             | —               | —              | —                | —          |
-| Read observations/IEPs/reports               | O        | O         | —             | —               | O/A            | A                | A          |
-| Write special-education records              | —        | —         | —             | —               | O/A            | A                | A          |
-| Review special-education workflows           | O        | O         | —             | —               | O              | —                | —          |
-| Approve final special-education workflow     | O        | —         | —             | —               | —              | —                | —          |
-| Export reports                               | O        | O         | —             | —               | O              | —                | —          |
-| Manage organization membership/configuration | O        | —         | —             | —               | —              | —                | —          |
+| Capability                                   | Director | Principal | Grade Teacher | Subject Teacher | SE Coordinator         | SE Teacher / GPK | Specialist |
+| -------------------------------------------- | -------- | --------- | ------------- | --------------- | ---------------------- | ---------------- | ---------- |
+| List available organizations                 | O        | O         | O             | O               | O                      | O                | O          |
+| Read academic years                          | O        | O         | O             | O               | —                      | —                | —          |
+| Read units, grades, and classes              | O        | O         | U/G/C         | —               | —                      | —                | —          |
+| Read subjects                                | O        | O         | —             | S               | —                      | —                | —          |
+| Read authorized student lists                | O        | O         | U/G/C         | —               | O (special needs only) | A                | A          |
+| Read student address/guardian contacts       | O        | O         | —             | —               | O (special needs only) | —                | —          |
+| Create/update student records                | O        | —         | —             | —               | —                      | —                | —          |
+| Read organization staff directory            | O        | O         | —             | —               | O                      | —                | —          |
+| Manage GPK student assignments               | O        | —         | —             | —               | O                      | —                | —          |
+| Read attendance                              | O        | O         | G/C           | —               | A                      | A                | —          |
+| Write attendance                             | —        | —         | G/C           | —               | —                      | —                | —          |
+| Read Learning Journeys                       | O        | O         | G/C           | S/C             | A                      | A                | —          |
+| Write/submit Learning Journeys               | —        | —         | G/C           | S/C             | —                      | —                | —          |
+| Review Learning Journeys                     | —        | O         | —             | —               | —                      | —                | —          |
+| Approve Learning Journeys                    | O        | —         | —             | —               | —                      | —                | —          |
+| Read observations/IEPs/reports               | O        | O         | —             | —               | O/A                    | A                | A          |
+| Write special-education records              | —        | —         | —             | —               | O/A                    | A                | A          |
+| Review special-education workflows           | O        | O         | —             | —               | O                      | —                | —          |
+| Approve final special-education workflow     | O        | —         | —             | —               | —                      | —                | —          |
+| Export reports                               | O        | O         | —             | —               | O                      | —                | —          |
+| Manage organization membership/configuration | O        | —         | —             | —               | —                      | —                | —          |
 
 The initial authorization primitives expose these coarse permissions:
 
@@ -46,11 +50,13 @@ The initial authorization primitives expose these coarse permissions:
 - `journey:read`, `journey:write`, `journey:review`, `journey:approve`
 - `special-ed:read`, `special-ed:write`, `special-ed:review`
 - `report:export`
+- `student:admin`, `student:sensitive-read`
+- `staff-directory:read`, `staff-assignment:admin`
 - `organization:admin`
 
 A permission alone is insufficient. Every tenant-owned repository query must also include `organizationId`, and scoped roles must pass the applicable unit, grade, subject, class, or assigned-student check.
 
-Academic collection and general student reads use explicit endpoint policies in addition to the coarse permission set. They do not add browser-controlled permissions: leadership is organization-wide, Grade Teachers are constrained to assigned units/grades/classes, Subject Teachers can read only assigned subjects plus organization academic-year context, and assigned-student roles can read only active dated assignments. Finer capabilities — subject/class-scoped attendance reads for Subject Teachers, team-scoped special-education reads for Grade and Subject Teachers, and separating observation writes from IEP and weekly-report writes — remain denied until those permissions are introduced.
+Academic collection and authorized student-list reads use explicit endpoint policies in addition to the coarse permission set. They do not add browser-controlled permissions: leadership is organization-wide, Grade Teachers are constrained to assigned units/grades/classes, Subject Teachers can read only assigned subjects plus organization academic-year context, and assigned-student roles can read only active dated assignments. Student address and guardian contacts additionally require `student:sensitive-read`; broad lists never include those fields. GPK assignment commands require `staff-assignment:admin`, derive the actor from the session, and enforce the server caseload limit transactionally. Finer capabilities — subject/class-scoped attendance reads for Subject Teachers, team-scoped special-education reads for Grade and Subject Teachers, and separating observation writes from IEP and weekly-report writes — remain denied until those permissions are introduced.
 
 ## Scope rules
 
