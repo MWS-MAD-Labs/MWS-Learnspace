@@ -139,6 +139,67 @@ export const staffDirectoryResponseSchema = z
   })
   .strict();
 
+export const organizationAccountSchema = z
+  .object({
+    membershipId: uuidSchema,
+    organizationId: uuidSchema,
+    userId: uuidSchema,
+    email: z.string().email(),
+    displayName: z.string().min(1),
+    avatarUrl: z.string().url().nullable(),
+    userStatus: accountStatusSchema,
+    role: staffMembershipRoleSchema,
+    roleTitle: z.string().nullable(),
+    membershipStatus: accountStatusSchema,
+    unitIds: z.array(uuidSchema),
+    gradeIds: z.array(uuidSchema),
+    subjectIds: z.array(uuidSchema),
+    updatedAt: z.string().datetime(),
+  })
+  .strict();
+export const organizationAccountsResponseSchema = z
+  .object({
+    data: z.array(organizationAccountSchema),
+    meta: collectionMetaSchema,
+  })
+  .strict();
+
+const membershipScopeCommandFields = {
+  unitIds: z.array(uuidSchema).max(100).optional(),
+  gradeIds: z.array(uuidSchema).max(100).optional(),
+  subjectIds: z.array(uuidSchema).max(100).optional(),
+};
+
+export const organizationAccountCreateCommandSchema = z
+  .object({
+    email: z.string().trim().email().max(320),
+    displayName: z.string().trim().min(1).max(256),
+    avatarUrl: z.string().url().nullable().optional(),
+    role: staffMembershipRoleSchema,
+    roleTitle: nullableTrimmedText(128).optional(),
+    ...membershipScopeCommandFields,
+  })
+  .strict();
+
+export const organizationAccountUpdateCommandSchema = z
+  .object({
+    email: z.string().trim().email().max(320).optional(),
+    displayName: z.string().trim().min(1).max(256).optional(),
+    avatarUrl: z.string().url().nullable().optional(),
+    userStatus: accountStatusSchema.optional(),
+    role: staffMembershipRoleSchema.optional(),
+    roleTitle: nullableTrimmedText(128).optional(),
+    membershipStatus: accountStatusSchema.optional(),
+    ...membershipScopeCommandFields,
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one account field is required.',
+  });
+export const organizationAccountMutationResponseSchema = z
+  .object({ data: organizationAccountSchema })
+  .strict();
+
 export const studentEnrollmentSummarySchema = z
   .object({
     id: uuidSchema,
@@ -225,8 +286,9 @@ export const studentDetailResponseSchema = z
   .object({ data: studentDetailSchema })
   .strict();
 
-const nullableTrimmedText = (maximum: number) =>
-  z.string().trim().min(1).max(maximum).nullable();
+function nullableTrimmedText(maximum: number) {
+  return z.string().trim().min(1).max(maximum).nullable();
+}
 
 export const studentEnrollmentCommandSchema = z
   .object({
@@ -425,6 +487,18 @@ export type ClassesResponse = z.infer<typeof classesResponseSchema>;
 export type SubjectsResponse = z.infer<typeof subjectsResponseSchema>;
 export type StaffDirectoryResponse = z.infer<
   typeof staffDirectoryResponseSchema
+>;
+export type OrganizationAccountsResponse = z.infer<
+  typeof organizationAccountsResponseSchema
+>;
+export type OrganizationAccountCreateCommand = z.infer<
+  typeof organizationAccountCreateCommandSchema
+>;
+export type OrganizationAccountUpdateCommand = z.infer<
+  typeof organizationAccountUpdateCommandSchema
+>;
+export type OrganizationAccountMutationResponse = z.infer<
+  typeof organizationAccountMutationResponseSchema
 >;
 export type StudentListQuery = z.infer<typeof studentListQuerySchema>;
 export type StudentsResponse = z.infer<typeof studentsResponseSchema>;

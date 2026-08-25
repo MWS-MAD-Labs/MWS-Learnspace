@@ -35,6 +35,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Disposable Compose-backed Playwright attendance testing with deterministic test-only real sessions, PostgreSQL fixtures, validation, persistence, forbidden-scope, and logout coverage.
 - Strict shared contracts and generated OpenAPI operations for organization staff directories, rich authorized student reads, privileged student creation/updates, and GPK assignment lifecycle commands.
 - Transactional GPK assignment capacity enforcement with PostgreSQL row locking, atomic reassignment/end behavior, session-derived actors, audit events, and concurrency integration tests.
+- Director-only organization account APIs and a People & access workspace for transactional, audited user/membership creation and updates, role-aware unit/grade/subject scopes, self-lockout protection, and safe multi-organization identity handling.
+- Dedicated Compose-backed P5 administration E2E coverage for account creation, editing, refresh persistence, and server-enforced principal denial.
 - API-backed web student/staff loading with initial loading and retry states, non-blocking refresh failure feedback, and contract-validated GPK assignment mutations.
 - Versioned and bounded `learnspace-export` v1 contracts with duplicate and cross-record reference validation.
 - Explicitly gated development-only browser exporter that validates raw legacy storage and downloads sensitive migration artifacts without transmitting them.
@@ -52,7 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Hardened tenant integrity with database triggers covering organization-owned relations and immutable tenant ownership; tenant actor references now require an active user and active organization membership when assigned, while unchanged historical attribution remains update-safe after an actor leaves. Membership user identity and audit actor attribution are immutable; audit actor deletion is restricted. Added composite IEP lineage for goal-achievement events, strict audit metadata schemas, and database immutability for completed observations and used definitions.
 - Replaced browser-selected startup identity with the API current-session response. The fake-data role switcher now requires both explicit development-only build flags and cannot change server identity.
 - Migrated the attendance workspace from browser seed/storage data to authorized API class rosters and PostgreSQL records, including loading, empty, retry, validation, read-only, conflict, and save-success states.
-- Migrated production user/student directory reads and GPK assignment writes away from browser storage; development fake-data behavior remains available only behind the explicit demo flags.
+- Migrated production user identity, membership, student directory, and GPK assignment administration away from browser storage; development fake-data behavior remains available only behind the explicit demo flags.
 - Restricted broad student responses from exposing addresses or guardian contacts, and limited sensitive student detail to documented leadership and Special Education Coordinator scope.
 - Updated the application and workspace package version to `0.2.0`, the first end-to-end feature migration release.
 
@@ -61,6 +63,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Attendance saves now promote newly persisted draft rows into the local server snapshot immediately, clearing stale unsaved counts and draft-default labels while safely defaulting any missing draft entry.
 - Student enrollment updates now reject conflicting same-day class starts instead of leaving ambiguous simultaneous active enrollments.
 - GPK assignment routes now validate UUID path parameters before Prisma or raw PostgreSQL queries.
+- Organization account save failures now render as accessible error feedback, scope-only membership updates advance `updatedAt`, account audit metadata records only submitted fields, and cross-organization users cannot have global identity fields changed by a single-organization administrator.
 
 ### Removed
 

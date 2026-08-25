@@ -4,6 +4,8 @@ import {
   attendanceStatusSchema,
   gpkAssignmentEndCommandSchema,
   gpkAssignmentUpsertCommandSchema,
+  organizationAccountCreateCommandSchema,
+  organizationAccountUpdateCommandSchema,
   schoolDateSchema,
   studentCreateCommandSchema,
   studentListItemSchema,
@@ -102,6 +104,28 @@ describe('resource contracts', () => {
     ).toBe(false);
     expect(
       gpkAssignmentEndCommandSchema.safeParse({ endsOn: '2026-02-30' }).success,
+    ).toBe(false);
+  });
+
+  it('defines strict organization account commands with explicit role scopes', () => {
+    expect(
+      organizationAccountCreateCommandSchema.safeParse({
+        email: 'teacher@example.test',
+        displayName: 'Teacher One',
+        role: 'GRADE_TEACHER',
+        unitIds: ['22222222-2222-4222-8222-222222222222'],
+        gradeIds: [],
+        subjectIds: [],
+      }).success,
+    ).toBe(true);
+    expect(organizationAccountUpdateCommandSchema.safeParse({}).success).toBe(
+      false,
+    );
+    expect(
+      organizationAccountUpdateCommandSchema.safeParse({
+        role: 'PRINCIPAL',
+        actorId: studentId,
+      }).success,
     ).toBe(false);
   });
 

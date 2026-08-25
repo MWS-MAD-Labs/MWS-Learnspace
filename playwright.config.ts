@@ -23,5 +23,10 @@ export default defineConfig({
       testMatch: /attendance\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
     },
+    {
+      name: 'p5-administration-chromium',
+      testMatch: /p5-administration\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
+    },
   ],
 });

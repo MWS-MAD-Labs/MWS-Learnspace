@@ -12,6 +12,7 @@ import {
 import type { SessionService } from './sessionService.js';
 
 export const e2eAuthHeaderName = 'x-learnspace-e2e-secret';
+export const e2eAuthUserHeaderName = 'x-learnspace-e2e-user-email';
 
 export function createTestAuthRouter(
   config: AppConfig,
@@ -45,9 +46,11 @@ export function createTestAuthRouter(
         return;
       }
 
+      const requestedEmail =
+        request.header(e2eAuthUserHeaderName) ?? config.e2eAuthUserEmail;
       const user = await prisma.user.findFirst({
         where: {
-          email: config.e2eAuthUserEmail,
+          email: requestedEmail,
           status: 'ACTIVE',
           memberships: {
             some: { status: 'ACTIVE', organization: { status: 'ACTIVE' } },

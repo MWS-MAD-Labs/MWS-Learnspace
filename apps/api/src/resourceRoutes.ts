@@ -20,6 +20,10 @@ import {
   gpkAssignmentsResponseSchema,
   gpkAssignmentUpsertCommandSchema,
   gradesResponseSchema,
+  organizationAccountCreateCommandSchema,
+  organizationAccountMutationResponseSchema,
+  organizationAccountsResponseSchema,
+  organizationAccountUpdateCommandSchema,
   organizationsResponseSchema,
   staffDirectoryResponseSchema,
   studentCreateCommandSchema,
@@ -149,7 +153,8 @@ function requireResourcePermission(
     | 'student:admin'
     | 'student:sensitive-read'
     | 'staff-directory:read'
-    | 'staff-assignment:admin',
+    | 'staff-assignment:admin'
+    | 'organization:admin',
 ) {
   try {
     requirePermission(membership, permission);
@@ -549,6 +554,164 @@ function assignmentOverlapWhere(startsOn: Date, endsOn: Date | null) {
   } satisfies Prisma.StaffStudentAssignmentWhereInput;
 }
 
+const organizationAccountSelect = {
+  id: true,
+  organizationId: true,
+  role: true,
+  roleTitle: true,
+  status: true,
+  updatedAt: true,
+  user: {
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+      avatarUrl: true,
+      status: true,
+      updatedAt: true,
+    },
+  },
+  unitScopes: { select: { unitId: true }, orderBy: { unitId: 'asc' as const } },
+  gradeScopes: {
+    select: { gradeId: true },
+    orderBy: { gradeId: 'asc' as const },
+  },
+  subjectScopes: {
+    select: { subjectId: true },
+    orderBy: { subjectId: 'asc' as const },
+  },
+} satisfies Prisma.MembershipSelect;
+
+type SelectedOrganizationAccount = Prisma.MembershipGetPayload<{
+  select: typeof organizationAccountSelect;
+}>;
+
+function mapOrganizationAccount(account: SelectedOrganizationAccount) {
+  return {
+    membershipId: account.id,
+    organizationId: account.organizationId,
+    userId: account.user.id,
+    email: account.user.email,
+    displayName: account.user.displayName,
+    avatarUrl: account.user.avatarUrl,
+    userStatus: account.user.status,
+    role: account.role,
+    roleTitle: account.roleTitle,
+    membershipStatus: account.status,
+    unitIds: account.unitScopes.map((scope) => scope.unitId),
+    gradeIds: account.gradeScopes.map((scope) => scope.gradeId),
+    subjectIds: account.subjectScopes.map((scope) => scope.subjectId),
+    updatedAt: new Date(
+      Math.max(account.updatedAt.getTime(), account.user.updatedAt.getTime()),
+    ).toISOString(),
+  };
+}
+
+function validateRoleScopes(input: {
+  role: MembershipRole;
+  unitIds: readonly string[];
+  gradeIds: readonly string[];
+  subjectIds: readonly string[];
+}) {
+  if (
+    input.role === 'GRADE_TEACHER' &&
+    input.subjectIds.length === 0 &&
+    (input.unitIds.length > 0 || input.gradeIds.length > 0)
+  )
+    return;
+  if (
+    input.role === 'SUBJECT_TEACHER' &&
+    input.unitIds.length === 0 &&
+    input.gradeIds.length === 0 &&
+    input.subjectIds.length > 0
+  )
+    return;
+  if (
+    input.role !== 'GRADE_TEACHER' &&
+    input.role !== 'SUBJECT_TEACHER' &&
+    input.unitIds.length === 0 &&
+    input.gradeIds.length === 0 &&
+    input.subjectIds.length === 0
+  )
+    return;
+  throw new HttpError(
+    400,
+    'INVALID_MEMBERSHIP_SCOPES',
+    'Membership scopes are not valid for the selected role.',
+  );
+}
+
+async function validateOrganizationScopeIds(
+  transaction: Prisma.TransactionClient,
+  organizationId: string,
+  scopes: {
+    unitIds: readonly string[];
+    gradeIds: readonly string[];
+    subjectIds: readonly string[];
+  },
+) {
+  const unitIds = [...new Set(scopes.unitIds)];
+  const gradeIds = [...new Set(scopes.gradeIds)];
+  const subjectIds = [...new Set(scopes.subjectIds)];
+  const [unitCount, gradeCount, subjectCount] = await Promise.all([
+    transaction.unit.count({ where: { organizationId, id: { in: unitIds } } }),
+    transaction.grade.count({
+      where: { organizationId, id: { in: gradeIds } },
+    }),
+    transaction.subject.count({
+      where: { organizationId, id: { in: subjectIds } },
+    }),
+  ]);
+  if (
+    unitCount !== unitIds.length ||
+    gradeCount !== gradeIds.length ||
+    subjectCount !== subjectIds.length
+  ) {
+    throw new HttpError(
+      400,
+      'INVALID_MEMBERSHIP_SCOPE_REFERENCE',
+      'Every membership scope must belong to the organization.',
+    );
+  }
+  return { unitIds, gradeIds, subjectIds };
+}
+
+async function replaceMembershipScopes(
+  transaction: Prisma.TransactionClient,
+  membershipId: string,
+  scopes: {
+    unitIds: readonly string[];
+    gradeIds: readonly string[];
+    subjectIds: readonly string[];
+  },
+) {
+  await Promise.all([
+    transaction.membershipUnit.deleteMany({ where: { membershipId } }),
+    transaction.membershipGrade.deleteMany({ where: { membershipId } }),
+    transaction.membershipSubject.deleteMany({ where: { membershipId } }),
+  ]);
+  await Promise.all([
+    scopes.unitIds.length
+      ? transaction.membershipUnit.createMany({
+          data: scopes.unitIds.map((unitId) => ({ membershipId, unitId })),
+        })
+      : Promise.resolve(),
+    scopes.gradeIds.length
+      ? transaction.membershipGrade.createMany({
+          data: scopes.gradeIds.map((gradeId) => ({ membershipId, gradeId })),
+        })
+      : Promise.resolve(),
+    scopes.subjectIds.length
+      ? transaction.membershipSubject.createMany({
+          data: scopes.subjectIds.map((subjectId) => ({
+            membershipId,
+            subjectId,
+          })),
+        })
+      : Promise.resolve(),
+  ]);
+}
+
 export function createResourceRouter(
   prisma: PrismaClient,
   sessions: SessionService,
@@ -752,6 +915,326 @@ export function createResourceRouter(
           subjectsResponseSchema.parse({ data, meta: { count: data.length } }),
         );
       } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
+    '/organizations/:organizationId/accounts',
+    async (request, response, next) => {
+      try {
+        const membership = membershipFor(
+          request,
+          request.params.organizationId,
+        );
+        requireResourcePermission(membership, 'organization:admin');
+        const rows = await prisma.membership.findMany({
+          where: { organizationId: request.params.organizationId },
+          orderBy: [{ user: { displayName: 'asc' } }, { id: 'asc' }],
+          select: organizationAccountSelect,
+        });
+        const data = rows.map(mapOrganizationAccount);
+        response.json(
+          organizationAccountsResponseSchema.parse({
+            data,
+            meta: { count: data.length },
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/accounts',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const command = parseRequest(
+          organizationAccountCreateCommandSchema,
+          request.body,
+        );
+        const auth = requireAuth(request);
+        const membership = membershipFor(
+          request,
+          request.params.organizationId,
+        );
+        requireResourcePermission(membership, 'organization:admin');
+        const result = await prisma.$transaction(async (transaction) => {
+          const scopes = await validateOrganizationScopeIds(
+            transaction,
+            request.params.organizationId,
+            {
+              unitIds: command.unitIds ?? [],
+              gradeIds: command.gradeIds ?? [],
+              subjectIds: command.subjectIds ?? [],
+            },
+          );
+          validateRoleScopes({ role: command.role, ...scopes });
+          const email = command.email.toLowerCase();
+          let user = await transaction.user.findUnique({
+            where: { email },
+            select: {
+              id: true,
+              displayName: true,
+              avatarUrl: true,
+              status: true,
+            },
+          });
+          if (user) {
+            const existingMembership = await transaction.membership.findUnique({
+              where: {
+                organizationId_userId: {
+                  organizationId: request.params.organizationId,
+                  userId: user.id,
+                },
+              },
+              select: { id: true },
+            });
+            if (existingMembership) {
+              throw new HttpError(
+                409,
+                'MEMBERSHIP_ALREADY_EXISTS',
+                'This user already has a membership in the organization.',
+              );
+            }
+            if (user.status !== 'ACTIVE') {
+              throw new HttpError(
+                409,
+                'USER_DISABLED',
+                'A disabled user must be reactivated before adding a membership.',
+              );
+            }
+          } else {
+            user = await transaction.user.create({
+              data: {
+                email,
+                displayName: command.displayName,
+                avatarUrl: command.avatarUrl ?? null,
+              },
+              select: {
+                id: true,
+                displayName: true,
+                avatarUrl: true,
+                status: true,
+              },
+            });
+          }
+          const created = await transaction.membership.create({
+            data: {
+              organizationId: request.params.organizationId,
+              userId: user.id,
+              role: command.role,
+              roleTitle: command.roleTitle ?? null,
+            },
+            select: { id: true },
+          });
+          await replaceMembershipScopes(transaction, created.id, scopes);
+          await createAuditRepository(transaction as PrismaClient).append({
+            organizationId: request.params.organizationId,
+            actorId: auth.userId,
+            action: 'organization_account.create',
+            targetType: 'Membership',
+            targetId: created.id,
+            requestId: String(response.locals.requestId),
+            result: 'SUCCEEDED',
+            metadata: { changedFields: Object.keys(command) },
+          });
+          return transaction.membership.findFirstOrThrow({
+            where: {
+              id: created.id,
+              organizationId: request.params.organizationId,
+            },
+            select: organizationAccountSelect,
+          });
+        });
+        response.status(201).json(
+          organizationAccountMutationResponseSchema.parse({
+            data: mapOrganizationAccount(result),
+          }),
+        );
+      } catch (error) {
+        if (asPrismaErrorCode(error) === 'P2002') {
+          next(
+            new HttpError(
+              409,
+              'ACCOUNT_CONFLICT',
+              'The email or membership is already in use.',
+            ),
+          );
+          return;
+        }
+        next(error);
+      }
+    },
+  );
+
+  router.patch(
+    '/organizations/:organizationId/accounts/:membershipId',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const path = parseRequest(
+          z
+            .object({ organizationId: uuidSchema, membershipId: uuidSchema })
+            .strict(),
+          request.params,
+        );
+        const command = parseRequest(
+          organizationAccountUpdateCommandSchema,
+          request.body,
+        );
+        const auth = requireAuth(request);
+        const actorMembership = membershipFor(request, path.organizationId);
+        requireResourcePermission(actorMembership, 'organization:admin');
+        const result = await prisma.$transaction(async (transaction) => {
+          const existing = await transaction.membership.findFirst({
+            where: {
+              id: path.membershipId,
+              organizationId: path.organizationId,
+            },
+            select: organizationAccountSelect,
+          });
+          if (!existing) {
+            throw new HttpError(
+              404,
+              'MEMBERSHIP_NOT_FOUND',
+              'Membership not found.',
+            );
+          }
+          if (
+            existing.user.id === auth.userId &&
+            (command.userStatus === 'DISABLED' ||
+              command.membershipStatus === 'DISABLED' ||
+              (command.role !== undefined && command.role !== 'DIRECTOR'))
+          ) {
+            throw new HttpError(
+              409,
+              'SELF_ADMIN_LOCKOUT',
+              'You cannot disable or remove your own organization administration access.',
+            );
+          }
+          const scopesRequested =
+            command.unitIds !== undefined ||
+            command.gradeIds !== undefined ||
+            command.subjectIds !== undefined ||
+            command.role !== undefined;
+          const scopes = scopesRequested
+            ? await validateOrganizationScopeIds(
+                transaction,
+                path.organizationId,
+                {
+                  unitIds:
+                    command.unitIds ??
+                    existing.unitScopes.map((scope) => scope.unitId),
+                  gradeIds:
+                    command.gradeIds ??
+                    existing.gradeScopes.map((scope) => scope.gradeId),
+                  subjectIds:
+                    command.subjectIds ??
+                    existing.subjectScopes.map((scope) => scope.subjectId),
+                },
+              )
+            : undefined;
+          if (scopes) {
+            validateRoleScopes({
+              role: command.role ?? existing.role,
+              ...scopes,
+            });
+          }
+          const normalizedEmail = command.email?.toLowerCase();
+          const userData = {
+            ...(normalizedEmail !== undefined &&
+            normalizedEmail !== existing.user.email
+              ? { email: normalizedEmail }
+              : {}),
+            ...(command.displayName !== undefined &&
+            command.displayName !== existing.user.displayName
+              ? { displayName: command.displayName }
+              : {}),
+            ...(command.avatarUrl !== undefined &&
+            command.avatarUrl !== existing.user.avatarUrl
+              ? { avatarUrl: command.avatarUrl }
+              : {}),
+            ...(command.userStatus !== undefined &&
+            command.userStatus !== existing.user.status
+              ? { status: command.userStatus }
+              : {}),
+          };
+          if (Object.keys(userData).length) {
+            const otherOrganizationMemberships =
+              await transaction.membership.count({
+                where: {
+                  userId: existing.user.id,
+                  organizationId: { not: path.organizationId },
+                },
+              });
+            if (otherOrganizationMemberships > 0) {
+              throw new HttpError(
+                409,
+                'SHARED_USER_IDENTITY_CONFLICT',
+                'Global identity fields cannot be changed from one organization while the user belongs to another organization.',
+              );
+            }
+            await transaction.user.update({
+              where: { id: existing.user.id },
+              data: userData,
+            });
+          }
+          const membershipData = {
+            ...(command.role !== undefined ? { role: command.role } : {}),
+            ...(command.roleTitle !== undefined
+              ? { roleTitle: command.roleTitle }
+              : {}),
+            ...(command.membershipStatus !== undefined
+              ? { status: command.membershipStatus }
+              : {}),
+          };
+          if (Object.keys(membershipData).length || scopes) {
+            // Same-value role write ensures @updatedAt reflects scope-only changes.
+            await transaction.membership.update({
+              where: { id: existing.id },
+              data: Object.keys(membershipData).length
+                ? membershipData
+                : { role: existing.role },
+            });
+          }
+          if (scopes) {
+            await replaceMembershipScopes(transaction, existing.id, scopes);
+          }
+          await createAuditRepository(transaction as PrismaClient).append({
+            organizationId: path.organizationId,
+            actorId: auth.userId,
+            action: 'organization_account.update',
+            targetType: 'Membership',
+            targetId: existing.id,
+            requestId: String(response.locals.requestId),
+            result: 'SUCCEEDED',
+            metadata: { changedFields: Object.keys(command) },
+          });
+          return transaction.membership.findFirstOrThrow({
+            where: { id: existing.id, organizationId: path.organizationId },
+            select: organizationAccountSelect,
+          });
+        });
+        response.json(
+          organizationAccountMutationResponseSchema.parse({
+            data: mapOrganizationAccount(result),
+          }),
+        );
+      } catch (error) {
+        if (asPrismaErrorCode(error) === 'P2002') {
+          next(
+            new HttpError(
+              409,
+              'ACCOUNT_CONFLICT',
+              'The email or membership is already in use.',
+            ),
+          );
+          return;
+        }
         next(error);
       }
     },

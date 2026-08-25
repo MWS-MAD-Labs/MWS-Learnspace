@@ -14,6 +14,10 @@ import {
   gpkAssignmentsResponseSchema,
   gpkAssignmentUpsertCommandSchema,
   gradesResponseSchema,
+  organizationAccountCreateCommandSchema,
+  organizationAccountMutationResponseSchema,
+  organizationAccountsResponseSchema,
+  organizationAccountUpdateCommandSchema,
   organizationsResponseSchema,
   staffDirectoryResponseSchema,
   studentCreateCommandSchema,
@@ -43,6 +47,11 @@ const components: Record<string, ZodTypeAny> = {
   ClassesResponse: classesResponseSchema,
   SubjectsResponse: subjectsResponseSchema,
   StaffDirectoryResponse: staffDirectoryResponseSchema,
+  OrganizationAccountsResponse: organizationAccountsResponseSchema,
+  OrganizationAccountCreateCommand: organizationAccountCreateCommandSchema,
+  OrganizationAccountUpdateCommand: organizationAccountUpdateCommandSchema,
+  OrganizationAccountMutationResponse:
+    organizationAccountMutationResponseSchema,
   StudentsResponse: studentsResponseSchema,
   StudentDetailResponse: studentDetailResponseSchema,
   StudentCreateCommand: studentCreateCommandSchema,
@@ -221,6 +230,12 @@ const studentParameter = {
   required: true,
   schema: { type: 'string', format: 'uuid' },
 };
+const membershipParameter = {
+  name: 'membershipId',
+  in: 'path',
+  required: true,
+  schema: { type: 'string', format: 'uuid' },
+};
 const assignmentParameter = {
   name: 'assignmentId',
   in: 'path',
@@ -326,6 +341,66 @@ export function generateOpenApiDocument() {
           'listSubjects',
           'SubjectsResponse',
         ),
+      },
+      '/organizations/{organizationId}/accounts': {
+        get: collectionOperation(
+          'Organization administration',
+          'listOrganizationAccounts',
+          'OrganizationAccountsResponse',
+        ),
+        post: {
+          tags: ['Organization administration'],
+          operationId: 'createOrganizationAccount',
+          description:
+            'Creates an organization membership and, when necessary, its global user identity. Existing global users are linked without changing their identity fields.',
+          parameters: [organizationParameter, csrfParameter],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/OrganizationAccountCreateCommand',
+                },
+              },
+            },
+          },
+          responses: {
+            '201': jsonResponse(
+              'OrganizationAccountMutationResponse',
+              'Organization account created',
+            ),
+            ...errorResponses,
+            '409': jsonResponse('ApiError', 'Account conflict'),
+          },
+        },
+      },
+      '/organizations/{organizationId}/accounts/{membershipId}': {
+        patch: {
+          tags: ['Organization administration'],
+          operationId: 'updateOrganizationAccount',
+          description:
+            'Updates organization-local membership role, status, and scopes. Email, display name, avatar URL, and user status are global identity fields and cannot be changed when the user belongs to another organization.',
+          parameters: [
+            organizationParameter,
+            membershipParameter,
+            csrfParameter,
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/OrganizationAccountUpdateCommand',
+                },
+              },
+            },
+          },
+          responses: {
+            '200': jsonResponse('OrganizationAccountMutationResponse'),
+            ...errorResponses,
+            '409': jsonResponse('ApiError', 'Account or self-lockout conflict'),
+          },
+        },
       },
       '/organizations/{organizationId}/staff': {
         get: collectionOperation(

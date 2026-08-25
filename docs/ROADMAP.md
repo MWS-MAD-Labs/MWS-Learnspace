@@ -749,12 +749,12 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-001 — Migrate users, students, and staff assignments
 
-- [ ] **Dependencies:** P4-009
+- [x] **Dependencies:** P4-009
 - **Change:** migrate user administration, student details, GPK assignment, and authorized student lists.
 - **Special rules:** enforce the configured GPK assignment limit transactionally; do not expose guardian contacts broadly.
 - **Acceptance:** all student and assignment mutations are server-authorized and audited.
 - **Validate:** role/scope matrix tests and assignment concurrency tests.
-- **Progress (2026-08-24):** Added strict contracts and OpenAPI for scoped staff/student reads, privileged student mutations, and GPK assignment commands; implemented session-derived authorization, sensitive guardian-contact gating, transactional audited student writes, row-locked GPK reassignment/end commands with a server-enforced caseload limit, API-backed web loading/retry states, and removal of production user/student/GPK assignment browser persistence. PostgreSQL role/scope, audit, and concurrent-capacity tests pass. Remaining before completion: the user/membership administration UI/API flow and dedicated Compose-backed P5 E2E coverage.
+- **Completed (2026-08-24):** Added strict contracts and OpenAPI for scoped staff/student reads, privileged student mutations, GPK assignment commands, and organization account administration; implemented session-derived authorization, sensitive guardian-contact gating, transactional audited student and user/membership writes, role-aware unit/grade/subject scopes, self-lockout protection, row-locked GPK reassignment/end commands with a server-enforced caseload limit, API-backed web loading/retry/editing states, and removal of production user/student/GPK assignment browser persistence. PostgreSQL role/scope, audit, concurrent-capacity, component, integration, and dedicated Compose-backed P5 E2E coverage pass.
 
 ## P5-002 — Migrate Learning Journey reads and editing
 
@@ -762,6 +762,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** migrate calendar, tracker, editor, projects, goals, ownership, and filters.
 - **Acceptance:** authors can edit only permitted drafts; concurrent updates return an explicit conflict rather than silently overwriting.
 - **Validate:** repository/API/component/E2E tests.
+- **Next implementation (2026-08-25):** Start with strict list/detail/filter/create/update contracts and an organization-scoped repository policy, then add transactional nested project/goal/connection/owner writes with explicit version conflicts. Migrate the calendar, tracker, and editor to the API only after repository and authorization tests pass; workflow transitions remain in P5-003.
 
 ## P5-003 — Migrate Learning Journey workflow transitions
 

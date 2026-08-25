@@ -6,7 +6,13 @@ export const e2eFixture = {
   forbiddenOrganizationId: '10000000-0000-4000-8000-000000000002',
   teacherId: '20000000-0000-4000-8000-000000000001',
   teacherEmail: 'attendance.teacher@example.test',
+  directorId: '20000000-0000-4000-8000-000000000002',
+  directorEmail: 'p5.director@example.test',
+  principalId: '20000000-0000-4000-8000-000000000003',
+  principalEmail: 'p5.principal@example.test',
   membershipId: '30000000-0000-4000-8000-000000000001',
+  directorMembershipId: '30000000-0000-4000-8000-000000000002',
+  principalMembershipId: '30000000-0000-4000-8000-000000000003',
   unitId: '40000000-0000-4000-8000-000000000001',
   authorizedGradeId: '50000000-0000-4000-8000-000000000001',
   forbiddenGradeId: '50000000-0000-4000-8000-000000000002',
@@ -74,21 +80,49 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
     ],
   });
 
-  await prisma.user.create({
-    data: {
-      id: e2eFixture.teacherId,
-      email: e2eFixture.teacherEmail,
-      displayName: 'Taylor Attendance Teacher',
-    },
+  await prisma.user.createMany({
+    data: [
+      {
+        id: e2eFixture.teacherId,
+        email: e2eFixture.teacherEmail,
+        displayName: 'Taylor Attendance Teacher',
+      },
+      {
+        id: e2eFixture.directorId,
+        email: e2eFixture.directorEmail,
+        displayName: 'Dana P5 Director',
+      },
+      {
+        id: e2eFixture.principalId,
+        email: e2eFixture.principalEmail,
+        displayName: 'Priya P5 Principal',
+      },
+    ],
   });
-  await prisma.membership.create({
-    data: {
-      id: e2eFixture.membershipId,
-      organizationId: e2eFixture.organizationId,
-      userId: e2eFixture.teacherId,
-      role: 'GRADE_TEACHER',
-      roleTitle: 'Grade 1 Teacher',
-    },
+  await prisma.membership.createMany({
+    data: [
+      {
+        id: e2eFixture.membershipId,
+        organizationId: e2eFixture.organizationId,
+        userId: e2eFixture.teacherId,
+        role: 'GRADE_TEACHER',
+        roleTitle: 'Grade 1 Teacher',
+      },
+      {
+        id: e2eFixture.directorMembershipId,
+        organizationId: e2eFixture.organizationId,
+        userId: e2eFixture.directorId,
+        role: 'DIRECTOR',
+        roleTitle: 'School Director',
+      },
+      {
+        id: e2eFixture.principalMembershipId,
+        organizationId: e2eFixture.organizationId,
+        userId: e2eFixture.principalId,
+        role: 'PRINCIPAL',
+        roleTitle: 'Principal',
+      },
+    ],
   });
   await prisma.academicYear.create({
     data: {

@@ -5,6 +5,7 @@ import type { AppConfig } from '../src/config.js';
 import {
   createTestAuthRouter,
   e2eAuthHeaderName,
+  e2eAuthUserHeaderName,
 } from '../src/testAuthRoutes.js';
 
 const testConfig: AppConfig = {
@@ -98,5 +99,21 @@ describe('test-only authentication router', () => {
     expect(setCookies.join(';')).not.toContain('Secure');
     expect(setCookies[0]).toContain('HttpOnly');
     expect(setCookies[1]).not.toContain('HttpOnly');
+  });
+
+  it('allows the secret-gated test harness to select another seeded fixture user', async () => {
+    const { app, prisma } = testApp();
+
+    const response = await request(app)
+      .post('/api/v1/test-auth/session')
+      .set(e2eAuthHeaderName, testConfig.e2eAuthSecret!)
+      .set(e2eAuthUserHeaderName, 'director@example.test');
+
+    expect(response.status).toBe(204);
+    expect(prisma.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ email: 'director@example.test' }),
+      }),
+    );
   });
 });

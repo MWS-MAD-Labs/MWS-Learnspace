@@ -191,11 +191,10 @@ The requested local Docker rehearsal is recorded at `docs/operations/prototype-i
 
 P6 is not ready for production rollout while `P5-013` remains incomplete. Before repeating this procedure in staging:
 
-1. Complete P5-001's remaining user/membership administration and E2E coverage.
-2. Migrate Learning Journey reads/editing and workflow transitions (`P5-002`–`P5-003`).
-3. Migrate observation definitions, assignments, and all three observation instruments (`P5-004`–`P5-007`).
-4. Migrate IEPs, IEP workflow, weekly reports, and transactional goal projections (`P5-008`–`P5-011`).
-5. Replace dashboard/report/search/notification browser-derived reads (`P5-012`).
-6. Remove sensitive browser persistence, automatic domain seed initialization, production reset controls, and obsolete browser domain types (`P5-013`).
+1. Migrate Learning Journey reads/editing and workflow transitions (`P5-002`–`P5-003`).
+2. Migrate observation definitions, assignments, and all three observation instruments (`P5-004`–`P5-007`).
+3. Migrate IEPs, IEP workflow, weekly reports, and transactional goal projections (`P5-008`–`P5-011`).
+4. Replace dashboard/report/search/notification browser-derived reads (`P5-012`).
+5. Remove sensitive browser persistence, automatic domain seed initialization, production reset controls, and obsolete browser domain types (`P5-013`).
 
 After P5-013 passes, repeat the import procedure in staging with an approved sensitive export and manifest, deployment-specific writer freeze/cutover commands, named operators, application workflow verification, and approver sign-off.

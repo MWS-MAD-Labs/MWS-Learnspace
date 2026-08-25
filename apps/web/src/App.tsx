@@ -11,6 +11,11 @@ const AttendanceView = lazy(() =>
     default: module.AttendanceView,
   })),
 );
+const PeopleAccessView = lazy(() =>
+  import('./components/administration/PeopleAccessView').then((module) => ({
+    default: module.PeopleAccessView,
+  })),
+);
 const LearningJourneyCalendar = lazy(() =>
   import('./components/learning-journey/LearningJourneyCalendar').then(
     (module) => ({ default: module.LearningJourneyCalendar }),
@@ -73,6 +78,8 @@ const MainContent: React.FC = () => {
         return <DashboardView />;
       case 'ATTENDANCE':
         return <AttendanceView />;
+      case 'PEOPLE_ACCESS':
+        return <PeopleAccessView />;
       case 'LEARNING_JOURNEY_CALENDAR':
         return <LearningJourneyCalendar />;
       case 'LEARNING_JOURNEY_TRACKER':

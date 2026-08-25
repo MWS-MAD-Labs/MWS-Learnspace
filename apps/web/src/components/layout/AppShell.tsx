@@ -18,6 +18,7 @@ import {
   ClipboardList,
   RefreshCw,
   LogOut,
+  UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -43,7 +44,10 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
     navigateToJourneyEditor,
   } = useApp();
 
-  const { logout } = useAuth();
+  const { logout, session } = useAuth();
+  const canAdminOrganization =
+    session?.memberships[0]?.permissions.includes('organization:admin') ??
+    false;
   const [learningJourneyMenuOpen, setLearningJourneyMenuOpen] = useState(true);
   const [specialEdMenuOpen, setSpecialEdMenuOpen] = useState(true);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
@@ -288,6 +292,21 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
                   Today
                 </span>
               </button>
+
+              {canAdminOrganization && (
+                <button
+                  id="nav-people-access"
+                  onClick={() => setActiveTab('PEOPLE_ACCESS')}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    activeTab === 'PEOPLE_ACCESS'
+                      ? 'bg-[#6E161E] text-white shadow-sm'
+                      : 'text-stone-700 hover:bg-[#FAF5EF] hover:text-stone-900'
+                  }`}
+                >
+                  <UserCog className="w-4 h-4" />
+                  <span>People & access</span>
+                </button>
+              )}
 
               {/* Learning Journey Accordion */}
               <div className="pt-2">
