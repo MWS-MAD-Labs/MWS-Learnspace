@@ -8,8 +8,6 @@ import {
   IEPRecord,
   IEPReport,
   WorkflowHistoryEntry,
-  ObservationAssignment,
-  ObservationFormDefinition,
 } from '../types';
 
 import {
@@ -21,8 +19,6 @@ import {
   SEED_SFA_OBSERVATION,
   SEED_IEP_RECORDS,
   SEED_WEEKLY_REPORTS,
-  SEED_OBSERVATION_ASSIGNMENTS,
-  SEED_OBSERVATION_FORMS,
 } from '../data/seedData';
 
 const demoRoleSwitcherEnabled =
@@ -40,8 +36,6 @@ const STORAGE_KEYS = {
   SFA_OBSERVATIONS: 'mws_sfa_observations_v2',
   IEP_RECORDS: 'mws_iep_records_v2',
   IEP_REPORTS: 'mws_iep_reports_v2',
-  OBSERVATION_ASSIGNMENTS: 'mws_observation_assignments_v2',
-  OBSERVATION_FORMS: 'mws_observation_forms_v2',
 };
 
 class StorageService {
@@ -106,22 +100,6 @@ class StorageService {
         JSON.stringify(SEED_WEEKLY_REPORTS),
       );
     }
-    if (
-      forceReset ||
-      !localStorage.getItem(STORAGE_KEYS.OBSERVATION_ASSIGNMENTS)
-    ) {
-      localStorage.setItem(
-        STORAGE_KEYS.OBSERVATION_ASSIGNMENTS,
-        JSON.stringify(SEED_OBSERVATION_ASSIGNMENTS),
-      );
-    }
-    if (forceReset || !localStorage.getItem(STORAGE_KEYS.OBSERVATION_FORMS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.OBSERVATION_FORMS,
-        JSON.stringify(SEED_OBSERVATION_FORMS),
-      );
-    }
-
     this.isInitialized = true;
   }
 
@@ -396,85 +374,6 @@ class StorageService {
     }
     localStorage.setItem(STORAGE_KEYS.SFA_OBSERVATIONS, JSON.stringify(list));
     return record;
-  }
-
-  // Observation Assignments (Coordinator Feature)
-  public getObservationAssignments(
-    studentId?: string,
-  ): ObservationAssignment[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.OBSERVATION_ASSIGNMENTS);
-      let list: ObservationAssignment[] = data
-        ? JSON.parse(data)
-        : SEED_OBSERVATION_ASSIGNMENTS;
-      if (studentId) {
-        list = list.filter((a) => a.studentId === studentId);
-      }
-      return list;
-    } catch {
-      return SEED_OBSERVATION_ASSIGNMENTS;
-    }
-  }
-
-  public saveObservationAssignment(
-    assignment: ObservationAssignment,
-  ): ObservationAssignment {
-    const list = this.getObservationAssignments();
-    const idx = list.findIndex((a) => a.id === assignment.id);
-    if (idx >= 0) {
-      list[idx] = assignment;
-    } else {
-      list.unshift({
-        ...assignment,
-        id: assignment.id || `oa-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-      });
-    }
-    localStorage.setItem(
-      STORAGE_KEYS.OBSERVATION_ASSIGNMENTS,
-      JSON.stringify(list),
-    );
-    return assignment;
-  }
-
-  public deleteObservationAssignment(id: string): boolean {
-    const list = this.getObservationAssignments().filter((a) => a.id !== id);
-    localStorage.setItem(
-      STORAGE_KEYS.OBSERVATION_ASSIGNMENTS,
-      JSON.stringify(list),
-    );
-    return true;
-  }
-
-  // Observation Form Definitions
-  public getObservationForms(): ObservationFormDefinition[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.OBSERVATION_FORMS);
-      return data ? JSON.parse(data) : SEED_OBSERVATION_FORMS;
-    } catch {
-      return SEED_OBSERVATION_FORMS;
-    }
-  }
-
-  public saveObservationForm(
-    form: ObservationFormDefinition,
-  ): ObservationFormDefinition {
-    const list = this.getObservationForms();
-    const idx = list.findIndex((f) => f.id === form.id);
-    if (idx >= 0) {
-      list[idx] = {
-        ...form,
-        lastUpdated: new Date().toISOString().split('T')[0],
-      };
-    } else {
-      list.push({
-        ...form,
-        id: form.id || `form-${Date.now()}`,
-        lastUpdated: new Date().toISOString().split('T')[0],
-      });
-    }
-    localStorage.setItem(STORAGE_KEYS.OBSERVATION_FORMS, JSON.stringify(list));
-    return form;
   }
 
   // IEP Records

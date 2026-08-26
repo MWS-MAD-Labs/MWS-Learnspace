@@ -41,6 +41,10 @@ export class SessionService {
                 gradeScopes: true,
                 subjectScopes: true,
                 staffAssignments: true,
+                observationAssignments: {
+                  where: { status: { in: ['PENDING', 'IN_PROGRESS'] } },
+                  select: { studentId: true },
+                },
               },
             },
           },

@@ -34,7 +34,7 @@
     "e2e:attendance:stop": "docker compose -p learnspace-attendance-e2e -f compose.e2e.yaml down --volumes --remove-orphans",
     "e2e:attendance": "sh scripts/e2e-attendance.sh",
     "e2e:p5:start": "docker compose -p learnspace-p5-e2e -f compose.e2e.yaml up --build --wait --wait-timeout 240",
-    "e2e:p5:test": "playwright test --project=p5-administration-chromium --project=p5-learning-journeys-chromium",
+    "e2e:p5:test": "playwright test --project=p5-administration-chromium --project=p5-learning-journeys-chromium --project=p5-observations-chromium",
     "e2e:p5:stop": "docker compose -p learnspace-p5-e2e -f compose.e2e.yaml down --volumes --remove-orphans",
     "e2e:p5": "sh scripts/e2e-p5.sh",
     "db:backup": "sh scripts/db-backup.sh",

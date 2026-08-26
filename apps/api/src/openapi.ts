@@ -19,6 +19,15 @@ import {
   organizationAccountsResponseSchema,
   organizationAccountUpdateCommandSchema,
   organizationsResponseSchema,
+  observationAssignmentCancelCommandSchema,
+  observationAssignmentCreateCommandSchema,
+  observationAssignmentMutationResponseSchema,
+  observationAssignmentsResponseSchema,
+  observationAssignmentUpdateCommandSchema,
+  observationDefinitionCreateCommandSchema,
+  observationDefinitionMutationResponseSchema,
+  observationDefinitionsResponseSchema,
+  observationDefinitionVersionCreateCommandSchema,
   staffDirectoryResponseSchema,
   studentCreateCommandSchema,
   studentDetailResponseSchema,
@@ -64,6 +73,18 @@ const components: Record<string, ZodTypeAny> = {
   AttendanceRosterResponse: attendanceRosterResponseSchema,
   AttendanceBulkSaveCommand: attendanceBulkSaveCommandSchema,
   AttendanceBulkSaveResponse: attendanceBulkSaveResponseSchema,
+  ObservationDefinitionsResponse: observationDefinitionsResponseSchema,
+  ObservationDefinitionCreateCommand: observationDefinitionCreateCommandSchema,
+  ObservationDefinitionVersionCreateCommand:
+    observationDefinitionVersionCreateCommandSchema,
+  ObservationDefinitionMutationResponse:
+    observationDefinitionMutationResponseSchema,
+  ObservationAssignmentsResponse: observationAssignmentsResponseSchema,
+  ObservationAssignmentCreateCommand: observationAssignmentCreateCommandSchema,
+  ObservationAssignmentUpdateCommand: observationAssignmentUpdateCommandSchema,
+  ObservationAssignmentCancelCommand: observationAssignmentCancelCommandSchema,
+  ObservationAssignmentMutationResponse:
+    observationAssignmentMutationResponseSchema,
 };
 
 function zodDefinition(schema: ZodTypeAny): SchemaDefinition {
@@ -162,8 +183,18 @@ export function zodToJsonSchema(schema: ZodTypeAny): JsonSchema {
           { type: 'null' },
         ],
       };
+    case 'ZodUnion':
+      return {
+        anyOf: (definition.options as ZodTypeAny[]).map(zodToJsonSchema),
+      };
+    case 'ZodLazy':
+      return {};
     case 'ZodEffects':
       return zodToJsonSchema(definition.schema as ZodTypeAny);
+    case 'ZodBoolean':
+      return { type: 'boolean' };
+    case 'ZodNull':
+      return { type: 'null' };
     case 'ZodUnknown':
     case 'ZodAny':
       return {};
@@ -238,6 +269,12 @@ const membershipParameter = {
 };
 const assignmentParameter = {
   name: 'assignmentId',
+  in: 'path',
+  required: true,
+  schema: { type: 'string', format: 'uuid' },
+};
+const definitionParameter = {
+  name: 'definitionId',
   in: 'path',
   required: true,
   schema: { type: 'string', format: 'uuid' },
@@ -548,6 +585,178 @@ export function generateOpenApiDocument() {
           },
         },
       },
+      '/organizations/{organizationId}/observation-definitions': {
+        get: collectionOperation(
+          'Observations',
+          'listObservationDefinitions',
+          'ObservationDefinitionsResponse',
+        ),
+        post: {
+          tags: ['Observations'],
+          operationId: 'createObservationDefinition',
+          parameters: [organizationParameter, csrfParameter],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ObservationDefinitionCreateCommand',
+                },
+              },
+            },
+          },
+          responses: {
+            '201': jsonResponse(
+              'ObservationDefinitionMutationResponse',
+              'Observation definition created',
+            ),
+            ...errorResponses,
+            '409': jsonResponse(
+              'ApiError',
+              'Observation definition already exists',
+            ),
+          },
+        },
+      },
+      '/organizations/{organizationId}/observation-definitions/{definitionId}/versions':
+        {
+          post: {
+            tags: ['Observations'],
+            operationId: 'createObservationDefinitionVersion',
+            parameters: [
+              organizationParameter,
+              definitionParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/ObservationDefinitionVersionCreateCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '201': jsonResponse(
+                'ObservationDefinitionMutationResponse',
+                'Observation definition version created',
+              ),
+              ...errorResponses,
+              '409': jsonResponse(
+                'ApiError',
+                'Observation definition version conflict',
+              ),
+            },
+          },
+        },
+      '/organizations/{organizationId}/observation-assignments': {
+        get: collectionOperation(
+          'Observations',
+          'listObservationAssignments',
+          'ObservationAssignmentsResponse',
+        ),
+        post: {
+          tags: ['Observations'],
+          operationId: 'createObservationAssignment',
+          parameters: [organizationParameter, csrfParameter],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/ObservationAssignmentCreateCommand',
+                },
+              },
+            },
+          },
+          responses: {
+            '201': jsonResponse(
+              'ObservationAssignmentMutationResponse',
+              'Observation assignment created',
+            ),
+            ...errorResponses,
+          },
+        },
+      },
+      '/organizations/{organizationId}/observation-assignments/{assignmentId}':
+        {
+          patch: {
+            tags: ['Observations'],
+            operationId: 'updateObservationAssignment',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/ObservationAssignmentUpdateCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '200': jsonResponse('ObservationAssignmentMutationResponse'),
+              ...errorResponses,
+              '409': jsonResponse(
+                'ApiError',
+                'Observation assignment state conflict',
+              ),
+            },
+          },
+          delete: {
+            tags: ['Observations'],
+            operationId: 'deleteObservationAssignment',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            responses: {
+              '204': { description: 'Observation assignment deleted' },
+              ...errorResponses,
+              '409': jsonResponse(
+                'ApiError',
+                'Observation assignment state conflict',
+              ),
+            },
+          },
+        },
+      '/organizations/{organizationId}/observation-assignments/{assignmentId}/cancel':
+        {
+          post: {
+            tags: ['Observations'],
+            operationId: 'cancelObservationAssignment',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/ObservationAssignmentCancelCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '200': jsonResponse('ObservationAssignmentMutationResponse'),
+              ...errorResponses,
+              '409': jsonResponse(
+                'ApiError',
+                'Observation assignment state conflict',
+              ),
+            },
+          },
+        },
       '/organizations/{organizationId}/classes/{classId}/attendance': {
         get: {
           tags: ['Attendance'],

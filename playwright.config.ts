@@ -33,5 +33,10 @@ export default defineConfig({
       testMatch: /p5-learning-journeys\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
     },
+    {
+      name: 'p5-observations-chromium',
+      testMatch: /p5-observations\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
+    },
   ],
 });

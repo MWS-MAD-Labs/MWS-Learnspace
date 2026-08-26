@@ -49,9 +49,16 @@ function sessionPayload(
       unitIds: membership.unitScopes.map((scope) => scope.unitId),
       gradeIds: membership.gradeScopes.map((scope) => scope.gradeId),
       subjectIds: membership.subjectScopes.map((scope) => scope.subjectId),
-      assignedStudentIds: membership.staffAssignments.map(
-        (assignment) => assignment.studentId,
-      ),
+      assignedStudentIds: [
+        ...new Set([
+          ...membership.staffAssignments.map(
+            (assignment) => assignment.studentId,
+          ),
+          ...membership.observationAssignments.map(
+            (assignment) => assignment.studentId,
+          ),
+        ]),
+      ],
       permissions: permissionsForRole(membership.role),
     })),
     expiresAt: session.expiresAt.toISOString(),
@@ -99,6 +106,9 @@ export function createRequiredAuthentication(
           gradeIds: membership.gradeScopes.map((scope) => scope.gradeId),
           subjectIds: membership.subjectScopes.map((scope) => scope.subjectId),
           assignedStudentIds: membership.staffAssignments.map(
+            (assignment) => assignment.studentId,
+          ),
+          observationAssignedStudentIds: membership.observationAssignments.map(
             (assignment) => assignment.studentId,
           ),
           assignedStudentScopes: membership.staffAssignments.map(

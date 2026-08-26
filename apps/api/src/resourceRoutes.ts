@@ -224,7 +224,7 @@ function studentScopeWhere(
     };
   }
   if (assignedStudentRoles.includes(membership.role)) {
-    const activeStudentIds = membership.assignedStudentScopes
+    const datedStudentIds = membership.assignedStudentScopes
       ? membership.assignedStudentScopes
           .filter(
             (scope) =>
@@ -233,6 +233,12 @@ function studentScopeWhere(
           )
           .map((scope) => scope.studentId)
       : membership.assignedStudentIds;
+    const activeStudentIds = [
+      ...new Set([
+        ...datedStudentIds,
+        ...(membership.observationAssignedStudentIds ?? []),
+      ]),
+    ];
     return activeStudentIds.length
       ? { id: { in: activeStudentIds } }
       : undefined;

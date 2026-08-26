@@ -29,6 +29,45 @@ describe('OpenAPI contract', () => {
     expect(generateOpenApiDocument().openapi).toBe('3.1.0');
   });
 
+  it('registers the observation definition and assignment contracts and routes', () => {
+    const document = generateOpenApiDocument();
+    const schemas = document.components.schemas;
+    const paths = document.paths;
+
+    expect(schemas).toMatchObject({
+      ObservationDefinitionsResponse: expect.any(Object),
+      ObservationDefinitionCreateCommand: expect.any(Object),
+      ObservationDefinitionVersionCreateCommand: expect.any(Object),
+      ObservationDefinitionMutationResponse: expect.any(Object),
+      ObservationAssignmentsResponse: expect.any(Object),
+      ObservationAssignmentCreateCommand: expect.any(Object),
+      ObservationAssignmentUpdateCommand: expect.any(Object),
+      ObservationAssignmentCancelCommand: expect.any(Object),
+      ObservationAssignmentMutationResponse: expect.any(Object),
+    });
+    expect(
+      paths['/organizations/{organizationId}/observation-definitions'],
+    ).toMatchObject({ get: expect.any(Object), post: expect.any(Object) });
+    expect(
+      paths[
+        '/organizations/{organizationId}/observation-definitions/{definitionId}/versions'
+      ],
+    ).toMatchObject({ post: expect.any(Object) });
+    expect(
+      paths['/organizations/{organizationId}/observation-assignments'],
+    ).toMatchObject({ get: expect.any(Object), post: expect.any(Object) });
+    expect(
+      paths[
+        '/organizations/{organizationId}/observation-assignments/{assignmentId}'
+      ],
+    ).toMatchObject({ patch: expect.any(Object), delete: expect.any(Object) });
+    expect(
+      paths[
+        '/organizations/{organizationId}/observation-assignments/{assignmentId}/cancel'
+      ],
+    ).toMatchObject({ post: expect.any(Object) });
+  });
+
   it('uses the runtime schemas for attendance request and response examples', () => {
     expect(
       attendanceBulkSaveCommandSchema.parse({

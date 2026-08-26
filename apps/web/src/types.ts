@@ -55,15 +55,28 @@ export interface Student {
 
 export type ObservationInstrumentType = 'FEDC' | 'SENSORY_PROFILE' | 'SFA';
 
+export type ObservationAssignmentStatus =
+  | 'Pending'
+  | 'In Progress'
+  | 'Completed'
+  | 'Cancelled'
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
 export interface ObservationAssignment {
   id: string;
   studentId: string;
   studentName: string;
   studentGrade?: string;
+  definitionId: string;
+  definitionVersion: number;
   instrumentType: ObservationInstrumentType;
   instrumentTitle?: string;
   academicYear: string; // e.g. "2026-2027"
   assignedToUserId: string;
+  assignedToMembershipId?: string;
   assignedToUserName: string;
   assignedToRole?: string; // e.g. "Occupational Therapist", "Speech Therapist", "GPK Teacher"
   assignedToUserRole?: string;
@@ -73,13 +86,7 @@ export interface ObservationAssignment {
   assignedByCoordinatorName?: string;
   assignedDate?: string;
   dueDate: string; // e.g. "2026-11-30"
-  status:
-    | 'Pending'
-    | 'In Progress'
-    | 'Completed'
-    | 'PENDING'
-    | 'IN_PROGRESS'
-    | 'COMPLETED';
+  status: ObservationAssignmentStatus;
   priority?:
     | 'Routine Annual'
     | 'Urgent Re-Evaluation'
@@ -88,7 +95,28 @@ export interface ObservationAssignment {
   notes?: string;
   createdAt?: string;
   completedAt?: string;
+  cancelledAt?: string;
   recordId?: string;
+}
+
+export interface ObservationDefinition {
+  id: string;
+  definitionKey: string;
+  type: ObservationInstrumentType;
+  title: string;
+  framework: string;
+  description: string;
+  targetAges: string;
+  defaultFrequency: string;
+  version: number;
+  itemCount: number;
+  sectionsCount: number;
+  maxScore: number;
+  lastUpdated: string;
+  updatedBy: string;
+  isActive: boolean;
+  body: Record<string, unknown>;
+  isNew?: boolean;
 }
 
 export interface ObservationFormDefinition {

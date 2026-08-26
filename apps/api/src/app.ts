@@ -15,6 +15,7 @@ import { SessionService } from './sessionService.js';
 import { HttpError } from './httpErrors.js';
 import { createLearningJourneyRouter } from './learningJourneyRoutes.js';
 import { createResourceRouter } from './resourceRoutes.js';
+import { createObservationRouter } from './observationRoutes.js';
 import { createTestAuthRouter } from './testAuthRoutes.js';
 
 export type AppDependencies = {
@@ -134,6 +135,10 @@ export function createApp({
       app.use(
         '/api/v1',
         createResourceRouter(database.client, authServices.sessions),
+      );
+      app.use(
+        '/api/v1',
+        createObservationRouter(database.client, authServices.sessions),
       );
     }
   }

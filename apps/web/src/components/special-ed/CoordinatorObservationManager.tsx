@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { demoRoleSwitcherEnabled, useApp } from '../../context/AppContext';
+import { useObservationData } from '../../hooks/useObservationData';
 import { ApiClientError } from '../../services/apiClient';
+import {
+  definitionCreateCommand,
+  definitionVersionCommand,
+  demoObservationRepository,
+  observationService,
+} from '../../services/observationService';
 import { storageService } from '../../services/storageService';
 import { studentAdministrationService } from '../../services/studentAdministrationService';
 import {
   Student,
-  ObservationAssignment,
-  ObservationFormDefinition,
+  ObservationDefinition,
   ObservationInstrumentType,
 } from '../../types';
 import { ObservationHistoryViewer } from './ObservationHistoryViewer';
@@ -21,6 +27,8 @@ import {
   Settings2,
   Send,
   UserCheck,
+  RefreshCw,
+  XCircle,
 } from 'lucide-react';
 
 type CoordinatorTab =
@@ -40,19 +48,18 @@ export const CoordinatorObservationManager: React.FC = () => {
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<CoordinatorTab>('GPK_MANAGEMENT');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Forms state
-  const [forms, setForms] = useState<ObservationFormDefinition[]>(() =>
-    storageService.getObservationForms(),
+  const observationData = useObservationData(organizationId);
+  const [forms, setForms] = useState<ObservationDefinition[]>([]);
+  const [assignments, setAssignments] = useState(observationData.assignments);
+  const [editingForm, setEditingForm] = useState<ObservationDefinition | null>(
+    null,
   );
-  const [editingForm, setEditingForm] =
-    useState<ObservationFormDefinition | null>(null);
-
-  // Assignments state
-  const [assignments, setAssignments] = useState<ObservationAssignment[]>(() =>
-    storageService.getObservationAssignments(),
-  );
+  const [isSavingForm, setIsSavingForm] = useState(false);
+  const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
+  const [mutatingAssignmentId, setMutatingAssignmentId] = useState<
+    string | null
+  >(null);
+  const [mutationError, setMutationError] = useState<string>();
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
     studentId:
@@ -63,11 +70,32 @@ export const CoordinatorObservationManager: React.FC = () => {
       allUsers.find((u) => u.roleTitle.includes('Therapist') || u.isGPK)?.id ||
       allUsers[0]?.id ||
       '',
+    definitionId: '',
     instrumentType: 'FEDC' as ObservationInstrumentType,
     academicYear: '2026-2027',
     dueDate: '2026-11-30',
+    priority: 'Routine Annual',
     notes: 'Annual developmental observation evaluation',
   });
+
+  useEffect(() => {
+    setForms(observationData.definitions);
+    setAssignments(observationData.assignments);
+  }, [observationData.assignments, observationData.definitions]);
+
+  useEffect(() => {
+    const selectedDefinition = forms.find(
+      (form) => form.id === newAssignment.definitionId,
+    );
+    const fallback = forms.find((form) => form.isActive);
+    if ((!selectedDefinition || !selectedDefinition.isActive) && fallback) {
+      setNewAssignment((current) => ({
+        ...current,
+        definitionId: fallback.id,
+        instrumentType: fallback.type,
+      }));
+    }
+  }, [forms, newAssignment.definitionId]);
 
   // GPK-Student Assignment state
   const [isAssignGPKModalOpen, setIsAssignGPKModalOpen] = useState(false);
@@ -83,12 +111,8 @@ export const CoordinatorObservationManager: React.FC = () => {
     specialStudents[0] ||
     students[0];
 
-  // Security check: Only Coordinator and Leadership should access this view
-  const isAuthorizedCoordinator =
-    currentUser.isSpecialEdCoordinator ||
-    currentUser.role === 'PRINCIPAL' ||
-    currentUser.role === 'DIRECTOR' ||
-    (currentUser.role === 'SPECIAL_ED_TEACHER' && !currentUser.isGPK);
+  // Observation definitions and assignments are coordinator-only management.
+  const isAuthorizedCoordinator = Boolean(currentUser.isSpecialEdCoordinator);
 
   // GPK Teachers list (strictly filter actual GPK teachers, excluding coordinator)
   const gpkTeachers = allUsers.filter(
@@ -96,72 +120,209 @@ export const CoordinatorObservationManager: React.FC = () => {
       u.isGPK ||
       (u.roleTitle.toLowerCase().includes('gpk') && !u.isSpecialEdCoordinator),
   );
+  const eligibleAssigneeRoles = new Set([
+    'SPECIAL_ED_COORDINATOR',
+    'SPECIAL_ED_TEACHER',
+    'SPECIALIST',
+  ]);
+  const selectableAssignees = allUsers.filter(
+    (user) =>
+      eligibleAssigneeRoles.has(user.role) &&
+      (demoRoleSwitcherEnabled || Boolean(user.membershipId)),
+  );
+  const latestDefinitionVersionByKey = forms.reduce<Map<string, number>>(
+    (latest, form) => {
+      latest.set(
+        form.definitionKey,
+        Math.max(latest.get(form.definitionKey) ?? 0, form.version),
+      );
+      return latest;
+    },
+    new Map(),
+  );
 
-  // Handle Form Save
-  const handleSaveForm = (form: ObservationFormDefinition) => {
-    storageService.saveObservationForm(form);
-    setForms(storageService.getObservationForms());
-    setEditingForm(null);
-    showToast(
-      'success',
-      'Observation Form Template Saved',
-      `Updated configuration for "${form.title}"`,
-    );
+  useEffect(() => {
+    if (
+      selectableAssignees.length > 0 &&
+      !selectableAssignees.some(
+        (user) => user.id === newAssignment.assignedToUserId,
+      )
+    ) {
+      setNewAssignment((current) => ({
+        ...current,
+        assignedToUserId: selectableAssignees[0].id,
+      }));
+    }
+  }, [newAssignment.assignedToUserId, selectableAssignees]);
+
+  const handleSaveForm = async (form: ObservationDefinition) => {
+    if (isSavingForm) return;
+    setIsSavingForm(true);
+    setMutationError(undefined);
+    try {
+      if (demoRoleSwitcherEnabled) {
+        demoObservationRepository.saveDefinition(form, currentUser);
+      } else if (form.isNew) {
+        await observationService.createDefinition(
+          organizationId,
+          definitionCreateCommand(form),
+        );
+      } else {
+        await observationService.createDefinitionVersion(
+          organizationId,
+          form.id,
+          definitionVersionCommand(form),
+        );
+      }
+      setEditingForm(null);
+      observationData.retry();
+      showToast(
+        'success',
+        form.isNew ? 'Observation Form Created' : 'New Form Version Published',
+        form.isNew
+          ? `Created v1 of "${form.title}".`
+          : `Published a new version of "${form.title}" without replacing v${form.version}.`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'The observation form could not be saved.';
+      setMutationError(message);
+      showToast('error', 'Form Save Failed', message);
+    } finally {
+      setIsSavingForm(false);
+    }
   };
 
-  // Handle Create Assignment
-  const handleCreateAssignment = (e: React.FormEvent) => {
+  const handleCreateAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCreatingAssignment) return;
     const student = students.find((s) => s.id === newAssignment.studentId);
     const assignedUser = allUsers.find(
       (u) => u.id === newAssignment.assignedToUserId,
     );
+    const definition = forms.find(
+      (form) => form.id === newAssignment.definitionId,
+    );
 
-    if (!student || !assignedUser) {
+    if (!student || !assignedUser || !definition) {
       showToast(
         'error',
         'Incomplete Assignment',
-        'Please select a valid student and assessor.',
+        'Please select a valid student, assessor, and observation definition.',
+      );
+      return;
+    }
+    if (!assignedUser.membershipId && !demoRoleSwitcherEnabled) {
+      showToast(
+        'error',
+        'Assessor Unavailable',
+        'This staff member has no organization membership and cannot be selected.',
       );
       return;
     }
 
-    const created: ObservationAssignment = {
-      id: `oa-${Date.now()}`,
-      studentId: student.id,
-      studentName: student.name,
-      assignedToUserId: assignedUser.id,
-      assignedToUserName: assignedUser.name,
-      assignedToUserRole: assignedUser.roleTitle,
-      instrumentType: newAssignment.instrumentType,
-      academicYear: newAssignment.academicYear,
-      dueDate: newAssignment.dueDate,
-      status: 'PENDING',
-      assignedByCoordinatorId: currentUser.id,
-      assignedByCoordinatorName: currentUser.name,
-      assignedDate: new Date().toISOString().split('T')[0],
-      notes: newAssignment.notes,
-    };
-
-    storageService.saveObservationAssignment(created);
-    setAssignments(storageService.getObservationAssignments());
-    setIsAssignModalOpen(false);
-    showToast(
-      'success',
-      'Observation Assigned',
-      `Assigned ${created.instrumentType} for ${student.name} to ${assignedUser.name}`,
-    );
+    setIsCreatingAssignment(true);
+    setMutationError(undefined);
+    try {
+      if (demoRoleSwitcherEnabled) {
+        demoObservationRepository.createAssignment({
+          student,
+          assignee: assignedUser,
+          definition,
+          academicYear: newAssignment.academicYear,
+          dueDate: newAssignment.dueDate,
+          priority: newAssignment.priority,
+          notes: newAssignment.notes,
+          coordinator: currentUser,
+        });
+      } else {
+        await observationService.createAssignment(organizationId, {
+          assignedToMembershipId: assignedUser.membershipId!,
+          studentId: student.id,
+          definitionId: definition.id,
+          academicYear: newAssignment.academicYear,
+          dueDate: newAssignment.dueDate,
+          priority: newAssignment.priority,
+          notes: newAssignment.notes || null,
+        });
+      }
+      setIsAssignModalOpen(false);
+      observationData.retry();
+      showToast(
+        'success',
+        'Observation Assigned',
+        `Assigned ${definition.title} v${definition.version} for ${student.name} to ${assignedUser.name}.`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'The observation assignment could not be created.';
+      setMutationError(message);
+      showToast('error', 'Assignment Failed', message);
+    } finally {
+      setIsCreatingAssignment(false);
+    }
   };
 
-  // Handle Delete Assignment
-  const handleDeleteAssignment = (id: string) => {
-    storageService.deleteObservationAssignment(id);
-    setAssignments(storageService.getObservationAssignments());
-    showToast(
-      'info',
-      'Assignment Removed',
-      'The observation assignment was deleted.',
-    );
+  const handleDeleteAssignment = async (id: string) => {
+    if (mutatingAssignmentId) return;
+    setMutatingAssignmentId(id);
+    setMutationError(undefined);
+    try {
+      if (demoRoleSwitcherEnabled) {
+        demoObservationRepository.deleteAssignment(id);
+      } else {
+        await observationService.deleteAssignment(organizationId, id);
+      }
+      observationData.retry();
+      showToast(
+        'info',
+        'Assignment Removed',
+        'The pending assignment was deleted.',
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'The assignment could not be deleted.';
+      setMutationError(message);
+      showToast('error', 'Delete Failed', message);
+    } finally {
+      setMutatingAssignmentId(null);
+    }
+  };
+
+  const handleCancelAssignment = async (id: string) => {
+    if (mutatingAssignmentId) return;
+    setMutatingAssignmentId(id);
+    setMutationError(undefined);
+    try {
+      if (demoRoleSwitcherEnabled) {
+        demoObservationRepository.cancelAssignment(id);
+      } else {
+        await observationService.cancelAssignment(organizationId, id, {
+          reason: 'Cancelled by Special Education Coordinator.',
+        });
+      }
+      observationData.retry();
+      showToast(
+        'info',
+        'Assignment Cancelled',
+        'The assignment is now immutable.',
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'The assignment could not be cancelled.';
+      setMutationError(message);
+      showToast('error', 'Cancel Failed', message);
+    } finally {
+      setMutatingAssignmentId(null);
+    }
   };
 
   const handleAssignGPK = async (e: React.FormEvent) => {
@@ -552,82 +713,155 @@ export const CoordinatorObservationManager: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {assignments.map((assn) => (
-              <div
-                key={assn.id}
-                id={`assignment-card-${assn.id}`}
-                className="bg-white border border-[#EFE7DC] rounded-2xl p-4 shadow-xs space-y-3"
+          {mutationError && (
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-800 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{mutationError}</span>
+            </div>
+          )}
+
+          {observationData.status === 'loading' ? (
+            <div className="bg-white border border-[#EFE7DC] rounded-2xl p-8 text-center text-xs text-stone-500">
+              Loading observation assignments…
+            </div>
+          ) : observationData.status === 'error' ? (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center space-y-3">
+              <AlertCircle className="w-6 h-6 text-rose-600 mx-auto" />
+              <p className="text-xs text-rose-800">
+                {observationData.error ||
+                  'Observation assignments could not be loaded.'}
+              </p>
+              <button
+                type="button"
+                onClick={observationData.retry}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-rose-200 rounded-lg text-xs font-bold text-rose-800"
               >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                      assn.instrumentType === 'FEDC'
-                        ? 'bg-purple-100 text-purple-800'
-                        : assn.instrumentType === 'SENSORY_PROFILE'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-blue-100 text-blue-800'
-                    }`}
+                <RefreshCw className="w-3.5 h-3.5" /> Retry
+              </button>
+            </div>
+          ) : assignments.length === 0 ? (
+            <div className="bg-white border border-dashed border-[#E8DFC8] rounded-2xl p-8 text-center text-xs text-stone-500">
+              No observation assignments have been created yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {assignments.map((assn) => {
+                const normalizedStatus = assn.status
+                  .toUpperCase()
+                  .replaceAll(' ', '_');
+                const canDelete = normalizedStatus === 'PENDING';
+                const canCancel =
+                  normalizedStatus === 'PENDING' ||
+                  normalizedStatus === 'IN_PROGRESS';
+                const isMutating = mutatingAssignmentId === assn.id;
+                return (
+                  <div
+                    key={assn.id}
+                    id={`assignment-card-${assn.id}`}
+                    className="bg-white border border-[#EFE7DC] rounded-2xl p-4 shadow-xs space-y-3"
                   >
-                    {assn.instrumentType} Instrument
-                  </span>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                          assn.instrumentType === 'FEDC'
+                            ? 'bg-purple-100 text-purple-800'
+                            : assn.instrumentType === 'SENSORY_PROFILE'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {assn.instrumentType} · v{assn.definitionVersion}
+                      </span>
 
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      assn.status === 'COMPLETED'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : assn.status === 'IN_PROGRESS'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-stone-100 text-stone-700'
-                    }`}
-                  >
-                    {assn.status}
-                  </span>
-                </div>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          normalizedStatus === 'COMPLETED'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : normalizedStatus === 'CANCELLED'
+                              ? 'bg-rose-100 text-rose-800'
+                              : normalizedStatus === 'IN_PROGRESS'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-stone-100 text-stone-700'
+                        }`}
+                      >
+                        {assn.status}
+                      </span>
+                    </div>
 
-                <div>
-                  <h4 className="font-heading font-bold text-sm text-stone-900">
-                    {assn.studentName}
-                  </h4>
-                  <p className="text-xs text-stone-600 mt-0.5">
-                    Assigned to:{' '}
-                    <strong className="text-stone-900">
-                      {assn.assignedToUserName}
-                    </strong>{' '}
-                    ({assn.assignedToUserRole})
-                  </p>
-                </div>
+                    <div>
+                      <h4 className="font-heading font-bold text-sm text-stone-900">
+                        {assn.studentName}
+                      </h4>
+                      <p className="text-[11px] text-stone-500 mt-0.5">
+                        {assn.instrumentTitle || 'Observation definition'} ·
+                        Definition{' '}
+                        <span className="font-mono">{assn.definitionId}</span>
+                      </p>
+                      <p className="text-xs text-stone-600 mt-0.5">
+                        Assigned to:{' '}
+                        <strong className="text-stone-900">
+                          {assn.assignedToUserName}
+                        </strong>{' '}
+                        ({assn.assignedToUserRole})
+                      </p>
+                    </div>
 
-                <div className="bg-[#FAF5EF] p-2.5 rounded-xl border border-[#E8DFC8] text-[11px] space-y-1 text-stone-600">
-                  <p>
-                    <strong className="text-stone-800">Due Date:</strong>{' '}
-                    {assn.dueDate}
-                  </p>
-                  <p>
-                    <strong className="text-stone-800">Academic Year:</strong>{' '}
-                    {assn.academicYear}
-                  </p>
-                  <p>
-                    <strong className="text-stone-800">Notes:</strong>{' '}
-                    {assn.notes}
-                  </p>
-                </div>
+                    <div className="bg-[#FAF5EF] p-2.5 rounded-xl border border-[#E8DFC8] text-[11px] space-y-1 text-stone-600">
+                      <p>
+                        <strong className="text-stone-800">Due Date:</strong>{' '}
+                        {assn.dueDate}
+                      </p>
+                      <p>
+                        <strong className="text-stone-800">
+                          Academic Year:
+                        </strong>{' '}
+                        {assn.academicYear}
+                      </p>
+                      <p>
+                        <strong className="text-stone-800">Notes:</strong>{' '}
+                        {assn.notes}
+                      </p>
+                    </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-[11px]">
-                  <span className="text-stone-400">
-                    Assigned {assn.assignedDate}
-                  </span>
-                  <button
-                    onClick={() => handleDeleteAssignment(assn.id)}
-                    className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
-                    title="Remove assignment"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-[11px]">
+                      <span className="text-stone-400">
+                        Assigned {assn.assignedDate}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {canCancel && (
+                          <button
+                            type="button"
+                            onClick={() => handleCancelAssignment(assn.id)}
+                            disabled={isMutating}
+                            className="p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                            title="Cancel assignment"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAssignment(assn.id)}
+                            disabled={isMutating}
+                            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-50"
+                            title="Delete pending assignment"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {!canCancel && !canDelete && (
+                          <span className="text-[10px] font-semibold text-stone-400">
+                            Immutable
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -649,16 +883,24 @@ export const CoordinatorObservationManager: React.FC = () => {
               id="create-new-form-btn"
               onClick={() =>
                 setEditingForm({
-                  id: `form-${Date.now()}`,
+                  id: '',
+                  definitionKey: `custom-${Date.now()}`,
                   title: 'New Observation Instrument',
-                  type: 'CUSTOM',
-                  version: '1.0',
+                  type: 'FEDC',
+                  version: 1,
+                  framework: '',
                   description:
                     'Custom diagnostic rubric for classroom observation.',
+                  targetAges: '',
+                  defaultFrequency: '',
+                  itemCount: 20,
                   sectionsCount: 4,
-                  totalItemsCount: 20,
                   maxScore: 60,
                   lastUpdated: new Date().toISOString().split('T')[0],
+                  updatedBy: currentUser.name,
+                  isActive: true,
+                  body: {},
+                  isNew: true,
                 })
               }
               className="flex items-center gap-1.5 px-4 py-2 bg-[#6E161E] hover:bg-[#581118] text-white rounded-xl text-xs font-bold transition-all shadow-xs"
@@ -668,71 +910,105 @@ export const CoordinatorObservationManager: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {forms.map((form) => (
-              <div
-                key={form.id}
-                id={`form-card-${form.id}`}
-                className="bg-white border border-[#EFE7DC] rounded-2xl p-5 shadow-xs space-y-3"
+          {observationData.status === 'loading' ? (
+            <div className="bg-white border border-[#EFE7DC] rounded-2xl p-8 text-center text-xs text-stone-500">
+              Loading observation definitions…
+            </div>
+          ) : observationData.status === 'error' ? (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center space-y-3">
+              <p className="text-xs text-rose-800">
+                {observationData.error ||
+                  'Observation definitions could not be loaded.'}
+              </p>
+              <button
+                type="button"
+                onClick={observationData.retry}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-rose-200 rounded-lg text-xs font-bold text-rose-800"
               >
-                <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#6E161E]/10 text-[#6E161E] border border-[#6E161E]/20">
-                    {form.type} Instrument
-                  </span>
-                  <span className="text-[11px] font-mono text-stone-400">
-                    v{form.version}
-                  </span>
-                </div>
-
-                <div>
-                  <h4 className="font-heading font-bold text-sm text-stone-900">
-                    {form.title}
-                  </h4>
-                  <p className="text-xs text-stone-500 mt-1 leading-relaxed">
-                    {form.description}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 bg-[#FAF5EF] p-2.5 rounded-xl border border-[#E8DFC8] text-center text-xs">
-                  <div>
-                    <span className="text-[10px] text-stone-400 uppercase font-bold">
-                      Sections
+                <RefreshCw className="w-3.5 h-3.5" /> Retry
+              </button>
+            </div>
+          ) : forms.length === 0 ? (
+            <div className="bg-white border border-dashed border-[#E8DFC8] rounded-2xl p-8 text-center text-xs text-stone-500">
+              No observation definitions exist yet. Create the first v1
+              definition.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {forms.map((form) => (
+                <div
+                  key={form.id}
+                  id={`form-card-${form.id}`}
+                  className="bg-white border border-[#EFE7DC] rounded-2xl p-5 shadow-xs space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#6E161E]/10 text-[#6E161E] border border-[#6E161E]/20">
+                      {form.type} Instrument
                     </span>
-                    <p className="font-bold text-stone-800">
-                      {form.sectionsCount}
+                    <span className="text-[11px] font-mono text-stone-400">
+                      v{form.version}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="font-heading font-bold text-sm text-stone-900">
+                      {form.title}
+                    </h4>
+                    <p className="text-xs text-stone-500 mt-1 leading-relaxed">
+                      {form.description}
                     </p>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-stone-400 uppercase font-bold">
-                      Items
-                    </span>
-                    <p className="font-bold text-stone-800">
-                      {form.totalItemsCount}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-stone-400 uppercase font-bold">
-                      Max Score
-                    </span>
-                    <p className="font-bold text-stone-800">{form.maxScore}</p>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-stone-100">
-                  <span className="text-[10px] text-stone-400">
-                    Updated: {form.lastUpdated}
-                  </span>
-                  <button
-                    onClick={() => setEditingForm(form)}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-[#FAF5EF] hover:bg-[#6E161E] hover:text-white border border-[#E8DFC8] rounded-xl text-xs font-bold transition-all text-stone-700 shadow-2xs"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit Form</span>
-                  </button>
+                  <div className="grid grid-cols-3 gap-2 bg-[#FAF5EF] p-2.5 rounded-xl border border-[#E8DFC8] text-center text-xs">
+                    <div>
+                      <span className="text-[10px] text-stone-400 uppercase font-bold">
+                        Sections
+                      </span>
+                      <p className="font-bold text-stone-800">
+                        {form.sectionsCount || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-stone-400 uppercase font-bold">
+                        Items
+                      </span>
+                      <p className="font-bold text-stone-800">
+                        {form.itemCount || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-stone-400 uppercase font-bold">
+                        Max Score
+                      </span>
+                      <p className="font-bold text-stone-800">
+                        {form.maxScore || '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-stone-100">
+                    <span className="text-[10px] text-stone-400">
+                      Updated: {form.lastUpdated}
+                    </span>
+                    {form.version ===
+                    latestDefinitionVersionByKey.get(form.definitionKey) ? (
+                      <button
+                        onClick={() => setEditingForm(form)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-[#FAF5EF] hover:bg-[#6E161E] hover:text-white border border-[#E8DFC8] rounded-xl text-xs font-bold transition-all text-stone-700 shadow-2xs"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Publish Next Version</span>
+                      </button>
+                    ) : (
+                      <span className="text-[10px] font-bold text-stone-400">
+                        Historical version
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -965,7 +1241,7 @@ export const CoordinatorObservationManager: React.FC = () => {
                   }
                   className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl font-semibold"
                 >
-                  {allUsers.map((u) => (
+                  {selectableAssignees.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} ({u.roleTitle})
                     </option>
@@ -973,25 +1249,51 @@ export const CoordinatorObservationManager: React.FC = () => {
                 </select>
               </div>
 
+              <div className="space-y-1">
+                <label className="font-bold text-stone-700">
+                  Observation Definition & Version:
+                </label>
+                <select
+                  value={newAssignment.definitionId}
+                  onChange={(e) => {
+                    const definition = forms.find(
+                      (form) => form.id === e.target.value,
+                    );
+                    setNewAssignment({
+                      ...newAssignment,
+                      definitionId: e.target.value,
+                      instrumentType:
+                        definition?.type ?? newAssignment.instrumentType,
+                    });
+                  }}
+                  className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl font-semibold"
+                >
+                  {forms
+                    .filter((definition) => definition.isActive)
+                    .map((definition) => (
+                      <option key={definition.id} value={definition.id}>
+                        {definition.title} · v{definition.version}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="font-bold text-stone-700">
-                    Instrument Type:
+                    Academic Year:
                   </label>
-                  <select
-                    value={newAssignment.instrumentType}
+                  <input
+                    type="text"
+                    value={newAssignment.academicYear}
                     onChange={(e) =>
                       setNewAssignment({
                         ...newAssignment,
-                        instrumentType: e.target.value as any,
+                        academicYear: e.target.value,
                       })
                     }
                     className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl font-semibold"
-                  >
-                    <option value="FEDC">FEDC (Greenspan)</option>
-                    <option value="SENSORY_PROFILE">Sensory Profile 2</option>
-                    <option value="SFA">SFA Assessment</option>
-                  </select>
+                  />
                 </div>
 
                 <div className="space-y-1">
@@ -1008,6 +1310,28 @@ export const CoordinatorObservationManager: React.FC = () => {
                     className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl font-semibold"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-stone-700">Priority:</label>
+                <select
+                  value={newAssignment.priority}
+                  onChange={(e) =>
+                    setNewAssignment({
+                      ...newAssignment,
+                      priority: e.target.value,
+                    })
+                  }
+                  className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl font-semibold"
+                >
+                  <option value="Routine Annual">Routine Annual</option>
+                  <option value="Urgent Re-Evaluation">
+                    Urgent Re-Evaluation
+                  </option>
+                  <option value="New Admission Diagnostic">
+                    New Admission Diagnostic
+                  </option>
+                </select>
               </div>
 
               <div className="space-y-1">
@@ -1032,16 +1356,26 @@ export const CoordinatorObservationManager: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAssignModalOpen(false)}
-                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-bold"
+                  disabled={isCreatingAssignment}
+                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-bold disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#6E161E] hover:bg-[#581118] text-white rounded-xl font-bold shadow-xs flex items-center gap-1.5"
+                  disabled={
+                    isCreatingAssignment ||
+                    !newAssignment.definitionId ||
+                    !newAssignment.assignedToUserId
+                  }
+                  className="px-4 py-2 bg-[#6E161E] hover:bg-[#581118] text-white rounded-xl font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Dispatch Assignment</span>
+                  <span>
+                    {isCreatingAssignment
+                      ? 'Dispatching…'
+                      : 'Dispatch Assignment'}
+                  </span>
                 </button>
               </div>
             </form>
@@ -1056,9 +1390,9 @@ export const CoordinatorObservationManager: React.FC = () => {
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <div>
                 <h3 className="font-heading font-black text-base text-stone-900">
-                  {editingForm.id.startsWith('form-')
+                  {editingForm.isNew
                     ? 'Create Observation Form'
-                    : 'Edit Observation Form Template'}
+                    : `Publish Version ${editingForm.version + 1}`}
                 </h3>
                 <p className="text-xs text-stone-500 mt-0.5">
                   Customize rubric fields and scoring bounds
@@ -1125,11 +1459,11 @@ export const CoordinatorObservationManager: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    value={editingForm.totalItemsCount}
+                    value={editingForm.itemCount}
                     onChange={(e) =>
                       setEditingForm({
                         ...editingForm,
-                        totalItemsCount: Number(e.target.value),
+                        itemCount: Number(e.target.value),
                       })
                     }
                     className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl font-bold"
@@ -1155,16 +1489,22 @@ export const CoordinatorObservationManager: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setEditingForm(null)}
-                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-bold"
+                  disabled={isSavingForm}
+                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-bold disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSaveForm(editingForm)}
-                  className="px-4 py-2 bg-[#6E161E] hover:bg-[#581118] text-white rounded-xl font-bold shadow-xs"
+                  disabled={isSavingForm || !editingForm.title.trim()}
+                  className="px-4 py-2 bg-[#6E161E] hover:bg-[#581118] text-white rounded-xl font-bold shadow-xs disabled:opacity-50"
                 >
-                  Save Form Template
+                  {isSavingForm
+                    ? 'Saving…'
+                    : editingForm.isNew
+                      ? 'Create v1'
+                      : 'Publish New Version'}
                 </button>
               </div>
             </div>

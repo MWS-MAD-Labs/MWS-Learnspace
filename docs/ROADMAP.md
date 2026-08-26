@@ -774,10 +774,11 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-004 — Migrate observation definitions and assignments
 
-- [ ] **Dependencies:** P5-001, P2-007
+- [x] **Dependencies:** P5-001, P2-007
 - **Change:** migrate form definitions, definition versioning, coordinator assignment, due dates, priorities, and assignment deletion/cancellation policy.
 - **Acceptance:** completed records retain their original definition version; only authorized coordinators manage assignments.
 - **Validate:** authorization and version-retention tests.
+- **Completed (2026-08-26):** Added shared contracts for observation definitions and assignments; immutable definition versioning; coordinator-only, server-enforced assignment management; temporary assignee student access limited to pending/in-progress work; due-date, priority, and lifecycle fields with explicit cancellation/deletion policy; transactional audits; API-backed web loading, retry, empty, denial, and mutation states; and removal of the corresponding `storageService` persistence. Integration tests and dedicated Compose-backed P5 observation E2E coverage validate definition retention, authorization, assignment lifecycle behavior, and persistence; observation record creation, responses, completion, and scoring remain in P5-005 through P5-007.
 
 ## P5-005 — Migrate FEDC observations
 

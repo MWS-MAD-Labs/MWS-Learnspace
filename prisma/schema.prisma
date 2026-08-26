@@ -72,6 +72,7 @@ enum ObservationStatus {
   PENDING
   IN_PROGRESS
   COMPLETED
+  CANCELLED
 }
 
 enum ServiceType {
@@ -140,6 +141,7 @@ model User {
   sessions              Session[]
   invitationsCreated    UserInvitation[]            @relation("InvitationCreatedBy")
   assignedByAssignments ObservationAssignment[]     @relation("ObservationAssignedBy")
+  cancelledAssignments  ObservationAssignment[]     @relation("ObservationCancelledBy")
   attendanceRecorded    AttendanceRecord[]          @relation("AttendanceRecorder")
   createdJourneys       LearningJourney[]           @relation("LearningJourneyCreatedBy")
   updatedJourneys       LearningJourney[]           @relation("LearningJourneyUpdatedBy")
@@ -603,17 +605,22 @@ model ObservationAssignment {
   status             ObservationStatus          @default(PENDING)
   assignedAt         DateTime                   @default(now())
   completedAt        DateTime?
+  cancelledAt        DateTime?
+  cancelledById      String?                    @db.Uuid
+  cancellationReason String?
   organization       Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   student            Student                    @relation(fields: [studentId], references: [id], onDelete: Cascade)
   definition         ObservationDefinition      @relation(fields: [definitionId], references: [id], onDelete: Restrict)
   assignedTo         Membership                 @relation("ObservationAssignee", fields: [assignedToId], references: [id], onDelete: Restrict)
   assignedBy         User?                      @relation("ObservationAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+  cancelledBy        User?                      @relation("ObservationCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
   fedcObservation    FEDCObservation?
   sensoryObservation SensoryProfileObservation?
   sfaObservation     SFAObservation?
 
   @@index([organizationId, studentId, status])
   @@index([organizationId, assignedToId, status, dueDate])
+  @@index([cancelledById])
 }
 
 model FEDCObservation {

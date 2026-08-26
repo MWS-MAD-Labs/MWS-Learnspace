@@ -10,9 +10,15 @@ export const e2eFixture = {
   directorEmail: 'p5.director@example.test',
   principalId: '20000000-0000-4000-8000-000000000003',
   principalEmail: 'p5.principal@example.test',
+  specialEdCoordinatorId: '20000000-0000-4000-8000-000000000004',
+  specialEdCoordinatorEmail: 'p5.observation.coordinator@example.test',
+  specialistId: '20000000-0000-4000-8000-000000000005',
+  specialistEmail: 'p5.observation.specialist@example.test',
   membershipId: '30000000-0000-4000-8000-000000000001',
   directorMembershipId: '30000000-0000-4000-8000-000000000002',
   principalMembershipId: '30000000-0000-4000-8000-000000000003',
+  specialEdCoordinatorMembershipId: '30000000-0000-4000-8000-000000000004',
+  specialistMembershipId: '30000000-0000-4000-8000-000000000005',
   unitId: '40000000-0000-4000-8000-000000000001',
   authorizedGradeId: '50000000-0000-4000-8000-000000000001',
   forbiddenGradeId: '50000000-0000-4000-8000-000000000002',
@@ -51,6 +57,11 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
   await prisma.workflowEvent.deleteMany();
   await prisma.learningJourney.deleteMany();
   await prisma.attendanceRecord.deleteMany();
+  await prisma.fEDCObservation.deleteMany();
+  await prisma.sensoryProfileObservation.deleteMany();
+  await prisma.sFAObservation.deleteMany();
+  await prisma.observationAssignment.deleteMany();
+  await prisma.observationDefinition.deleteMany();
   await prisma.session.deleteMany();
   await prisma.oAuthAccount.deleteMany();
   await prisma.oAuthLoginTransaction.deleteMany();
@@ -103,6 +114,18 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
         email: e2eFixture.principalEmail,
         displayName: 'Priya P5 Principal',
       },
+      {
+        id: e2eFixture.specialEdCoordinatorId,
+        email: e2eFixture.specialEdCoordinatorEmail,
+        displayName: 'Cora Observation Coordinator',
+        status: 'ACTIVE',
+      },
+      {
+        id: e2eFixture.specialistId,
+        email: e2eFixture.specialistEmail,
+        displayName: 'Sam Observation Specialist',
+        status: 'ACTIVE',
+      },
     ],
   });
   await prisma.membership.createMany({
@@ -127,6 +150,22 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
         userId: e2eFixture.principalId,
         role: 'PRINCIPAL',
         roleTitle: 'Principal',
+      },
+      {
+        id: e2eFixture.specialEdCoordinatorMembershipId,
+        organizationId: e2eFixture.organizationId,
+        userId: e2eFixture.specialEdCoordinatorId,
+        role: 'SPECIAL_ED_COORDINATOR',
+        roleTitle: 'Special Education Coordinator',
+        status: 'ACTIVE',
+      },
+      {
+        id: e2eFixture.specialistMembershipId,
+        organizationId: e2eFixture.organizationId,
+        userId: e2eFixture.specialistId,
+        role: 'SPECIALIST',
+        roleTitle: 'Occupational Therapist',
+        status: 'ACTIVE',
       },
     ],
   });

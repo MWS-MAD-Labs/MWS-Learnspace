@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
-import { ObservationAssignment } from '../../types';
+import { useObservationData } from '../../hooks/useObservationData';
+
 import { ObservationHistoryViewer } from './ObservationHistoryViewer';
 import { CoordinatorObservationManager } from './CoordinatorObservationManager';
 import { FEDCObservationView } from './FEDCObservationView';
@@ -12,7 +12,6 @@ import {
   Activity,
   FileText,
   Users,
-  ChevronRight,
   History,
   Edit3,
   FileSignature,
@@ -20,10 +19,12 @@ import {
   Clock,
   AlertCircle,
   Info,
+  RefreshCw,
 } from 'lucide-react';
 
 export const ObservationView: React.FC = () => {
   const {
+    organizationId,
     currentUser,
     students,
     selectedStudentId,
@@ -34,11 +35,12 @@ export const ObservationView: React.FC = () => {
     setActiveTab,
   } = useApp();
 
-  // Strict role check: Special Ed Coordinator and School Leadership (Principal, Director)
-  const isCoordinatorOrLeadership =
-    Boolean(currentUser.isSpecialEdCoordinator) ||
-    currentUser.role === 'PRINCIPAL' ||
-    currentUser.role === 'DIRECTOR';
+  // Observation definition/assignment management is coordinator-only.
+  const isObservationManager = Boolean(currentUser.isSpecialEdCoordinator);
+  const observationData = useObservationData(organizationId, {
+    includeDefinitions: false,
+    enabled: !isObservationManager,
+  });
 
   // --- GPK Teacher / Specialist Teacher Workspace ---
 
@@ -83,7 +85,7 @@ export const ObservationView: React.FC = () => {
   }, [currentUser.id, assignedStudents.length]);
 
   // Hooks must run consistently before selecting the role-specific view.
-  if (isCoordinatorOrLeadership) {
+  if (isObservationManager) {
     return <CoordinatorObservationManager />;
   }
 
@@ -93,27 +95,17 @@ export const ObservationView: React.FC = () => {
     assignedStudents[0] ||
     students[0];
 
-  // Fetch observation assignments delegated by Coordinator to this teacher or for this student
-  const allAssignments = storageService.getObservationAssignments();
-  const myAssignments = allAssignments.filter(
+  // API assignments retain definitionId and definitionVersion for later record flows.
+  const myAssignments = observationData.assignments.filter(
     (a) =>
       a.assignedToUserId === currentUser.id ||
       (currentStudent && a.studentId === currentStudent.id),
   );
 
-  const pendingAssignments = myAssignments.filter(
-    (a) => a.status !== 'Completed' && a.status !== 'COMPLETED',
-  );
-
-  // Quick action: start an assigned instrument
-  const handleStartAssignedInstrument = (assignment: ObservationAssignment) => {
-    if (assignment.studentId !== currentStudent?.id) {
-      setChosenStudentId(assignment.studentId);
-      setSelectedStudentId(assignment.studentId);
-    }
-    setSpecialEdSubTab(assignment.instrumentType);
-    setViewMode('ACTIVE_FORM');
-  };
+  const pendingAssignments = myAssignments.filter((assignment) => {
+    const status = assignment.status.toUpperCase().replaceAll(' ', '_');
+    return status === 'PENDING' || status === 'IN_PROGRESS';
+  });
 
   return (
     <div
@@ -177,8 +169,37 @@ export const ObservationView: React.FC = () => {
         </div>
       </div>
 
-      {/* Coordinator Assigned Tasks Alert (if any assigned to this teacher) */}
-      {pendingAssignments.length > 0 && (
+      {/* Coordinator Assigned Tasks Alert */}
+      {observationData.status === 'loading' && (
+        <div className="bg-white border border-[#EFE7DC] rounded-2xl p-4 text-xs text-stone-500">
+          Loading coordinator-assigned observation tasks…
+        </div>
+      )}
+      {observationData.status === 'error' && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-rose-800">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>
+              {observationData.error ||
+                'Coordinator-assigned observation tasks could not be loaded.'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={observationData.retry}
+            className="px-3 py-1.5 bg-white border border-rose-200 rounded-lg text-xs font-bold text-rose-800 flex items-center gap-1.5 shrink-0"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Retry
+          </button>
+        </div>
+      )}
+      {observationData.status === 'ready' &&
+        pendingAssignments.length === 0 && (
+          <div className="bg-white border border-dashed border-[#E8DFC8] rounded-2xl p-4 text-xs text-stone-500 text-center">
+            No pending or in-progress observation assignments.
+          </div>
+        )}
+      {observationData.status === 'ready' && pendingAssignments.length > 0 && (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50/50 border border-amber-200/80 rounded-2xl p-4 shadow-2xs">
           <div className="flex items-center justify-between gap-3 pb-2 border-b border-amber-200/60 mb-3">
             <div className="flex items-center gap-2">
@@ -202,26 +223,27 @@ export const ObservationView: React.FC = () => {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded text-[10px] font-black bg-[#6E161E] text-white">
-                      {assignment.instrumentType}
+                      {assignment.instrumentType} · v
+                      {assignment.definitionVersion}
                     </span>
                     <strong className="text-xs font-bold text-stone-900">
                       {assignment.studentName}
                     </strong>
                   </div>
                   <p className="text-[11px] text-stone-500">
-                    Due: <strong>{assignment.dueDate}</strong> ·{' '}
-                    {assignment.notes || 'Routine observation'}
+                    Due: <strong>{assignment.dueDate}</strong> · Definition{' '}
+                    <span className="font-mono">{assignment.definitionId}</span>{' '}
+                    · {assignment.notes || 'Routine observation'}
                   </p>
                 </div>
 
-                <button
-                  id={`start-assigned-task-${assignment.id}`}
-                  onClick={() => handleStartAssignedInstrument(assignment)}
-                  className="px-3 py-1.5 bg-[#6E161E] hover:bg-[#8C1F28] text-white rounded-lg text-xs font-bold transition-colors shrink-0 flex items-center gap-1.5"
+                <span
+                  id={`assigned-task-pending-record-api-${assignment.id}`}
+                  className="px-3 py-1.5 bg-stone-100 border border-stone-200 text-stone-500 rounded-lg text-[10px] font-bold shrink-0"
+                  title="Assignment-bound observation recording is delivered in P5-005 through P5-007."
                 >
-                  <span>Open Form</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                  Recording available in next observation phase
+                </span>
               </div>
             ))}
           </div>

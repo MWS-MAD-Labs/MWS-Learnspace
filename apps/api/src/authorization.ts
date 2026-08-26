@@ -16,7 +16,8 @@ export type Permission =
   | 'student:sensitive-read'
   | 'staff-directory:read'
   | 'staff-assignment:admin'
-  | 'organization:admin';
+  | 'organization:admin'
+  | 'observation:manage';
 
 const permissionsByRole: Record<MembershipRole, readonly Permission[]> = {
   DIRECTOR: [
@@ -58,6 +59,7 @@ const permissionsByRole: Record<MembershipRole, readonly Permission[]> = {
     'student:sensitive-read',
     'staff-directory:read',
     'staff-assignment:admin',
+    'observation:manage',
   ],
   SPECIAL_ED_TEACHER: [
     'attendance:read',
@@ -87,6 +89,7 @@ export type MembershipScope = {
   gradeIds: string[];
   subjectIds: string[];
   assignedStudentIds: string[];
+  observationAssignedStudentIds?: string[];
   assignedStudentScopes?: Array<{
     studentId: string;
     startsOn: Date;
