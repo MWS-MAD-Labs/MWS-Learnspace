@@ -2,7 +2,6 @@ import {
   User,
   Student,
   LearningJourney,
-  FEDCObservationRecord,
   SensoryProfileRecord,
   SFAObservationRecord,
   IEPRecord,
@@ -14,7 +13,6 @@ import {
   SEED_USERS,
   SEED_STUDENTS,
   SEED_LEARNING_JOURNEYS,
-  SEED_ALL_FEDC_OBSERVATIONS,
   SEED_ALL_SENSORY_PROFILES,
   SEED_SFA_OBSERVATION,
   SEED_IEP_RECORDS,
@@ -31,7 +29,6 @@ const STORAGE_KEYS = {
   CURRENT_USER_ID: 'mws_current_user_id_v2',
   STUDENTS: 'mws_students_v2',
   LEARNING_JOURNEYS: 'mws_learning_journeys_v2',
-  FEDC_OBSERVATIONS: 'mws_fedc_observations_v2',
   SENSORY_PROFILES: 'mws_sensory_profiles_v2',
   SFA_OBSERVATIONS: 'mws_sfa_observations_v2',
   IEP_RECORDS: 'mws_iep_records_v2',
@@ -70,12 +67,6 @@ class StorageService {
       );
     }
 
-    if (forceReset || !localStorage.getItem(STORAGE_KEYS.FEDC_OBSERVATIONS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.FEDC_OBSERVATIONS,
-        JSON.stringify(SEED_ALL_FEDC_OBSERVATIONS),
-      );
-    }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.SENSORY_PROFILES)) {
       localStorage.setItem(
         STORAGE_KEYS.SENSORY_PROFILES,
@@ -272,40 +263,6 @@ class StorageService {
       JSON.stringify(journeys),
     );
     return true;
-  }
-
-  // FEDC Observations
-  public getFEDCObservations(studentId?: string): FEDCObservationRecord[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.FEDC_OBSERVATIONS);
-      let records: FEDCObservationRecord[] = data
-        ? JSON.parse(data)
-        : SEED_ALL_FEDC_OBSERVATIONS;
-      if (studentId) {
-        records = records.filter((r) => r.studentId === studentId);
-      }
-      return records;
-    } catch {
-      return SEED_ALL_FEDC_OBSERVATIONS;
-    }
-  }
-
-  public saveFEDCObservation(
-    record: FEDCObservationRecord,
-  ): FEDCObservationRecord {
-    const list = this.getFEDCObservations();
-    const idx = list.findIndex((r) => r.id === record.id);
-    if (idx >= 0) {
-      list[idx] = { ...record, updatedAt: new Date().toISOString() };
-    } else {
-      list.unshift({
-        ...record,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-    }
-    localStorage.setItem(STORAGE_KEYS.FEDC_OBSERVATIONS, JSON.stringify(list));
-    return record;
   }
 
   // Sensory Profile

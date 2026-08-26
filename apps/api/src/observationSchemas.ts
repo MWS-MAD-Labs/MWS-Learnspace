@@ -1,22 +1,22 @@
 import { z } from 'zod';
+import {
+  fedcObservationCompleteCommandSchema,
+  fedcObservationCreateDraftCommandSchema,
+  fedcObservationSaveDraftCommandSchema,
+} from '@learnspace/contracts';
 
-const completedObservationSchema = z.object({
-  status: z.enum(['IN_PROGRESS', 'COMPLETED']),
-});
+const completedObservationSchema = z
+  .object({ status: z.enum(['IN_PROGRESS', 'COMPLETED']) })
+  .strict();
 
-export const fedcPayloadSchema = completedObservationSchema.extend({
-  responses: z.record(
-    z.object({
-      itemId: z.string().min(1),
-      rating: z.enum(['T', 'K', 'S', 'H']).optional(),
-      score: z.number().int().min(0).optional(),
-      masteredAge: z.string().max(64).optional(),
-    }),
-  ),
-  milestoneScores: z.record(z.coerce.number().int().nonnegative()),
-  totalScore: z.number().int().nonnegative(),
-  maxPossibleScore: z.number().int().positive(),
-});
+export const fedcCreateDraftPayloadSchema =
+  fedcObservationCreateDraftCommandSchema;
+export const fedcSaveDraftPayloadSchema = fedcObservationSaveDraftCommandSchema;
+export const fedcCompletePayloadSchema = fedcObservationCompleteCommandSchema;
+export const fedcPayloadSchema = z.union([
+  fedcSaveDraftPayloadSchema,
+  fedcCompletePayloadSchema,
+]);
 
 export const sensoryProfilePayloadSchema = completedObservationSchema.extend({
   responses: z.record(z.number().int().min(0).max(5)),

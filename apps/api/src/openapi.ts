@@ -9,6 +9,12 @@ import {
   attendanceRosterResponseSchema,
   classesResponseSchema,
   currentSessionResponseSchema,
+  fedcObservationCompleteCommandSchema,
+  fedcObservationCreateDraftCommandSchema,
+  fedcObservationHistoryResponseSchema,
+  fedcObservationReferenceResponseSchema,
+  fedcObservationResponseSchema,
+  fedcObservationSaveDraftCommandSchema,
   gpkAssignmentEndCommandSchema,
   gpkAssignmentMutationResponseSchema,
   gpkAssignmentsResponseSchema,
@@ -85,6 +91,12 @@ const components: Record<string, ZodTypeAny> = {
   ObservationAssignmentCancelCommand: observationAssignmentCancelCommandSchema,
   ObservationAssignmentMutationResponse:
     observationAssignmentMutationResponseSchema,
+  FedcObservationCreateDraftCommand: fedcObservationCreateDraftCommandSchema,
+  FedcObservationSaveDraftCommand: fedcObservationSaveDraftCommandSchema,
+  FedcObservationCompleteCommand: fedcObservationCompleteCommandSchema,
+  FedcObservationResponse: fedcObservationResponseSchema,
+  FedcObservationHistoryResponse: fedcObservationHistoryResponseSchema,
+  FedcObservationReferenceResponse: fedcObservationReferenceResponseSchema,
 };
 
 function zodDefinition(schema: ZodTypeAny): SchemaDefinition {
@@ -754,6 +766,120 @@ export function generateOpenApiDocument() {
                 'ApiError',
                 'Observation assignment state conflict',
               ),
+            },
+          },
+        },
+      '/organizations/{organizationId}/observation-assignments/{assignmentId}/fedc-observation':
+        {
+          get: {
+            tags: ['Observations'],
+            operationId: 'getFedcObservationByAssignment',
+            parameters: [organizationParameter, assignmentParameter],
+            responses: {
+              '200': jsonResponse('FedcObservationResponse'),
+              ...errorResponses,
+            },
+          },
+          post: {
+            tags: ['Observations'],
+            operationId: 'createFedcObservationDraft',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/FedcObservationCreateDraftCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '201': jsonResponse(
+                'FedcObservationResponse',
+                'FEDC draft created',
+              ),
+              ...errorResponses,
+              '409': jsonResponse('ApiError', 'FEDC lifecycle conflict'),
+            },
+          },
+          put: {
+            tags: ['Observations'],
+            operationId: 'saveFedcObservationDraft',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/FedcObservationSaveDraftCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '200': jsonResponse('FedcObservationResponse'),
+              ...errorResponses,
+              '409': jsonResponse('ApiError', 'FEDC lifecycle conflict'),
+            },
+          },
+        },
+      '/organizations/{organizationId}/observation-assignments/{assignmentId}/fedc-observation/complete':
+        {
+          post: {
+            tags: ['Observations'],
+            operationId: 'completeFedcObservation',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/FedcObservationCompleteCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '200': jsonResponse('FedcObservationResponse'),
+              ...errorResponses,
+              '409': jsonResponse('ApiError', 'FEDC lifecycle conflict'),
+            },
+          },
+        },
+      '/organizations/{organizationId}/students/{studentId}/fedc-observations':
+        {
+          get: {
+            tags: ['Observations'],
+            operationId: 'listStudentFedcObservations',
+            parameters: [organizationParameter, studentParameter],
+            responses: {
+              '200': jsonResponse('FedcObservationHistoryResponse'),
+              ...errorResponses,
+            },
+          },
+        },
+      '/organizations/{organizationId}/students/{studentId}/fedc-observations/reference':
+        {
+          get: {
+            tags: ['Observations'],
+            operationId: 'getStudentFedcReference',
+            parameters: [organizationParameter, studentParameter],
+            responses: {
+              '200': jsonResponse('FedcObservationReferenceResponse'),
+              ...errorResponses,
             },
           },
         },

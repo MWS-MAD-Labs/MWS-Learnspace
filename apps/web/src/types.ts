@@ -74,6 +74,7 @@ export interface ObservationAssignment {
   definitionVersion: number;
   instrumentType: ObservationInstrumentType;
   instrumentTitle?: string;
+  definitionBody?: Record<string, unknown>;
   academicYear: string; // e.g. "2026-2027"
   assignedToUserId: string;
   assignedToMembershipId?: string;
@@ -292,18 +293,39 @@ export interface FEDCItemResponse {
 
 export interface FEDCObservationRecord {
   id: string;
+  organizationId?: string;
+  assignmentId?: string;
   studentId: string;
+  student?: {
+    id: string;
+    fullName: string;
+    studentNumber?: string | null;
+    avatarUrl?: string | null;
+  };
+  definition?: {
+    id: string;
+    key: string;
+    version: number;
+    title: string;
+    body: Record<string, unknown>;
+  };
   observationType: 'FEDC';
-  recordYear: string; // "2026"
+  recordYear: string; // derived from observationDate for API records
   observationDate: string; // "2026-10-14"
   observerId: string;
   observerName: string;
-  status: 'Draft' | 'Completed';
+  observer?: {
+    id?: string;
+    userId?: string;
+    displayName: string;
+  };
+  status: 'Draft' | 'Completed' | 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED';
   responses: Record<string, FEDCItemResponse>;
   milestoneScores: Record<number, number>;
   totalScore: number;
   maxPossibleScore: number;
   notes?: string;
+  completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

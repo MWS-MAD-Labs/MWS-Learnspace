@@ -1059,9 +1059,6 @@ export const CoordinatorObservationManager: React.FC = () => {
             student={activeStudentForResults}
             currentUser={currentUser}
             onNavigateToIEP={navigateToIEP}
-            onOpenAssessmentForm={(type) => {
-              setActiveTab('FORM_TEMPLATES');
-            }}
           />
         </div>
       )}

@@ -782,10 +782,11 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-005 — Migrate FEDC observations
 
-- [ ] **Dependencies:** P5-004
+- [x] **Dependencies:** P5-004
 - **Change:** migrate creation, draft saving, completion, scoring, history, and reference drawer data.
 - **Acceptance:** server recalculates trusted scores from validated responses instead of accepting client totals.
 - **Validate:** scoring fixtures, malformed response tests, authorization tests, and E2E flow.
+- **Completed (2026-08-26):** Added strict shared FEDC definition, response, draft, completion, history, and reference contracts; assignment-bound record creation and lifecycle APIs; exact-assignee writes plus coordinator, permanent student-scope, and active observation-assignment reads; strict response validation against the assignment's pinned definition version; server-only item, milestone, total, and maximum-score recalculation with client score/total spoof rejection; transactional assignment and record completion with session-derived audits; API-backed FEDC authoring, history, reference drawer, and analytics reads; specialist workspace navigation; exact pinned-rubric rendering; and removal of production `getFEDCObservations()` and `saveFEDCObservation()` browser persistence. Unit scoring fixtures, malformed-payload and authorization tests, PostgreSQL integration coverage, OpenAPI checks, and a Compose-backed browser flow validate draft reload, trusted scoring, completion, version retention, history, and reference data.
 
 ## P5-006 — Migrate Sensory Profile observations
 

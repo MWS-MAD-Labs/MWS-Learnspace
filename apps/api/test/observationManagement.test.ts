@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  fedcDefinitionBodySchema,
+  fedcObservationCompleteCommandSchema,
+  fedcObservationCreateDraftCommandSchema,
+  fedcObservationResponseSchema,
+  fedcObservationSaveDraftCommandSchema,
   observationAssignmentCancelCommandSchema,
   observationAssignmentCreateCommandSchema,
   observationAssignmentUpdateCommandSchema,
@@ -28,6 +33,24 @@ const definition = {
   type: 'FEDC',
   title: 'FEDC Development',
   body: { sections: [{ id: 'gross-motor', items: [] }] },
+};
+
+const scorableFedcBody = {
+  milestones: [
+    {
+      id: 1,
+      title: 'Regulation',
+      maxScore: 3,
+      items: [
+        {
+          id: 'fedc-1-1',
+          number: '1.1',
+          text: 'Maintains regulation.',
+          milestoneId: 1,
+        },
+      ],
+    },
+  ],
 };
 
 describe('observation management contracts and authorization', () => {
@@ -75,6 +98,126 @@ describe('observation management contracts and authorization', () => {
         }).success,
       ).toBe(false);
     }
+  });
+
+  it('keeps generic definition publication compatible while defining a strict scorable FEDC body', () => {
+    expect(
+      observationDefinitionCreateCommandSchema.safeParse(definition).success,
+    ).toBe(true);
+    expect(fedcDefinitionBodySchema.safeParse(definition.body).success).toBe(
+      false,
+    );
+    expect(fedcDefinitionBodySchema.safeParse(scorableFedcBody).success).toBe(
+      true,
+    );
+  });
+
+  it('defines strict FEDC create-draft, draft-save, and completion commands', () => {
+    const response = {
+      observationDate: '2026-08-26',
+      responses: {
+        'fedc-1-1': { itemId: 'fedc-1-1', rating: 'S' },
+      },
+    };
+    expect(
+      fedcObservationCreateDraftCommandSchema.safeParse({
+        observationDate: response.observationDate,
+      }).success,
+    ).toBe(true);
+    expect(
+      fedcObservationSaveDraftCommandSchema.safeParse(response).success,
+    ).toBe(true);
+    expect(
+      fedcObservationCompleteCommandSchema.safeParse(response).success,
+    ).toBe(true);
+    for (const forbiddenField of [
+      'status',
+      'totalScore',
+      'maxPossibleScore',
+      'milestoneScores',
+      'observerId',
+      'actorId',
+      'organizationId',
+      'studentId',
+      'definitionId',
+      'assignmentId',
+    ]) {
+      expect(
+        fedcObservationSaveDraftCommandSchema.safeParse({
+          ...response,
+          [forbiddenField]: forbiddenField.includes('Score') ? 3 : studentId,
+        }).success,
+      ).toBe(false);
+    }
+    expect(
+      fedcObservationSaveDraftCommandSchema.safeParse({
+        ...response,
+        responses: {
+          'fedc-1-1': {
+            itemId: 'fedc-1-1',
+            rating: 'S',
+            score: 3,
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('requires an exact scorable FEDC definition projection in record responses', () => {
+    const timestamp = '2026-08-26T12:00:00.000Z';
+    const parsed = fedcObservationResponseSchema.parse({
+      data: {
+        id: definitionId,
+        organizationId: membershipId,
+        assignmentId: studentId,
+        studentId,
+        definitionId,
+        observerId: membershipId,
+        observationDate: '2026-08-26',
+        status: 'COMPLETED',
+        responses: {
+          'fedc-1-1': {
+            itemId: 'fedc-1-1',
+            rating: 'S',
+            score: 3,
+          },
+        },
+        milestoneScores: { '1': 3 },
+        totalScore: 3,
+        maxPossibleScore: 3,
+        notes: null,
+        completedAt: timestamp,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        student: {
+          id: studentId,
+          organizationId: membershipId,
+          studentNumber: 'S-1',
+          fullName: 'Student',
+          nickname: null,
+          avatarUrl: null,
+        },
+        observer: { id: membershipId, displayName: 'Observer' },
+        definition: {
+          id: definitionId,
+          organizationId: membershipId,
+          definitionKey: 'fedc-development',
+          version: 1,
+          type: 'FEDC',
+          title: 'FEDC Development',
+          framework: null,
+          description: null,
+          targetAges: null,
+          defaultFrequency: null,
+          body: scorableFedcBody,
+          isActive: true,
+          publishedAt: timestamp,
+          createdAt: timestamp,
+        },
+      },
+    });
+    expect(parsed.data.definition.version).toBe(1);
+    expect(parsed.data.definition.body).toEqual(scorableFedcBody);
   });
 
   it('defines strict assignment create, update, and cancel commands', () => {

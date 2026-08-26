@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
+import { fedcDefinitionBodySchema } from '@learnspace/contracts';
 import { Student, User } from '../../types';
+import { useApp } from '../../context/AppContext';
+import { useFEDCObservations } from '../../hooks/useFEDCObservations';
 import { storageService } from '../../services/storageService';
 import {
   Brain,
@@ -16,12 +19,17 @@ import {
   ExternalLink,
   BookOpen,
   Info,
+  RefreshCw,
 } from 'lucide-react';
-import {
-  FEDC_MILESTONES,
-  SENSORY_PROFILE_ITEMS,
-  SFA_SETTINGS,
-} from '../../data/seedData';
+import { SENSORY_PROFILE_ITEMS, SFA_SETTINGS } from '../../data/seedData';
+
+function recordFedcMilestones(record: unknown) {
+  const candidate = record as {
+    definition?: { body?: unknown };
+  };
+  const parsed = fedcDefinitionBodySchema.safeParse(candidate.definition?.body);
+  return parsed.success ? parsed.data.milestones : [];
+}
 
 interface ObservationHistoryViewerProps {
   student: Student;
@@ -30,12 +38,15 @@ interface ObservationHistoryViewerProps {
   onOpenAssessmentForm?: (
     type: 'FEDC' | 'SENSORY_PROFILE' | 'SFA',
     recordId?: string,
+    assignmentId?: string,
   ) => void;
 }
 
 export const ObservationHistoryViewer: React.FC<
   ObservationHistoryViewerProps
 > = ({ student, currentUser, onNavigateToIEP, onOpenAssessmentForm }) => {
+  const { organizationId } = useApp();
+  const fedcHistory = useFEDCObservations(organizationId, student.id);
   const [selectedInstrument, setSelectedInstrument] = useState<
     'ALL' | 'FEDC' | 'SENSORY' | 'SFA'
   >('ALL');
@@ -55,8 +66,10 @@ export const ObservationHistoryViewer: React.FC<
     1,
   );
 
-  // Fetch all historical records for this student
-  const fedcRecords = storageService.getFEDCObservations(student.id);
+  // Archived history contains completed FEDC records only. In-progress records remain in the assignment editor.
+  const fedcRecords = fedcHistory.observations.filter(
+    (record) => record.status.toUpperCase() === 'COMPLETED',
+  );
   const sensoryRecords = storageService.getSensoryProfiles(student.id);
   const sfaRecords = storageService.getSFAObservations(student.id);
 
@@ -251,6 +264,25 @@ export const ObservationHistoryViewer: React.FC<
 
       {/* Observation History Cards */}
       <div className="space-y-6">
+        {(selectedInstrument === 'ALL' || selectedInstrument === 'FEDC') &&
+          fedcHistory.status === 'loading' && (
+            <div className="bg-white border border-[#EFE7DC] rounded-2xl p-6 text-sm text-stone-500 text-center">
+              Loading FEDC observation history…
+            </div>
+          )}
+        {(selectedInstrument === 'ALL' || selectedInstrument === 'FEDC') &&
+          fedcHistory.status === 'error' && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-rose-800">
+              <span>{fedcHistory.error}</span>
+              <button
+                type="button"
+                onClick={fedcHistory.retry}
+                className="px-3 py-1.5 bg-white border border-rose-200 rounded-lg font-bold flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Retry
+              </button>
+            </div>
+          )}
         {/* FEDC Records Section */}
         {(selectedInstrument === 'ALL' || selectedInstrument === 'FEDC') &&
           filteredFedc.length > 0 && (
@@ -355,7 +387,13 @@ export const ObservationHistoryViewer: React.FC<
                       {onOpenAssessmentForm && (
                         <button
                           id={`edit-fedc-form-btn-${rec.id}`}
-                          onClick={() => onOpenAssessmentForm('FEDC', rec.id)}
+                          onClick={() =>
+                            onOpenAssessmentForm(
+                              'FEDC',
+                              rec.id,
+                              rec.assignmentId,
+                            )
+                          }
                           className="w-full py-1.5 text-xs font-bold text-stone-700 hover:text-[#6E161E] bg-white hover:bg-stone-50 rounded-xl border border-[#E8DFC8] flex items-center justify-center gap-1 transition-all"
                         >
                           <ExternalLink className="w-3 h-3 text-[#6E161E]" />
@@ -695,7 +733,13 @@ export const ObservationHistoryViewer: React.FC<
                             ? 'SENSORY_PROFILE'
                             : 'SFA';
                       setActiveDetailRecord(null);
-                      onOpenAssessmentForm(type, activeDetailRecord.data.id);
+                      onOpenAssessmentForm(
+                        type,
+                        activeDetailRecord.data.id,
+                        activeDetailRecord.type === 'FEDC'
+                          ? activeDetailRecord.data.assignmentId
+                          : undefined,
+                      );
                     }}
                     className="px-3 py-1.5 bg-[#6E161E] hover:bg-[#8C1F28] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
                   >
@@ -805,78 +849,80 @@ export const ObservationHistoryViewer: React.FC<
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {FEDC_MILESTONES.map((m) => {
-                          const mScore =
-                            activeDetailRecord.data.milestoneScores?.[m.id] ||
-                            0;
-                          const maxScore = m.items.length * 3;
-                          const pct =
-                            maxScore > 0
-                              ? Math.round((mScore / maxScore) * 100)
-                              : 0;
-                          const isMastered = pct >= 75;
-                          const isEmerging = pct >= 40 && pct < 75;
+                        {recordFedcMilestones(activeDetailRecord.data).map(
+                          (m) => {
+                            const mScore =
+                              activeDetailRecord.data.milestoneScores?.[m.id] ||
+                              0;
+                            const maxScore = m.items.length * 3;
+                            const pct =
+                              maxScore > 0
+                                ? Math.round((mScore / maxScore) * 100)
+                                : 0;
+                            const isMastered = pct >= 75;
+                            const isEmerging = pct >= 40 && pct < 75;
 
-                          return (
-                            <div
-                              key={m.id}
-                              className="p-4 bg-[#FAF5EF]/70 rounded-2xl border border-[#E8DFC8] space-y-2"
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <span className="text-[10px] font-black text-purple-800 uppercase">
-                                    Tonggak {m.id}
-                                  </span>
-                                  <h5 className="font-heading font-black text-xs text-stone-900 mt-0.5">
-                                    {m.title}
-                                  </h5>
-                                </div>
-                                <span
-                                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                                    isMastered
-                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                      : isEmerging
-                                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                        : 'bg-stone-100 text-stone-600 border border-stone-200'
-                                  }`}
-                                >
-                                  {isMastered
-                                    ? 'Mastered (Dikuasai)'
-                                    : isEmerging
-                                      ? 'Emerging (Berkembang)'
-                                      : 'Initial Phase'}
-                                </span>
-                              </div>
-
-                              <p className="text-[11px] text-stone-600 line-clamp-2">
-                                {m.description}
-                              </p>
-
-                              <div className="space-y-1 pt-1">
-                                <div className="flex items-center justify-between text-[11px]">
-                                  <span className="text-stone-500 font-medium">
-                                    Attainment Score:
-                                  </span>
-                                  <span className="font-mono font-bold text-purple-900">
-                                    {mScore} / {maxScore} pts ({pct}%)
-                                  </span>
-                                </div>
-                                <div className="w-full bg-stone-200 rounded-full h-2">
-                                  <div
-                                    className={`h-2 rounded-full transition-all ${
+                            return (
+                              <div
+                                key={m.id}
+                                className="p-4 bg-[#FAF5EF]/70 rounded-2xl border border-[#E8DFC8] space-y-2"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <span className="text-[10px] font-black text-purple-800 uppercase">
+                                      Tonggak {m.id}
+                                    </span>
+                                    <h5 className="font-heading font-black text-xs text-stone-900 mt-0.5">
+                                      {m.title}
+                                    </h5>
+                                  </div>
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                                       isMastered
-                                        ? 'bg-emerald-600'
+                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                                         : isEmerging
-                                          ? 'bg-amber-500'
-                                          : 'bg-purple-600'
+                                          ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                          : 'bg-stone-100 text-stone-600 border border-stone-200'
                                     }`}
-                                    style={{ width: `${pct}%` }}
-                                  />
+                                  >
+                                    {isMastered
+                                      ? 'Mastered (Dikuasai)'
+                                      : isEmerging
+                                        ? 'Emerging (Berkembang)'
+                                        : 'Initial Phase'}
+                                  </span>
+                                </div>
+
+                                <p className="text-[11px] text-stone-600 line-clamp-2">
+                                  {m.description}
+                                </p>
+
+                                <div className="space-y-1 pt-1">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="text-stone-500 font-medium">
+                                      Attainment Score:
+                                    </span>
+                                    <span className="font-mono font-bold text-purple-900">
+                                      {mScore} / {maxScore} pts ({pct}%)
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-stone-200 rounded-full h-2">
+                                    <div
+                                      className={`h-2 rounded-full transition-all ${
+                                        isMastered
+                                          ? 'bg-emerald-600'
+                                          : isEmerging
+                                            ? 'bg-amber-500'
+                                            : 'bg-purple-600'
+                                      }`}
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          },
+                        )}
                       </div>
                     </div>
                   )}
@@ -896,104 +942,99 @@ export const ObservationHistoryViewer: React.FC<
 
                       {/* Milestone Item Tables */}
                       <div className="space-y-4">
-                        {FEDC_MILESTONES.map((m) => {
-                          const mScore =
-                            activeDetailRecord.data.milestoneScores?.[m.id] ||
-                            0;
-                          return (
-                            <div
-                              key={m.id}
-                              className="bg-white border border-[#E8DFC8] rounded-2xl overflow-hidden shadow-2xs"
-                            >
-                              <div className="bg-[#FAF5EF] px-4 py-2.5 border-b border-[#E8DFC8] flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-5 h-5 rounded-full bg-purple-800 text-white font-bold text-[10px] flex items-center justify-center">
-                                    {m.id}
+                        {recordFedcMilestones(activeDetailRecord.data).map(
+                          (m) => {
+                            const mScore =
+                              activeDetailRecord.data.milestoneScores?.[m.id] ||
+                              0;
+                            return (
+                              <div
+                                key={m.id}
+                                className="bg-white border border-[#E8DFC8] rounded-2xl overflow-hidden shadow-2xs"
+                              >
+                                <div className="bg-[#FAF5EF] px-4 py-2.5 border-b border-[#E8DFC8] flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-5 h-5 rounded-full bg-purple-800 text-white font-bold text-[10px] flex items-center justify-center">
+                                      {m.id}
+                                    </span>
+                                    <h5 className="font-bold text-xs text-stone-900">
+                                      {m.title}
+                                    </h5>
+                                  </div>
+                                  <span className="font-bold text-xs text-purple-900 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-lg">
+                                    Score: {mScore} / {m.items.length * 3}
                                   </span>
-                                  <h5 className="font-bold text-xs text-stone-900">
-                                    {m.title}
-                                  </h5>
                                 </div>
-                                <span className="font-bold text-xs text-purple-900 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-lg">
-                                  Score: {mScore} / {m.items.length * 3}
-                                </span>
-                              </div>
 
-                              <div className="divide-y divide-stone-100">
-                                {m.items.map((item) => {
-                                  const response =
-                                    activeDetailRecord.data.responses?.[
-                                      item.id
-                                    ];
-                                  const rating =
-                                    response?.rating ||
-                                    (activeDetailRecord.data.totalScore > 50
-                                      ? 'S'
-                                      : 'K');
-                                  const ratingScore =
-                                    rating === 'S'
-                                      ? 3
-                                      : rating === 'K'
-                                        ? 2
-                                        : rating === 'T'
-                                          ? 1
-                                          : 0;
+                                <div className="divide-y divide-stone-100">
+                                  {m.items.map((item) => {
+                                    const response =
+                                      activeDetailRecord.data.responses?.[
+                                        item.id
+                                      ];
+                                    const rating = response?.rating;
+                                    const ratingScore = response?.score;
 
-                                  return (
-                                    <div
-                                      key={item.id}
-                                      className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-stone-50/60"
-                                    >
-                                      <div className="space-y-0.5 max-w-xl">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-mono text-[10px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.2 rounded">
-                                            Item {item.number}
+                                    return (
+                                      <div
+                                        key={item.id}
+                                        className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-stone-50/60"
+                                      >
+                                        <div className="space-y-0.5 max-w-xl">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-mono text-[10px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.2 rounded">
+                                              Item {item.number}
+                                            </span>
+                                            <span className="text-xs font-semibold text-stone-800">
+                                              {item.text}
+                                            </span>
+                                          </div>
+                                          {response?.masteredAge && (
+                                            <p className="text-[10px] text-stone-500">
+                                              Mastery Milestone Age:{' '}
+                                              <strong className="text-stone-700">
+                                                {response.masteredAge}
+                                              </strong>
+                                            </p>
+                                          )}
+                                        </div>
+
+                                        <div className="flex items-center gap-2 shrink-0">
+                                          <span
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                                              rating === 'S'
+                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                                : rating === 'K'
+                                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                                  : rating === 'T'
+                                                    ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                                    : 'bg-blue-100 text-blue-800 border border-blue-200'
+                                            }`}
+                                          >
+                                            {rating === 'S' &&
+                                              'Selalu / Always (S)'}
+                                            {rating === 'K' &&
+                                              'Kadang-kadang (K)'}
+                                            {rating === 'T' &&
+                                              'Tidak Pernah (T)'}
+                                            {rating === 'H' &&
+                                              'Dengan Bantuan (H)'}
+                                            {!rating && 'Not answered'}
                                           </span>
-                                          <span className="text-xs font-semibold text-stone-800">
-                                            {item.text}
+                                          <span className="font-mono font-bold text-stone-700 text-xs w-8 text-right">
+                                            {ratingScore === undefined
+                                              ? '—'
+                                              : `+${ratingScore} pt`}
                                           </span>
                                         </div>
-                                        {response?.masteredAge && (
-                                          <p className="text-[10px] text-stone-500">
-                                            Mastery Milestone Age:{' '}
-                                            <strong className="text-stone-700">
-                                              {response.masteredAge}
-                                            </strong>
-                                          </p>
-                                        )}
                                       </div>
-
-                                      <div className="flex items-center gap-2 shrink-0">
-                                        <span
-                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                                            rating === 'S'
-                                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                              : rating === 'K'
-                                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                                : rating === 'T'
-                                                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                                                  : 'bg-blue-100 text-blue-800 border border-blue-200'
-                                          }`}
-                                        >
-                                          {rating === 'S' &&
-                                            'Selalu / Always (S)'}
-                                          {rating === 'K' &&
-                                            'Kadang-kadang (K)'}
-                                          {rating === 'T' && 'Tidak Pernah (T)'}
-                                          {rating === 'H' &&
-                                            'Dengan Bantuan (H)'}
-                                        </span>
-                                        <span className="font-mono font-bold text-stone-700 text-xs w-8 text-right">
-                                          +{ratingScore} pt
-                                        </span>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+                                    );
+                                  })}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          },
+                        )}
                       </div>
                     </div>
                   )}

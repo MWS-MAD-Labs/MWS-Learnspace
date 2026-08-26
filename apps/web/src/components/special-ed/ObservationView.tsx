@@ -72,6 +72,7 @@ export const ObservationView: React.FC = () => {
   const [viewMode, setViewMode] = useState<'RESULTS' | 'ACTIVE_FORM'>(
     'RESULTS',
   );
+  const [activeAssignmentId, setActiveAssignmentId] = useState<string>();
 
   // Auto-sync if student changes
   useEffect(() => {
@@ -81,6 +82,7 @@ export const ObservationView: React.FC = () => {
     ) {
       setChosenStudentId(assignedStudents[0].id);
       setSelectedStudentId(assignedStudents[0].id);
+      setActiveAssignmentId(undefined);
     }
   }, [currentUser.id, assignedStudents.length]);
 
@@ -106,6 +108,18 @@ export const ObservationView: React.FC = () => {
     const status = assignment.status.toUpperCase().replaceAll(' ', '_');
     return status === 'PENDING' || status === 'IN_PROGRESS';
   });
+  const activeFEDCAssignment =
+    myAssignments.find(
+      (assignment) =>
+        assignment.id === activeAssignmentId &&
+        assignment.studentId === currentStudent?.id &&
+        assignment.instrumentType === 'FEDC',
+    ) ??
+    pendingAssignments.find(
+      (assignment) =>
+        assignment.studentId === currentStudent?.id &&
+        assignment.instrumentType === 'FEDC',
+    );
 
   return (
     <div
@@ -237,13 +251,26 @@ export const ObservationView: React.FC = () => {
                   </p>
                 </div>
 
-                <span
-                  id={`assigned-task-pending-record-api-${assignment.id}`}
-                  className="px-3 py-1.5 bg-stone-100 border border-stone-200 text-stone-500 rounded-lg text-[10px] font-bold shrink-0"
-                  title="Assignment-bound observation recording is delivered in P5-005 through P5-007."
-                >
-                  Recording available in next observation phase
-                </span>
+                {assignment.instrumentType === 'FEDC' ? (
+                  <button
+                    id={`assigned-task-open-fedc-${assignment.id}`}
+                    type="button"
+                    onClick={() => {
+                      setChosenStudentId(assignment.studentId);
+                      setSelectedStudentId(assignment.studentId);
+                      setActiveAssignmentId(assignment.id);
+                      setSpecialEdSubTab('FEDC');
+                      setViewMode('ACTIVE_FORM');
+                    }}
+                    className="px-3 py-1.5 bg-[#6E161E] border border-[#6E161E] text-white rounded-lg text-[10px] font-bold shrink-0"
+                  >
+                    Open assigned FEDC form
+                  </button>
+                ) : (
+                  <span className="px-3 py-1.5 bg-stone-100 border border-stone-200 text-stone-500 rounded-lg text-[10px] font-bold shrink-0">
+                    Local form retained for this instrument
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -275,6 +302,7 @@ export const ObservationView: React.FC = () => {
                       onClick={() => {
                         setChosenStudentId(student.id);
                         setSelectedStudentId(student.id);
+                        setActiveAssignmentId(undefined);
                       }}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
                         isSelected
@@ -380,7 +408,17 @@ export const ObservationView: React.FC = () => {
             student={currentStudent}
             currentUser={currentUser}
             onNavigateToIEP={navigateToIEP}
-            onOpenAssessmentForm={(type) => {
+            onOpenAssessmentForm={(type, _recordId, assignmentId) => {
+              if (type === 'FEDC' && assignmentId) {
+                const assignment = myAssignments.find(
+                  (candidate) => candidate.id === assignmentId,
+                );
+                if (assignment) {
+                  setChosenStudentId(assignment.studentId);
+                  setSelectedStudentId(assignment.studentId);
+                  setActiveAssignmentId(assignment.id);
+                }
+              }
               setSpecialEdSubTab(type);
               setViewMode('ACTIVE_FORM');
             }}
@@ -431,7 +469,21 @@ export const ObservationView: React.FC = () => {
           </div>
 
           <div className="transition-all">
-            {specialEdSubTab === 'FEDC' && <FEDCObservationView />}
+            {specialEdSubTab === 'FEDC' &&
+              (activeFEDCAssignment ? (
+                <FEDCObservationView assignment={activeFEDCAssignment} />
+              ) : (
+                <div className="bg-white border border-dashed border-[#E8DFC8] rounded-2xl p-8 text-center space-y-2">
+                  <AlertCircle className="w-6 h-6 text-amber-600 mx-auto" />
+                  <h3 className="text-sm font-bold text-stone-900">
+                    No active FEDC assignment for this student
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    FEDC observations must be started from a pending or
+                    in-progress coordinator assignment.
+                  </p>
+                </div>
+              ))}
             {specialEdSubTab === 'SENSORY_PROFILE' && <SensoryProfileView />}
             {specialEdSubTab === 'SFA' && <SFAObservationView />}
           </div>

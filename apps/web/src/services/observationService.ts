@@ -1,3 +1,4 @@
+import * as contracts from '@learnspace/contracts';
 import {
   observationAssignmentCancelCommandSchema,
   observationAssignmentCreateCommandSchema,
@@ -9,7 +10,7 @@ import {
   observationDefinitionVersionCreateCommandSchema,
   observationDefinitionsResponseSchema,
 } from '@learnspace/contracts';
-import type { z } from 'zod';
+import { z } from 'zod';
 import {
   SEED_OBSERVATION_ASSIGNMENTS,
   SEED_OBSERVATION_FORMS,
@@ -18,6 +19,8 @@ import type {
   ObservationAssignment,
   ObservationDefinition,
   ObservationFormDefinition,
+  FEDCObservationRecord,
+  FEDCItemResponse,
   User,
   Student,
 } from '../types';
@@ -48,6 +51,85 @@ export type ObservationAssignmentMutationResponse = z.infer<
   typeof observationAssignmentMutationResponseSchema
 >;
 
+const fallbackFedcResponseSchema = z.object({ data: z.unknown() });
+const fallbackFedcObservationsResponseSchema = z.object({
+  data: z.array(z.unknown()),
+  meta: z.object({ count: z.number().int().nonnegative() }).optional(),
+});
+const fallbackFedcCommandSchema = z.object({
+  observationDate: z.string(),
+  responses: z.record(
+    z.string(),
+    z.object({
+      itemId: z.string(),
+      rating: z.enum(['S', 'K', 'T', 'H']),
+      masteredAge: z.string().optional(),
+    }),
+  ),
+  notes: z.string().nullable().optional(),
+});
+
+type ContractSchemas = typeof contracts & {
+  fedcObservationSchema?: z.ZodType<unknown>;
+  fedcObservationMutationResponseSchema?: z.ZodType<{ data: unknown }>;
+  fedcObservationResponseSchema?: z.ZodType<{ data: unknown }>;
+  fedcObservationsResponseSchema?: z.ZodType<{
+    data: unknown[];
+    meta?: { count: number };
+  }>;
+  fedcObservationHistoryResponseSchema?: z.ZodType<{
+    data: unknown[];
+    meta?: { count: number };
+  }>;
+  fedcObservationReferenceResponseSchema?: z.ZodType<{ data: unknown }>;
+  fedcObservationCreateCommandSchema?: z.ZodType<FEDCObservationCommand>;
+  fedcObservationCreateDraftCommandSchema?: z.ZodType<FEDCObservationCommand>;
+  fedcObservationDraftCommandSchema?: z.ZodType<FEDCObservationCommand>;
+  fedcObservationSaveDraftCommandSchema?: z.ZodType<FEDCObservationCommand>;
+  fedcObservationCompleteCommandSchema?: z.ZodType<FEDCObservationCommand>;
+};
+
+const fedcContracts = contracts as ContractSchemas;
+const fedcObservationMutationResponseSchema =
+  fedcContracts.fedcObservationMutationResponseSchema ??
+  fedcContracts.fedcObservationResponseSchema ??
+  fallbackFedcResponseSchema;
+const fedcObservationsResponseSchema =
+  fedcContracts.fedcObservationsResponseSchema ??
+  fedcContracts.fedcObservationHistoryResponseSchema ??
+  fallbackFedcObservationsResponseSchema;
+const fedcObservationReferenceResponseSchema =
+  fedcContracts.fedcObservationReferenceResponseSchema ??
+  fallbackFedcResponseSchema;
+const fedcObservationCreateCommandSchema =
+  fedcContracts.fedcObservationCreateCommandSchema ??
+  fedcContracts.fedcObservationCreateDraftCommandSchema ??
+  fallbackFedcCommandSchema;
+const fedcObservationDraftCommandSchema =
+  fedcContracts.fedcObservationDraftCommandSchema ??
+  fedcContracts.fedcObservationSaveDraftCommandSchema ??
+  fallbackFedcCommandSchema;
+const fedcObservationCompleteCommandSchema =
+  fedcContracts.fedcObservationCompleteCommandSchema ??
+  fallbackFedcCommandSchema;
+
+export interface FEDCObservationCommand {
+  observationDate: string;
+  responses: Record<
+    string,
+    {
+      itemId: string;
+      rating: 'S' | 'K' | 'T' | 'H';
+      masteredAge?: string;
+    }
+  >;
+  notes?: string | null;
+}
+
+export interface FEDCObservationReference {
+  latestObservation: FEDCObservationRecord | null;
+}
+
 type ApiDefinition = ObservationDefinitionsResponse['data'][number];
 type ApiAssignment = ObservationAssignmentsResponse['data'][number];
 
@@ -75,6 +157,117 @@ function booleanValue(value: unknown, fallback = false): boolean {
 
 function dateOnly(value: unknown): string {
   return text(value).slice(0, 10);
+}
+
+function nullableText(value: unknown): string | undefined {
+  const result = text(value);
+  return result || undefined;
+}
+
+function mapFedcResponses(value: unknown): Record<string, FEDCItemResponse> {
+  const mapped: Record<string, FEDCItemResponse> = {};
+  const source = Array.isArray(value) ? value : Object.values(asRecord(value));
+  source.forEach((entry) => {
+    const response = asRecord(entry);
+    const itemId = text(response.itemId);
+    if (!itemId) return;
+    mapped[itemId] = {
+      itemId,
+      rating: nullableText(response.rating) as FEDCItemResponse['rating'],
+      score: typeof response.score === 'number' ? response.score : undefined,
+      masteredAge: nullableText(response.masteredAge),
+    };
+  });
+  return mapped;
+}
+
+function mapMilestoneScores(value: unknown): Record<number, number> {
+  const mapped: Record<number, number> = {};
+  Object.entries(asRecord(value)).forEach(([key, score]) => {
+    const milestoneId = Number(key);
+    if (Number.isInteger(milestoneId) && typeof score === 'number') {
+      mapped[milestoneId] = score;
+    }
+  });
+  return mapped;
+}
+
+export function mapFEDCObservation(value: unknown): FEDCObservationRecord {
+  const record = asRecord(value);
+  const student = asRecord(record.student);
+  const definition = asRecord(record.definition);
+  const observer = asRecord(record.observer);
+  const definitionKey = text(
+    definition.key,
+    text(definition.definitionKey, text(record.definitionKey)),
+  );
+  const observationDate = dateOnly(record.observationDate);
+  return {
+    id: text(record.id),
+    organizationId: nullableText(record.organizationId),
+    assignmentId: nullableText(record.assignmentId),
+    studentId: text(record.studentId, text(student.id)),
+    student: text(student.id)
+      ? {
+          id: text(student.id),
+          fullName: text(
+            student.fullName,
+            text(student.displayName, 'Student'),
+          ),
+          studentNumber: nullableText(student.studentNumber),
+          avatarUrl: nullableText(student.avatarUrl),
+        }
+      : undefined,
+    definition: text(definition.id)
+      ? {
+          id: text(definition.id),
+          key: definitionKey,
+          version: numberValue(definition.version, 1),
+          title: text(definition.title, 'FEDC Instrument'),
+          body: asRecord(definition.body),
+        }
+      : undefined,
+    observationType: 'FEDC',
+    recordYear: observationDate.slice(0, 4),
+    observationDate,
+    observerId: text(
+      observer.userId,
+      text(observer.id, text(record.observerId)),
+    ),
+    observerName: text(
+      observer.displayName,
+      text(record.observerName, 'Staff observer'),
+    ),
+    observer: text(observer.displayName)
+      ? {
+          id: nullableText(observer.id),
+          userId: nullableText(observer.userId),
+          displayName: text(observer.displayName),
+        }
+      : undefined,
+    status: text(record.status, 'DRAFT') as FEDCObservationRecord['status'],
+    responses: mapFedcResponses(record.responses),
+    milestoneScores: mapMilestoneScores(record.milestoneScores),
+    totalScore: numberValue(record.totalScore),
+    maxPossibleScore: numberValue(record.maxPossibleScore),
+    notes: nullableText(record.notes),
+    completedAt: nullableText(record.completedAt) ?? null,
+    createdAt: text(record.createdAt),
+    updatedAt: text(record.updatedAt),
+  };
+}
+
+export function mapFEDCObservationReference(
+  value: unknown,
+): FEDCObservationReference {
+  if (!value) return { latestObservation: null };
+  const payload = asRecord(value);
+  const latest =
+    payload.latestObservation ??
+    payload.observation ??
+    payload.latestFedcObservation ??
+    value;
+  return { latestObservation: mapFEDCObservation(latest) };
 }
 
 export function mapObservationDefinition(
@@ -135,6 +328,7 @@ export function mapObservationAssignment(
     ) as ObservationAssignment['instrumentType'],
     instrumentTitle:
       text(definition.title, text(record.instrumentTitle)) || undefined,
+    definitionBody: asRecord(definition.body),
     academicYear: text(record.academicYear),
     assignedToUserId: text(assignee.userId, text(record.assignedToUserId)),
     assignedToMembershipId:
@@ -320,6 +514,96 @@ export const observationService = {
         signal,
       },
     );
+  },
+
+  async createFEDCObservation(
+    organizationId: string,
+    assignmentId: string,
+    command: FEDCObservationCommand,
+    signal?: AbortSignal,
+  ): Promise<FEDCObservationRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/fedc-observation`,
+      {
+        method: 'POST',
+        body: fedcObservationCreateCommandSchema.parse(command),
+        schema: fedcObservationMutationResponseSchema,
+        signal,
+      },
+    );
+    return mapFEDCObservation(response.data);
+  },
+
+  async saveFEDCObservationDraft(
+    organizationId: string,
+    assignmentId: string,
+    command: FEDCObservationCommand,
+    signal?: AbortSignal,
+  ): Promise<FEDCObservationRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/fedc-observation`,
+      {
+        method: 'PUT',
+        body: fedcObservationDraftCommandSchema.parse(command),
+        schema: fedcObservationMutationResponseSchema,
+        signal,
+      },
+    );
+    return mapFEDCObservation(response.data);
+  },
+
+  async completeFEDCObservation(
+    organizationId: string,
+    assignmentId: string,
+    command: FEDCObservationCommand,
+    signal?: AbortSignal,
+  ): Promise<FEDCObservationRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/fedc-observation/complete`,
+      {
+        method: 'POST',
+        body: fedcObservationCompleteCommandSchema.parse(command),
+        schema: fedcObservationMutationResponseSchema,
+        signal,
+      },
+    );
+    return mapFEDCObservation(response.data);
+  },
+
+  async getFEDCObservation(
+    organizationId: string,
+    assignmentId: string,
+    signal?: AbortSignal,
+  ): Promise<FEDCObservationRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/fedc-observation`,
+      { schema: fedcObservationMutationResponseSchema, signal },
+    );
+    return mapFEDCObservation(response.data);
+  },
+
+  async getStudentFEDCObservations(
+    organizationId: string,
+    studentId: string,
+    signal?: AbortSignal,
+  ): Promise<FEDCObservationRecord[]> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/students/${encodeURIComponent(studentId)}/fedc-observations`,
+      { schema: fedcObservationsResponseSchema, signal },
+    );
+    return response.data.map(mapFEDCObservation);
+  },
+
+  async getStudentFEDCReference(
+    organizationId: string,
+    studentId: string,
+    signal?: AbortSignal,
+  ): Promise<FEDCObservationReference> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/students/${encodeURIComponent(studentId)}/fedc-observations/reference`,
+      { schema: fedcObservationReferenceResponseSchema, signal },
+    );
+    return mapFEDCObservationReference(response.data);
   },
 };
 

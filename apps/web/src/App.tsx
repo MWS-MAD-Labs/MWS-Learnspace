@@ -108,7 +108,10 @@ const MainContent: React.FC = () => {
             isOpen
             onClose={() => setIsObservationDrawerOpen(false)}
             studentId={selectedStudentId}
-            onNavigateToFull={navigateToObservation}
+            onNavigateToFull={(type) => {
+              setIsObservationDrawerOpen(false);
+              navigateToObservation(selectedStudentId, type);
+            }}
           />
         )}
       </Suspense>

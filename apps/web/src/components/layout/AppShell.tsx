@@ -386,6 +386,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
               {(currentUser.isGPK ||
                 currentUser.isSpecialEdCoordinator ||
                 currentUser.role === 'SPECIAL_ED_TEACHER' ||
+                currentUser.role === 'SPECIALIST' ||
                 currentUser.role === 'PRINCIPAL' ||
                 currentUser.role === 'DIRECTOR') && (
                 <div className="pt-2">

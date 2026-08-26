@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { fedcDefinitionBodySchema } from '@learnspace/contracts';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
-import { FEDC_MILESTONES } from '../../data/seedData';
+import { useFEDCObservationReference } from '../../hooks/useFEDCObservations';
+
 import {
   X,
   FileText,
@@ -10,6 +12,7 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  RefreshCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -27,11 +30,19 @@ export const ObservationReferenceDrawer: React.FC<
     'FEDC' | 'SENSORY_PROFILE' | 'SFA'
   >('FEDC');
   const [expandedMilestone, setExpandedMilestone] = useState<number | null>(1);
-  const { students } = useApp();
+  const { students, organizationId } = useApp();
+  const fedcReference = useFEDCObservationReference(organizationId, studentId, {
+    enabled: isOpen,
+  });
 
   const student = students.find((candidate) => candidate.id === studentId);
-  const fedcRecords = storageService.getFEDCObservations(studentId);
-  const latestFedc = fedcRecords[0];
+  const latestFedc = fedcReference.reference?.latestObservation || undefined;
+  const fedcDefinition = fedcDefinitionBodySchema.safeParse(
+    latestFedc?.definition?.body,
+  );
+  const fedcMilestones = fedcDefinition.success
+    ? fedcDefinition.data.milestones
+    : [];
 
   const sensoryRecords = storageService.getSensoryProfiles(studentId);
   const latestSensory = sensoryRecords[0];
@@ -100,7 +111,7 @@ export const ObservationReferenceDrawer: React.FC<
               FEDC Milestones
               {latestFedc && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-stone-100 text-stone-700 font-semibold">
-                  {latestFedc.totalScore}/72
+                  {latestFedc.totalScore}/{latestFedc.maxPossibleScore}
                 </span>
               )}
             </button>
@@ -146,27 +157,51 @@ export const ObservationReferenceDrawer: React.FC<
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {activeTab === 'FEDC' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between bg-amber-50/70 p-3 rounded-lg border border-amber-200">
-                  <div>
-                    <span className="text-xs font-bold text-amber-900">
-                      FEDC Baseline Completed
-                    </span>
-                    <p className="text-xs text-amber-700 mt-0.5">
-                      Observer:{' '}
-                      {latestFedc?.observerName || 'Special Ed Coordinator'} ·
-                      Date: {latestFedc?.observationDate || 'N/A'}
-                    </p>
+                {fedcReference.status === 'loading' && (
+                  <div className="p-4 rounded-lg border border-stone-200 bg-white text-xs text-stone-500 text-center">
+                    Loading FEDC reference…
                   </div>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onNavigateToFull('FEDC');
-                    }}
-                    className="flex items-center gap-1 text-xs font-semibold text-[#6E161E] hover:underline"
-                  >
-                    Open Full Form <ExternalLink className="w-3 h-3" />
-                  </button>
-                </div>
+                )}
+                {fedcReference.status === 'error' && (
+                  <div className="p-4 rounded-lg border border-rose-200 bg-rose-50 text-xs text-rose-800 flex items-center justify-between gap-3">
+                    <span>{fedcReference.error}</span>
+                    <button
+                      type="button"
+                      onClick={fedcReference.retry}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-rose-200 font-bold flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Retry
+                    </button>
+                  </div>
+                )}
+                {fedcReference.status === 'ready' && !latestFedc && (
+                  <div className="p-4 rounded-lg border border-dashed border-stone-300 bg-white text-xs text-stone-500 text-center">
+                    No FEDC observation is available for this student.
+                  </div>
+                )}
+                {latestFedc && (
+                  <div className="flex items-center justify-between bg-amber-50/70 p-3 rounded-lg border border-amber-200">
+                    <div>
+                      <span className="text-xs font-bold text-amber-900">
+                        FEDC Baseline Completed
+                      </span>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        Observer:{' '}
+                        {latestFedc?.observerName || 'Special Ed Coordinator'} ·
+                        Date: {latestFedc?.observationDate || 'N/A'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onNavigateToFull('FEDC');
+                      }}
+                      className="flex items-center gap-1 text-xs font-semibold text-[#6E161E] hover:underline"
+                    >
+                      Open Full Form <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
 
                 {latestFedc?.notes && (
                   <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
@@ -181,9 +216,9 @@ export const ObservationReferenceDrawer: React.FC<
 
                 <div className="space-y-3">
                   <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
-                    Milestone Breakdown (6 Tonggak)
+                    Milestone Breakdown ({fedcMilestones.length} Tonggak)
                   </span>
-                  {FEDC_MILESTONES.map((milestone) => {
+                  {fedcMilestones.map((milestone) => {
                     const score =
                       latestFedc?.milestoneScores?.[milestone.id] || 0;
                     const isExpanded = expandedMilestone === milestone.id;

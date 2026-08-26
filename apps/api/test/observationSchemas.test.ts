@@ -1,21 +1,65 @@
 import { describe, expect, it } from 'vitest';
 import {
-  fedcPayloadSchema,
+  fedcCompletePayloadSchema,
+  fedcCreateDraftPayloadSchema,
+  fedcSaveDraftPayloadSchema,
   sensoryProfilePayloadSchema,
   sfaPayloadSchema,
 } from '../src/observationSchemas.js';
 
+const studentId = '33333333-3333-4333-8333-333333333333';
+
 describe('observation payload schemas', () => {
-  it('validates FEDC score payloads', () => {
+  it('accepts strict FEDC draft and completion inputs without trusted totals', () => {
     expect(
-      fedcPayloadSchema.parse({
-        status: 'COMPLETED',
-        responses: { item1: { itemId: 'item1', rating: 'T', score: 1 } },
-        milestoneScores: { 1: 1 },
-        totalScore: 1,
-        maxPossibleScore: 10,
-      }).totalScore,
-    ).toBe(1);
+      fedcCreateDraftPayloadSchema.parse({
+        observationDate: '2026-08-26',
+      }).responses,
+    ).toBeUndefined();
+    expect(
+      fedcSaveDraftPayloadSchema.parse({
+        observationDate: '2026-08-26',
+        responses: {
+          item1: { itemId: 'item1', rating: 'T', masteredAge: '4 years' },
+        },
+        notes: null,
+      }).responses.item1.rating,
+    ).toBe('T');
+    expect(
+      fedcCompletePayloadSchema.safeParse({
+        observationDate: '2026-08-26',
+        responses: { item1: { itemId: 'item1', rating: 'S' } },
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    'status',
+    'score',
+    'milestoneScores',
+    'totalScore',
+    'maxPossibleScore',
+    'observerId',
+    'actorId',
+    'organizationId',
+    'studentId',
+    'definitionId',
+    'assignmentId',
+  ])('rejects client-controlled FEDC field %s', (field) => {
+    const base = {
+      observationDate: '2026-08-26',
+      responses: { item1: { itemId: 'item1', rating: 'T' } },
+    };
+    const command =
+      field === 'score'
+        ? {
+            ...base,
+            responses: {
+              item1: { itemId: 'item1', rating: 'T', score: 1 },
+            },
+          }
+        : { ...base, [field]: field.includes('Score') ? 1 : studentId };
+    expect(fedcSaveDraftPayloadSchema.safeParse(command).success).toBe(false);
   });
 
   it('rejects invalid sensory ratings', () => {

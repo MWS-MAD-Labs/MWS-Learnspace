@@ -2,6 +2,7 @@ import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
 import { useLearningJourneys } from '../../hooks/useLearningJourneys';
+import { useFEDCObservations } from '../../hooks/useFEDCObservations';
 import { Users, BookOpen, Brain } from 'lucide-react';
 
 export const ReportsAnalyticsView: React.FC = () => {
@@ -14,7 +15,13 @@ export const ReportsAnalyticsView: React.FC = () => {
     { enabled: canReadJourneys },
   );
   const iepRecords = storageService.getIEPRecords();
-  const fedcRecords = storageService.getFEDCObservations('stu-001');
+  const featuredStudent = students.find((student) => student.specialNeedsFlag);
+  const fedcHistory = useFEDCObservations(
+    organizationId,
+    featuredStudent?.id || '',
+    { enabled: Boolean(featuredStudent) },
+  );
+  const latestFedc = fedcHistory.observations[0];
 
   const approvedJourneys = journeys.filter(
     (j) => j.directorApprovalStatus === 'Done',
@@ -136,14 +143,21 @@ export const ReportsAnalyticsView: React.FC = () => {
             <div className="p-3 bg-[#FAF5EF] rounded-2xl border border-[#E8DFC8] flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-stone-900">
-                  Leo M. (GPK Support)
+                  {featuredStudent?.fullName || 'GPK Support Student'}
                 </p>
                 <p className="text-[11px] text-stone-500">
-                  FEDC Baseline: 54 / 72 Pts
+                  {fedcHistory.status === 'loading'
+                    ? 'Loading FEDC baseline…'
+                    : latestFedc
+                      ? `FEDC Baseline: ${latestFedc.totalScore} / ${latestFedc.maxPossibleScore || 72} Pts`
+                      : 'No FEDC baseline available'}
                 </p>
               </div>
               <button
-                onClick={() => navigateToIEP('stu-001')}
+                onClick={() =>
+                  featuredStudent && navigateToIEP(featuredStudent.id)
+                }
+                disabled={!featuredStudent}
                 className="px-2.5 py-1 bg-white hover:bg-stone-50 border border-stone-200 text-stone-800 text-[11px] font-bold rounded-lg transition-colors"
               >
                 Inspect
