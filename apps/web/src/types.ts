@@ -200,6 +200,22 @@ export interface WorkflowHistoryEntry {
 
 export interface LearningJourney {
   id: string;
+  organizationId?: string;
+  version?: number;
+  academicYearId?: string;
+  semesterId?: string;
+  unitId?: string;
+  gradeId?: string;
+  subjectId?: string;
+  ownerMembershipIds?: string[];
+  state?:
+    | 'DRAFT'
+    | 'PRINCIPAL_REVIEW'
+    | 'COORDINATOR_REVIEW'
+    | 'DIRECTOR_APPROVAL'
+    | 'APPROVED'
+    | 'ACTIVE'
+    | 'ARCHIVED';
   title: string;
   academicYear: string; // "2026-2027"
   semester: 'Semester 1' | 'Semester 2';

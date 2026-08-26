@@ -51,7 +51,6 @@ const permissionsByRole: Record<MembershipRole, readonly Permission[]> = {
   SUBJECT_TEACHER: ['journey:read', 'journey:write'],
   SPECIAL_ED_COORDINATOR: [
     'attendance:read',
-    'journey:read',
     'special-ed:read',
     'special-ed:write',
     'special-ed:review',
@@ -62,7 +61,6 @@ const permissionsByRole: Record<MembershipRole, readonly Permission[]> = {
   ],
   SPECIAL_ED_TEACHER: [
     'attendance:read',
-    'journey:read',
     'special-ed:read',
     'special-ed:write',
   ],

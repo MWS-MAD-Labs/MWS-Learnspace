@@ -481,6 +481,7 @@ model LearningJourney {
   gradeId        String                   @db.Uuid
   subjectId      String                   @db.Uuid
   state          WorkflowState            @default(DRAFT)
+  version        Int                      @default(1)
   createdById    String                   @db.Uuid
   updatedById    String                   @db.Uuid
   createdAt      DateTime                 @default(now())

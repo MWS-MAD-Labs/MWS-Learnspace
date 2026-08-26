@@ -75,6 +75,25 @@ export async function seedDatabase(prisma: PrismaClient) {
     },
   });
 
+  const semester = await prisma.semester.upsert({
+    where: {
+      academicYearId_position: { academicYearId: academicYear.id, position: 1 },
+    },
+    update: {
+      name: 'Semester 1',
+      startsOn: new Date('2026-07-01T00:00:00.000Z'),
+      endsOn: new Date('2026-12-31T00:00:00.000Z'),
+    },
+    create: {
+      organizationId: organization.id,
+      academicYearId: academicYear.id,
+      name: 'Semester 1',
+      position: 1,
+      startsOn: new Date('2026-07-01T00:00:00.000Z'),
+      endsOn: new Date('2026-12-31T00:00:00.000Z'),
+    },
+  });
+
   const unit = await prisma.unit.upsert({
     where: {
       organizationId_code: {
@@ -126,7 +145,7 @@ export async function seedDatabase(prisma: PrismaClient) {
     create: { membershipId: gradeTeacherMembership.id, gradeId: grade.id },
   });
 
-  await prisma.subject.upsert({
+  const subject = await prisma.subject.upsert({
     where: {
       organizationId_code: {
         organizationId: organization.id,
@@ -140,6 +159,47 @@ export async function seedDatabase(prisma: PrismaClient) {
       name: 'General Studies',
     },
   });
+
+  const existingJourney = await prisma.learningJourney.findFirst({
+    where: {
+      organizationId: organization.id,
+      academicYearId: academicYear.id,
+      semesterId: semester.id,
+      gradeId: grade.id,
+      subjectId: subject.id,
+      title: 'Demo Inquiry Journey',
+    },
+    select: { id: true },
+  });
+  if (!existingJourney) {
+    await prisma.learningJourney.create({
+      data: {
+        organizationId: organization.id,
+        title: 'Demo Inquiry Journey',
+        academicYearId: academicYear.id,
+        semesterId: semester.id,
+        unitId: unit.id,
+        gradeId: grade.id,
+        subjectId: subject.id,
+        createdById: gradeTeacher.id,
+        updatedById: gradeTeacher.id,
+        owners: { create: { membershipId: gradeTeacherMembership.id } },
+        projects: {
+          create: {
+            title: 'Inquiry Kickoff',
+            description:
+              'Explore a question through observation and discussion.',
+            startsOn: new Date('2026-08-01T00:00:00.000Z'),
+            endsOn: new Date('2026-08-31T00:00:00.000Z'),
+            position: 0,
+            goals: {
+              create: { description: 'Form an inquiry question.', position: 0 },
+            },
+          },
+        },
+      },
+    });
+  }
 
   const schoolClass = await prisma.schoolClass.upsert({
     where: {

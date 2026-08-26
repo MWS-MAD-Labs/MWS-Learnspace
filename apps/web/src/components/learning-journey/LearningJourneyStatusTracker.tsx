@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
+import { useLearningJourneys } from '../../hooks/useLearningJourneys';
 import { LearningJourney } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import {
@@ -22,12 +22,12 @@ import {
 } from 'lucide-react';
 
 export const LearningJourneyStatusTracker: React.FC = () => {
-  const { currentUser, navigateToJourneyEditor, showToast, refreshData } =
+  const { currentUser, organizationId, navigateToJourneyEditor, showToast } =
     useApp();
   const [searchFilter, setSearchFilter] = useState('');
-  const [unitFilter, setUnitFilter] = useState('All Units');
-  const [gradeFilter, setGradeFilter] = useState('All Grades');
-  const [subjectFilter, setSubjectFilter] = useState('All Subjects');
+  const [unitFilter, setUnitFilter] = useState('');
+  const [gradeFilter, setGradeFilter] = useState('');
+  const [subjectFilter, setSubjectFilter] = useState('');
   const [stageFilter, setStageFilter] = useState('All Stages');
 
   // Review Modal state (for Principal or Director)
@@ -42,58 +42,32 @@ export const LearningJourneyStatusTracker: React.FC = () => {
   const [previewingJourney, setPreviewingJourney] =
     useState<LearningJourney | null>(null);
 
-  const journeys = storageService.getLearningJourneys();
+  const { journeys, metadata, status, error, retry } = useLearningJourneys(
+    organizationId,
+    {
+      ...(searchFilter.trim() ? { search: searchFilter.trim() } : {}),
+      ...(unitFilter ? { unitId: unitFilter } : {}),
+      ...(gradeFilter ? { gradeId: gradeFilter } : {}),
+      ...(subjectFilter ? { subjectId: subjectFilter } : {}),
+      ...(stageFilter === 'Draft'
+        ? { state: 'DRAFT' as const }
+        : stageFilter === 'Principal Review'
+          ? { state: 'PRINCIPAL_REVIEW' as const }
+          : stageFilter === 'Director Approval'
+            ? { state: 'DIRECTOR_APPROVAL' as const }
+            : stageFilter === 'Approved'
+              ? { state: 'APPROVED' as const }
+              : {}),
+    },
+  );
 
   const isPrincipal = currentUser.role === 'PRINCIPAL';
   const isDirector = currentUser.role === 'DIRECTOR';
   const isGradeTeacher = currentUser.role === 'GRADE_TEACHER';
   const isSubjectTeacher = currentUser.role === 'SUBJECT_TEACHER';
+  const canWrite = currentUser.permissions.includes('journey:write');
 
-  // Filtered Journeys
-  const filteredJourneys = useMemo(() => {
-    return journeys.filter((j) => {
-      if (
-        searchFilter &&
-        !j.title.toLowerCase().includes(searchFilter.toLowerCase()) &&
-        !j.subject.toLowerCase().includes(searchFilter.toLowerCase()) &&
-        !j.authorName.toLowerCase().includes(searchFilter.toLowerCase())
-      ) {
-        return false;
-      }
-      if (unitFilter !== 'All Units' && j.unit !== unitFilter) return false;
-      if (gradeFilter !== 'All Grades' && j.grade !== gradeFilter) return false;
-      if (subjectFilter !== 'All Subjects' && j.subject !== subjectFilter)
-        return false;
-      if (
-        stageFilter === 'Draft' &&
-        j.draftStatus !== 'On Progress' &&
-        j.draftStatus !== 'Not Started'
-      )
-        return false;
-      if (
-        stageFilter === 'Principal Review' &&
-        (j.principalReviewStatus === 'Not Started' ||
-          j.principalReviewStatus === 'Done')
-      )
-        return false;
-      if (
-        stageFilter === 'Director Approval' &&
-        (j.directorApprovalStatus === 'Not Started' ||
-          j.directorApprovalStatus === 'Done')
-      )
-        return false;
-      if (stageFilter === 'Approved' && j.directorApprovalStatus !== 'Done')
-        return false;
-      return true;
-    });
-  }, [
-    journeys,
-    searchFilter,
-    unitFilter,
-    gradeFilter,
-    subjectFilter,
-    stageFilter,
-  ]);
+  const filteredJourneys = journeys;
 
   // KPI Metrics
   const totalCount = journeys.length;
@@ -124,69 +98,16 @@ export const LearningJourneyStatusTracker: React.FC = () => {
   };
 
   const handleSubmitReview = () => {
-    if (!reviewingJourney) return;
-
-    // Strict validation
-    if (reviewAction === 'Return' && !reviewComment.trim()) {
-      showToast(
-        'error',
-        'Feedback Required',
-        'Please provide explicit feedback and required revisions for the author.',
-      );
-      return;
-    }
-
-    if (isPrincipal) {
-      if (reviewingJourney.draftStatus !== 'Done') {
-        showToast(
-          'error',
-          'Unauthorized Action',
-          'Journey is still in draft state and has not been submitted.',
-        );
-        return;
-      }
-      storageService.updateWorkflowStage(
-        reviewingJourney.id,
-        'Principal Review',
-        reviewAction === 'Approve' ? 'Approved' : 'Returned',
-        reviewComment || 'Curriculum unit reviewed and verified by Principal.',
-        currentUser,
-      );
-      showToast(
-        'success',
-        `Principal Review: ${reviewAction === 'Approve' ? 'Approved' : 'Returned'}`,
-        `Updated "${reviewingJourney.title}".`,
-      );
-    } else if (isDirector) {
-      if (reviewingJourney.principalReviewStatus !== 'Done') {
-        showToast(
-          'error',
-          'Unauthorized Action',
-          'Journey must first receive Principal approval before Director sign-off.',
-        );
-        return;
-      }
-      storageService.updateWorkflowStage(
-        reviewingJourney.id,
-        'Director Approval',
-        reviewAction === 'Approve' ? 'Approved' : 'Returned',
-        reviewComment ||
-          'Final governance sign-off completed by Director of Academics.',
-        currentUser,
-      );
-      showToast(
-        'success',
-        `Director Approval: ${reviewAction === 'Approve' ? 'Fully Approved' : 'Returned'}`,
-        `Updated "${reviewingJourney.title}".`,
-      );
-    }
-
+    showToast(
+      'info',
+      'Workflow transition unavailable',
+      'Review and approval commands will be enabled in P5-003.',
+    );
     setReviewingJourney(null);
-    refreshData();
   };
 
   // Delete journey (allowed only for drafts or admin)
-  const handleDelete = (id: string, title: string, isLocked: boolean) => {
+  const handleDelete = (_id: string, title: string, isLocked: boolean) => {
     if (isLocked) {
       showToast(
         'error',
@@ -195,11 +116,11 @@ export const LearningJourneyStatusTracker: React.FC = () => {
       );
       return;
     }
-    if (confirm(`Are you sure you want to delete "${title}"?`)) {
-      storageService.deleteLearningJourney(id);
-      showToast('info', 'Journey Deleted', `Deleted "${title}".`);
-      refreshData();
-    }
+    showToast(
+      'info',
+      'Delete unavailable',
+      `Deletion of "${title}" is deferred until the draft deletion policy is finalized.`,
+    );
   };
 
   return (
@@ -207,6 +128,19 @@ export const LearningJourneyStatusTracker: React.FC = () => {
       id="learning-journey-tracker-view"
       className="space-y-6 max-w-7xl mx-auto"
     >
+      {status === 'loading' && (
+        <div className="rounded-2xl border border-[#EFE7DC] bg-white p-4 text-sm text-stone-600">
+          Loading learning journeys…
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 flex items-center justify-between gap-4">
+          <span>{error}</span>
+          <button onClick={retry} className="font-bold underline">
+            Retry
+          </button>
+        </div>
+      )}
       {/* Header Bar */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 md:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
@@ -216,7 +150,7 @@ export const LearningJourneyStatusTracker: React.FC = () => {
               Workflow & Review Tracker
             </span>
             <span className="text-xs text-stone-500 font-medium">
-              Academic Year 2026–2027
+              Academic Year {metadata.academicYears[0]?.name ?? '—'}
             </span>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
               Active User: {currentUser.name} ({currentUser.roleTitle})
@@ -232,13 +166,15 @@ export const LearningJourneyStatusTracker: React.FC = () => {
           </p>
         </div>
 
-        <button
-          id="btn-create-journey-tracker"
-          onClick={() => navigateToJourneyEditor()}
-          className="px-5 py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2 shrink-0"
-        >
-          <Plus className="w-4 h-4" />+ Create Learning Journey
-        </button>
+        {canWrite && (
+          <button
+            id="btn-create-journey-tracker"
+            onClick={() => navigateToJourneyEditor()}
+            className="px-5 py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2 shrink-0"
+          >
+            <Plus className="w-4 h-4" />+ Create Learning Journey
+          </button>
+        )}
       </div>
 
       {/* KPI Overview Cards */}
@@ -374,10 +310,12 @@ export const LearningJourneyStatusTracker: React.FC = () => {
             onChange={(e) => setUnitFilter(e.target.value)}
             className="px-3 py-1.5 text-xs font-semibold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-800"
           >
-            <option value="All Units">All Units</option>
-            <option value="Early Years">Early Years</option>
-            <option value="Elementary">Elementary</option>
-            <option value="Junior High">Junior High</option>
+            <option value="">All Units</option>
+            {metadata.units.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.name}
+              </option>
+            ))}
           </select>
 
           <select
@@ -386,11 +324,12 @@ export const LearningJourneyStatusTracker: React.FC = () => {
             onChange={(e) => setGradeFilter(e.target.value)}
             className="px-3 py-1.5 text-xs font-semibold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-800"
           >
-            <option value="All Grades">All Grades</option>
-            <option value="K1">K1</option>
-            <option value="Grade 1">Grade 1</option>
-            <option value="Grade 2">Grade 2</option>
-            <option value="Grade 4">Grade 4</option>
+            <option value="">All Grades</option>
+            {metadata.grades.map((grade) => (
+              <option key={grade.id} value={grade.id}>
+                {grade.name}
+              </option>
+            ))}
           </select>
 
           <select
@@ -399,11 +338,12 @@ export const LearningJourneyStatusTracker: React.FC = () => {
             onChange={(e) => setSubjectFilter(e.target.value)}
             className="px-3 py-1.5 text-xs font-semibold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-800"
           >
-            <option value="All Subjects">All Subjects</option>
-            <option value="Physical Education">Physical Education</option>
-            <option value="Science">Science</option>
-            <option value="Math">Math</option>
-            <option value="English">English</option>
+            <option value="">All Subjects</option>
+            {metadata.subjects.map((subject) => (
+              <option key={subject.id} value={subject.id}>
+                {subject.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -451,10 +391,18 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                   (journey.principalReviewStatus === 'On Progress' ||
                     journey.directorApprovalStatus === 'On Progress');
                 const isApproved = journey.directorApprovalStatus === 'Done';
+                const isOwned =
+                  journey.createdBy === currentUser.id ||
+                  journey.ownerMembershipIds?.includes(
+                    currentUser.membershipId ?? '',
+                  ) === true;
                 const isReturned =
                   journey.principalReviewStatus === 'Returned' ||
                   journey.directorApprovalStatus === 'Returned';
-                const isLocked = (isUnderReview || isApproved) && !isReturned;
+                const isLocked =
+                  !canWrite ||
+                  !isOwned ||
+                  ((isUnderReview || isApproved) && !isReturned);
 
                 return (
                   <tr

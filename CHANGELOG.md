@@ -41,9 +41,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Versioned and bounded `learnspace-export` v1 contracts with duplicate and cross-record reference validation.
 - Explicitly gated development-only browser exporter that validates raw legacy storage and downloads sensitive migration artifacts without transmitting them.
 - Fail-closed administrative import CLI with approved target manifests, serializable dry-run/apply transactions, deterministic legacy ID mapping, idempotent source-key ledger, safe aggregate auditing, and a documented local Docker backup/import/rollback rehearsal.
+- API-backed Learning Journey collection/detail reads and draft creation/updates with strict nested contracts, organization and role scopes, active membership owners, transactional projects/goals/connections, audit events, integer optimistic concurrency, stale-version UI recovery, canonical server filters, and dedicated Compose Playwright coverage.
 
 ### Changed
 
+- Migrated Learning Journey calendar, tracker, editor, dashboard, and curriculum-report reads away from browser persistence; workflow transitions remain disabled pending explicit P5-003 submit/review/approval commands.
 - Formatted the existing prototype source and fixed conditional React Hook execution in the observation workspace.
 - Documented the retained Google AI Studio metadata and active Express API tooling.
 - Updated project documentation for the implemented Milestone 1 workspace, commands, endpoints, environment contract, Compose workflow, required production secrets, and remaining prototype/data-security limitations.

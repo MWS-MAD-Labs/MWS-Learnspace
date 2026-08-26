@@ -309,72 +309,78 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
               )}
 
               {/* Learning Journey Accordion */}
-              <div className="pt-2">
-                <button
-                  id="nav-learning-journey-toggle"
-                  onClick={() =>
-                    setLearningJourneyMenuOpen(!learningJourneyMenuOpen)
-                  }
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    isLearningJourneyActive && !learningJourneyMenuOpen
-                      ? 'bg-[#6E161E]/10 text-[#6E161E]'
-                      : 'text-stone-700 hover:bg-[#FAF5EF] hover:text-stone-900'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <BookOpen className="w-4 h-4 text-[#6E161E]" />
-                    <span>Learning Journey</span>
-                  </div>
-                  {learningJourneyMenuOpen ? (
-                    <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
-                  ) : (
-                    <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+              {currentUser.permissions.includes('journey:read') && (
+                <div className="pt-2">
+                  <button
+                    id="nav-learning-journey-toggle"
+                    onClick={() =>
+                      setLearningJourneyMenuOpen(!learningJourneyMenuOpen)
+                    }
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isLearningJourneyActive && !learningJourneyMenuOpen
+                        ? 'bg-[#6E161E]/10 text-[#6E161E]'
+                        : 'text-stone-700 hover:bg-[#FAF5EF] hover:text-stone-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <BookOpen className="w-4 h-4 text-[#6E161E]" />
+                      <span>Learning Journey</span>
+                    </div>
+                    {learningJourneyMenuOpen ? (
+                      <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+                    )}
+                  </button>
+
+                  {learningJourneyMenuOpen && (
+                    <div className="ml-5 pl-3 border-l-2 border-[#EFE7DC] mt-1 space-y-1 py-1">
+                      <button
+                        id="nav-lj-calendar"
+                        onClick={() =>
+                          setActiveTab('LEARNING_JOURNEY_CALENDAR')
+                        }
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          activeTab === 'LEARNING_JOURNEY_CALENDAR'
+                            ? 'bg-[#6E161E] text-white font-bold'
+                            : 'text-stone-600 hover:bg-[#FAF5EF] hover:text-stone-900'
+                        }`}
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>Calendar View</span>
+                      </button>
+
+                      <button
+                        id="nav-lj-tracker"
+                        onClick={() => setActiveTab('LEARNING_JOURNEY_TRACKER')}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          activeTab === 'LEARNING_JOURNEY_TRACKER'
+                            ? 'bg-[#6E161E] text-white font-bold'
+                            : 'text-stone-600 hover:bg-[#FAF5EF] hover:text-stone-900'
+                        }`}
+                      >
+                        <ListOrdered className="w-3.5 h-3.5" />
+                        <span>Status Tracker</span>
+                      </button>
+
+                      {currentUser.permissions.includes('journey:write') && (
+                        <button
+                          id="nav-lj-create"
+                          onClick={() => navigateToJourneyEditor()}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                            activeTab === 'LEARNING_JOURNEY_EDITOR'
+                              ? 'bg-[#6E161E] text-white font-bold'
+                              : 'text-[#6E161E] hover:bg-[#6E161E]/5 font-semibold'
+                          }`}
+                        >
+                          <PlusCircle className="w-3.5 h-3.5" />
+                          <span>+ Create Journey</span>
+                        </button>
+                      )}
+                    </div>
                   )}
-                </button>
-
-                {learningJourneyMenuOpen && (
-                  <div className="ml-5 pl-3 border-l-2 border-[#EFE7DC] mt-1 space-y-1 py-1">
-                    <button
-                      id="nav-lj-calendar"
-                      onClick={() => setActiveTab('LEARNING_JOURNEY_CALENDAR')}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                        activeTab === 'LEARNING_JOURNEY_CALENDAR'
-                          ? 'bg-[#6E161E] text-white font-bold'
-                          : 'text-stone-600 hover:bg-[#FAF5EF] hover:text-stone-900'
-                      }`}
-                    >
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>Calendar View</span>
-                    </button>
-
-                    <button
-                      id="nav-lj-tracker"
-                      onClick={() => setActiveTab('LEARNING_JOURNEY_TRACKER')}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                        activeTab === 'LEARNING_JOURNEY_TRACKER'
-                          ? 'bg-[#6E161E] text-white font-bold'
-                          : 'text-stone-600 hover:bg-[#FAF5EF] hover:text-stone-900'
-                      }`}
-                    >
-                      <ListOrdered className="w-3.5 h-3.5" />
-                      <span>Status Tracker</span>
-                    </button>
-
-                    <button
-                      id="nav-lj-create"
-                      onClick={() => navigateToJourneyEditor()}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                        activeTab === 'LEARNING_JOURNEY_EDITOR'
-                          ? 'bg-[#6E161E] text-white font-bold'
-                          : 'text-[#6E161E] hover:bg-[#6E161E]/5 font-semibold'
-                      }`}
-                    >
-                      <PlusCircle className="w-3.5 h-3.5" />
-                      <span>+ Create Journey</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Special Education Accordion - Only accessible to GPK teachers, Coordinator, and Leadership */}
               {(currentUser.isGPK ||

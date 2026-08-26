@@ -1,13 +1,18 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
+import { useLearningJourneys } from '../../hooks/useLearningJourneys';
 import { Users, BookOpen, Brain } from 'lucide-react';
 
 export const ReportsAnalyticsView: React.FC = () => {
-  const { students, currentUser, navigateToJourneyEditor, navigateToIEP } =
-    useApp();
+  const { students, currentUser, organizationId, navigateToIEP } = useApp();
 
-  const journeys = storageService.getLearningJourneys();
+  const canReadJourneys = currentUser.permissions.includes('journey:read');
+  const { journeys } = useLearningJourneys(
+    organizationId,
+    {},
+    { enabled: canReadJourneys },
+  );
   const iepRecords = storageService.getIEPRecords();
   const fedcRecords = storageService.getFEDCObservations('stu-001');
 

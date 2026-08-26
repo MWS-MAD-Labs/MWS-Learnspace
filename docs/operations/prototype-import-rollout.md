@@ -191,7 +191,7 @@ The requested local Docker rehearsal is recorded at `docs/operations/prototype-i
 
 P6 is not ready for production rollout while `P5-013` remains incomplete. Before repeating this procedure in staging:
 
-1. Migrate Learning Journey reads/editing and workflow transitions (`P5-002`–`P5-003`).
+1. Complete Learning Journey workflow transitions and remove the remaining legacy workflow persistence (`P5-003`; reads/draft editing completed in `P5-002`).
 2. Migrate observation definitions, assignments, and all three observation instruments (`P5-004`–`P5-007`).
 3. Migrate IEPs, IEP workflow, weekly reports, and transactional goal projections (`P5-008`–`P5-011`).
 4. Replace dashboard/report/search/notification browser-derived reads (`P5-012`).

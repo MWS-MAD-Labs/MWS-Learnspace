@@ -2,10 +2,10 @@
 
 Learnspace is an educator portal for academic planning, attendance, special-education observations, Individualized Education Programs (IEPs), and weekly progress reporting.
 
-The repository is currently at **`0.2.0`**. Milestone 4 delivered the first fully migrated product vertical, and Milestone 5 now has completed API-backed organization account and membership administration, authorized student directories, privileged student administration, and transactional GPK staff assignments in addition to PostgreSQL attendance.
+The repository is currently at **`0.2.0`**. Milestone 4 delivered the first fully migrated product vertical, and Milestone 5 now includes API-backed organization account and membership administration, authorized student directories, privileged student administration, transactional GPK staff assignments, and Learning Journey reads/draft editing in addition to PostgreSQL attendance.
 
 > [!IMPORTANT]
-> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, attendance, and the controlled prototype import tooling are server-backed, but Learning Journey, observations, IEPs, and weekly reports still use seeded browser `localStorage`. P6 tooling is implemented locally, but its release gate remains blocked until P5-013 removes sensitive browser persistence. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
+> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, attendance, Learning Journey reads/draft editing, and the controlled prototype import tooling are server-backed. Learning Journey workflow transitions, observations, IEPs, and weekly reports still depend on incomplete Milestone 5 work, including seeded browser `localStorage` in the remaining domains. P6 tooling is implemented locally, but its release gate remains blocked until P5-013 removes sensitive browser persistence. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
 
 ## Current capabilities
 
@@ -14,7 +14,7 @@ The repository is currently at **`0.2.0`**. Milestone 4 delivered the first full
 - Authorized student directories and privileged student detail administration with guardian-contact gating
 - Director-only People & access administration for authoritative user identities, organization memberships, roles, statuses, and unit/grade/subject scopes
 - Transactional GPK assignment, reassignment, ending, server-enforced caseload capacity, and audited session-derived actors
-- Learning Journey calendar, editor, and approval workflow
+- PostgreSQL-backed Learning Journey calendar, tracker, and draft editor with server filters, scoped ownership, nested projects/goals/connections, audit events, and optimistic concurrency; submit/review/approval transitions are deferred to P5-003
 - Special-education observation tools:
   - Functional Emotional Developmental Capacities (FEDC)
   - Sensory Profile
@@ -34,7 +34,7 @@ The repository is currently at **`0.2.0`**. Milestone 4 delivered the first full
 flowchart TB
     Browser[Browser] --> Web[React/Vite web application]
     Web --> LocalStorage[(Browser localStorage for remaining prototype domains)]
-    Web -->|typed account, academic, student, assignment, and attendance requests| Proxy
+    Web -->|typed account, academic, student, assignment, attendance, and journey requests| Proxy
     Browser -->|same-origin /api traffic in Compose| Proxy[Non-root nginx web container]
     Proxy --> API[Express TypeScript API]
     API --> DB[(PostgreSQL 16)]
@@ -44,12 +44,12 @@ flowchart TB
 
 The workspace and service boundary are implemented, but the migration is intentionally incremental:
 
-- `apps/web` contains the React/Vite application. Organization account administration, attendance, authorized student loading, staff directory reads, and GPK assignment use typed API services; remaining prototype domains still use `apps/web/src/services/storageService.ts` and `localStorage`.
-- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, organization account administration, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
-- `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, organization accounts, academic resources, students, staff directories, GPK assignments, and attendance.
+- `apps/web` contains the React/Vite application. Organization account administration, attendance, authorized student loading, staff directory reads, GPK assignment, and Learning Journey reads/draft editing use typed API services; remaining observation, IEP, weekly-report, and related prototype domains still use `apps/web/src/services/storageService.ts` and `localStorage`.
+- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, organization account administration, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, scoped Learning Journey list/detail/create/update endpoints, runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
+- `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, organization accounts, academic resources, students, staff directories, GPK assignments, attendance, and Learning Journey reads/draft commands.
 - `compose.yaml` defines production-oriented `web`, `api`, `migrate`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation. API startup waits for the one-shot migration job.
 - `compose.dev.yaml` is an optional override that publishes PostgreSQL on host port `5432` for database tools or a host-run API.
-- PostgreSQL is authoritative for authentication, user identity and membership administration, authorization scope, academic/student lookup and administration, GPK assignments, and attendance. Learning Journey, observations, IEPs, and weekly reports remain browser-backed while Milestone 5 continues.
+- PostgreSQL is authoritative for authentication, user identity and membership administration, authorization scope, academic/student lookup and administration, GPK assignments, attendance, and Learning Journey reads/draft editing. Learning Journey workflow transitions remain deferred to P5-003; observations, IEPs, and weekly reports remain browser-backed while Milestone 5 continues.
 
 Frontend role checks are presentation behavior only and are not authorization. The API is the intended security boundary for protected operations as those operations are implemented.
 

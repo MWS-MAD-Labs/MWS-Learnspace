@@ -64,11 +64,11 @@ These decisions reduce ambiguity for implementation agents. Change them only thr
 The current application has a useful React UI and domain inventory, but its educator workflows remain a prototype:
 
 - the npm workspace contains `apps/web`, `apps/api`, and `packages/contracts`;
-- non-attendance prototype domains are initialized from `apps/web/src/data/seedData.ts` and persisted by `apps/web/src/services/storageService.ts` in browser `localStorage`;
+- remaining observation, IEP, weekly-report, and related prototype domains are initialized from `apps/web/src/data/seedData.ts` and persisted by `apps/web/src/services/storageService.ts` in browser `localStorage`; Learning Journey reads and draft editing are API/PostgreSQL-backed;
 - authenticated identity, memberships, permissions, and record scopes come from Google OAuth and PostgreSQL-backed server sessions; the role switcher is isolated to explicit development fake-data builds;
 - authorization is enforced by the API for implemented protected resources; remaining prototype domains still contain presentation-only frontend role checks until they migrate;
 - the Express API, shared response contracts, PostgreSQL Compose service, Prisma lifecycle, production-oriented images, OAuth, sessions, and authorization foundation are implemented;
-- PostgreSQL is authoritative for attendance, while Learning Journey, observations, IEPs, and weekly reports remain browser-backed until Milestone 5;
+- PostgreSQL is authoritative for attendance and Learning Journey reads/draft editing; Learning Journey workflow transitions remain deferred to P5-003, while observations, IEPs, and weekly reports remain browser-backed until their Milestone 5 slices;
 - `apps/web/src/types.ts` still contains overlapping status representations for remaining prototype domains that must be normalized;
 - no active Gemini integration exists; Google AI Studio provenance remains only in `metadata.json`;
 - Milestone 0 provides a dependency lockfile, CI pipeline, formatting and linting, type checking, and frontend smoke tests.
@@ -758,11 +758,11 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-002 — Migrate Learning Journey reads and editing
 
-- [ ] **Dependencies:** P5-001, P2-006
+- [x] **Dependencies:** P5-001, P2-006
 - **Change:** migrate calendar, tracker, editor, projects, goals, ownership, and filters.
 - **Acceptance:** authors can edit only permitted drafts; concurrent updates return an explicit conflict rather than silently overwriting.
 - **Validate:** repository/API/component/E2E tests.
-- **Next implementation (2026-08-25):** Start with strict list/detail/filter/create/update contracts and an organization-scoped repository policy, then add transactional nested project/goal/connection/owner writes with explicit version conflicts. Migrate the calendar, tracker, and editor to the API only after repository and authorization tests pass; workflow transitions remain in P5-003.
+- **Completed (2026-08-26):** Added strict shared list/detail/filter/create/update contracts; an integer journey version and atomic `expectedVersion` conflict checks; organization, academic-reference, active-owner, role-scope, draft-state, and ownership authorization; transactional nested owner/project/goal/connection replacement with session-derived audit actors; API-backed calendar, tracker, editor, dashboard, and curriculum-report reads; loading, retry, saving, read-only ownership, and stale-version reload states; deterministic project date validation and semester clamping; canonical academic metadata filters; and dedicated seeded Playwright coverage for scoped reads, nested persistence, updates, cross-scope denial, stale writes, and workflow spoof rejection. General edits cannot change workflow state, delete remains deferred, and submit/review/approval controls remain disabled until P5-003.
 
 ## P5-003 — Migrate Learning Journey workflow transitions
 
@@ -770,6 +770,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** implement submit, principal review, return, director approval, and immutable workflow events as explicit API commands.
 - **Acceptance:** invalid source-state transitions and actor spoofing are rejected transactionally.
 - **Validate:** complete transition table tests for every role and source state.
+- **Next implementation (2026-08-26):** Define strict submit/review/return/approve command and response contracts with `expectedVersion`; implement explicit organization-scoped command endpoints that conditionally update the journey state and increment its version while appending an immutable `WorkflowEvent` and audit event in the same transaction. Derive every actor from the session, require author ownership for submission, `journey:review` for Principal decisions, and `journey:approve` for Director decisions. Replace the disabled editor/tracker controls only after transition-table, stale-version, cross-tenant, actor-spoofing, and simultaneous-command tests pass; then remove the remaining Learning Journey `storageService.updateWorkflowStage()` path.
 
 ## P5-004 — Migrate observation definitions and assignments
 
@@ -857,7 +858,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 **Milestone exit gate:** any approved prototype data can be imported through a validated, versioned, auditable, and rehearsed process with rollback.
 
-> **Implementation status (2026-08-24):** P6-001 through P6-004 are implemented and validated against a disposable local Docker database, including migration drift, concurrent apply, backup, restore, and rollback checks. The `0.9.0-beta.1` release gate remains blocked by the declared `P5-013` dependency: Learning Journeys, observations, IEPs, weekly reports, dashboards, and related workflows must become authorized API/PostgreSQL resources before sensitive browser persistence can be removed. Repeat the rehearsal in staging after P5-013 passes.
+> **Implementation status (updated 2026-08-26):** P6-001 through P6-004 are implemented and validated against a disposable local Docker database, including migration drift, concurrent apply, backup, restore, and rollback checks. Learning Journey reads and draft editing completed in P5-002, but the `0.9.0-beta.1` release gate remains blocked by the declared `P5-013` dependency: Learning Journey workflow transitions, observations, IEPs, weekly reports, remaining cross-domain dashboards/search/notifications, and related browser persistence must become authorized API/PostgreSQL resources before sensitive browser persistence can be removed. Repeat the rehearsal in staging after P5-013 passes.
 
 ## P6-001 — Define a versioned export format
 

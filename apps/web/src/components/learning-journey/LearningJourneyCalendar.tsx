@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
+import { useLearningJourneys } from '../../hooks/useLearningJourneys';
 import { LearningJourney, LearningJourneyProject } from '../../types';
 import {
   Plus,
@@ -33,19 +33,8 @@ const SEMESTER_2_MONTHS = [
 ];
 const ALL_MONTHS = [...SEMESTER_1_MONTHS, ...SEMESTER_2_MONTHS];
 
-const ALL_SCHOOL_GRADES = [
-  'K1',
-  'K2',
-  'Grade 1',
-  'Grade 2',
-  'Grade 3',
-  'Grade 4',
-  'Grade 5',
-  'Grade 6',
-];
-
 export const LearningJourneyCalendar: React.FC = () => {
-  const { currentUser, navigateToJourneyEditor } = useApp();
+  const { currentUser, organizationId, navigateToJourneyEditor } = useApp();
   const [selectedSemester, setSelectedSemester] = useState<
     'Semester 1' | 'Semester 2' | 'Full Year'
   >('Semester 1');
@@ -59,36 +48,31 @@ export const LearningJourneyCalendar: React.FC = () => {
     project: LearningJourneyProject;
   } | null>(null);
 
-  const journeys = storageService.getLearningJourneys();
+  const { journeys, metadata, status, error, retry } = useLearningJourneys(
+    organizationId,
+    {
+      ...(searchQuery.trim() ? { search: searchQuery.trim() } : {}),
+      ...(selectedUnit !== 'All Units' ? { unitName: selectedUnit } : {}),
+      ...(selectedGrade !== 'All Grades' ? { gradeName: selectedGrade } : {}),
+      ...(selectedSubject !== 'All Subjects'
+        ? { subjectName: selectedSubject }
+        : {}),
+      ...(selectedSemester !== 'Full Year'
+        ? { semesterName: selectedSemester }
+        : {}),
+    },
+  );
 
   const isPrincipal = currentUser.role === 'PRINCIPAL';
   const isDirector = currentUser.role === 'DIRECTOR';
   const isGradeTeacher = currentUser.role === 'GRADE_TEACHER';
-  const isSubjectTeacher = currentUser.role === 'SUBJECT_TEACHER';
-  const isSpecialEdTeacher = currentUser.role === 'SPECIAL_ED_TEACHER';
   const isLeadership = isPrincipal || isDirector;
+  const canWrite = currentUser.permissions.includes('journey:write');
 
   // Determine allowed grades for the current user
   const allowedGrades = useMemo(() => {
-    if (isLeadership) {
-      return ALL_SCHOOL_GRADES;
-    }
-    // Teacher: assigned homeroom grades + grades where they teach their subjects
-    const teacherGrades = new Set<string>();
-    (currentUser.gradeIds || []).forEach((g) => teacherGrades.add(g));
-
-    // Also include any grade in journeys matching their subjects
-    journeys.forEach((j) => {
-      if (
-        currentUser.subjectIds?.includes(j.subject) &&
-        currentUser.gradeIds?.includes(j.grade)
-      ) {
-        teacherGrades.add(j.grade);
-      }
-    });
-
-    return Array.from(teacherGrades);
-  }, [isLeadership, currentUser, journeys]);
+    return metadata.grades.map((grade) => grade.name);
+  }, [metadata.grades]);
 
   // Adjust selectedGrade if teacher switches or initially loads
   useEffect(() => {
@@ -111,79 +95,7 @@ export const LearningJourneyCalendar: React.FC = () => {
     return ALL_MONTHS;
   }, [selectedSemester]);
 
-  // Filter journeys based on user role permissions AND user filters
-  const filteredJourneys = useMemo(() => {
-    return journeys.filter((j) => {
-      // 1. Role-Based Access Control:
-      if (!isLeadership) {
-        const isHomeroom =
-          isGradeTeacher && currentUser.gradeIds?.includes(j.grade);
-        const isSubjectSpecialist =
-          currentUser.subjectIds?.includes(j.subject) &&
-          currentUser.gradeIds?.includes(j.grade);
-        const isAuthor =
-          j.ownerIds?.includes(currentUser.id) ||
-          j.createdBy === currentUser.id;
-        const isSpecialEd =
-          isSpecialEdTeacher && currentUser.gradeIds?.includes(j.grade);
-
-        // Teacher can only view:
-        // a) Their homeroom grade
-        // b) Other grades if they are the subject teacher for that subject in that grade
-        // c) Or journeys they created/own
-        if (!isHomeroom && !isSubjectSpecialist && !isAuthor && !isSpecialEd) {
-          return false;
-        }
-      }
-
-      // 2. User Selected Filters:
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = j.title.toLowerCase().includes(q);
-        const matchSubject = j.subject.toLowerCase().includes(q);
-        const matchAuthor = j.authorName.toLowerCase().includes(q);
-        const matchGrade = j.grade.toLowerCase().includes(q);
-        const matchProjects = j.projects?.some(
-          (p) =>
-            p.title.toLowerCase().includes(q) ||
-            p.description.toLowerCase().includes(q) ||
-            p.learningGoals?.some((g) =>
-              g.description.toLowerCase().includes(q),
-            ),
-        );
-        if (
-          !matchTitle &&
-          !matchSubject &&
-          !matchAuthor &&
-          !matchGrade &&
-          !matchProjects
-        ) {
-          return false;
-        }
-      }
-
-      if (selectedUnit !== 'All Units' && j.unit !== selectedUnit) return false;
-      if (selectedGrade !== 'All Grades' && j.grade !== selectedGrade)
-        return false;
-      if (selectedSubject !== 'All Subjects' && j.subject !== selectedSubject)
-        return false;
-      if (selectedSemester !== 'Full Year' && j.semester !== selectedSemester)
-        return false;
-
-      return true;
-    });
-  }, [
-    journeys,
-    isLeadership,
-    isGradeTeacher,
-    isSpecialEdTeacher,
-    currentUser,
-    searchQuery,
-    selectedUnit,
-    selectedGrade,
-    selectedSubject,
-    selectedSemester,
-  ]);
+  const filteredJourneys = journeys;
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -218,6 +130,19 @@ export const LearningJourneyCalendar: React.FC = () => {
       id="learning-journey-calendar-view"
       className="space-y-6 max-w-7xl mx-auto"
     >
+      {status === 'loading' && (
+        <div className="rounded-2xl border border-[#EFE7DC] bg-white p-4 text-sm text-stone-600">
+          Loading learning journeys…
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 flex items-center justify-between gap-4">
+          <span>{error}</span>
+          <button onClick={retry} className="font-bold underline">
+            Retry
+          </button>
+        </div>
+      )}
       {/* Header Bar */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 md:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1.5">
@@ -227,7 +152,7 @@ export const LearningJourneyCalendar: React.FC = () => {
               Curriculum Roadmap
             </span>
             <span className="text-xs text-stone-500 font-medium">
-              Academic Year 2026–2027
+              Academic Year {metadata.academicYears[0]?.name ?? '—'}
             </span>
             {isPrincipal && (
               <span className="text-xs font-bold bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
@@ -253,15 +178,17 @@ export const LearningJourneyCalendar: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            id="btn-create-journey"
-            onClick={() => navigateToJourneyEditor()}
-            className="px-5 py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />+ Create Learning Journey
-          </button>
-        </div>
+        {canWrite && (
+          <div className="flex items-center gap-3">
+            <button
+              id="btn-create-journey"
+              onClick={() => navigateToJourneyEditor()}
+              className="px-5 py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />+ Create Learning Journey
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Grade Selector Strip (Especially for Principal to choose calendar view per grade, or teacher for assigned grades) */}
@@ -290,9 +217,14 @@ export const LearningJourneyCalendar: React.FC = () => {
           )}
 
           {/* Render allowed grades */}
-          {(isLeadership ? ALL_SCHOOL_GRADES : allowedGrades).map((grade) => {
+          {allowedGrades.map((grade) => {
+            const gradeId = metadata.grades.find(
+              (item) => item.name === grade,
+            )?.id;
             const isHomeroomGrade =
-              isGradeTeacher && currentUser.gradeIds?.includes(grade);
+              isGradeTeacher &&
+              gradeId !== undefined &&
+              currentUser.gradeIds?.includes(gradeId);
             const isSelected = selectedGrade === grade;
 
             return (
@@ -369,9 +301,11 @@ export const LearningJourneyCalendar: React.FC = () => {
             className="px-3 py-1.5 text-xs font-semibold bg-white border border-[#E8DFC8] rounded-xl focus:outline-hidden text-stone-800 shadow-2xs"
           >
             <option value="All Units">All Units</option>
-            <option value="Early Years">Early Years</option>
-            <option value="Elementary">Elementary</option>
-            <option value="Junior High">Junior High</option>
+            {metadata.units.map((unit) => (
+              <option key={unit.id} value={unit.name}>
+                {unit.name}
+              </option>
+            ))}
           </select>
 
           <select
@@ -381,10 +315,11 @@ export const LearningJourneyCalendar: React.FC = () => {
             className="px-3 py-1.5 text-xs font-semibold bg-white border border-[#E8DFC8] rounded-xl focus:outline-hidden text-stone-800 shadow-2xs"
           >
             <option value="All Subjects">All Subjects</option>
-            <option value="Physical Education">Physical Education</option>
-            <option value="Science">Science</option>
-            <option value="Math">Math</option>
-            <option value="English">English</option>
+            {metadata.subjects.map((subject) => (
+              <option key={subject.id} value={subject.name}>
+                {subject.name}
+              </option>
+            ))}
           </select>
 
           {hasActiveFilters && (
@@ -465,7 +400,13 @@ export const LearningJourneyCalendar: React.FC = () => {
                   (journey.principalReviewStatus === 'On Progress' ||
                     journey.directorApprovalStatus === 'On Progress');
                 const isApproved = journey.directorApprovalStatus === 'Done';
-                const isLocked = isUnderReview || isApproved;
+                const isOwned =
+                  journey.createdBy === currentUser.id ||
+                  journey.ownerMembershipIds?.includes(
+                    currentUser.membershipId ?? '',
+                  ) === true;
+                const isLocked =
+                  !canWrite || isUnderReview || isApproved || !isOwned;
 
                 return (
                   <div

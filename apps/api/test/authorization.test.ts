@@ -38,6 +38,8 @@ describe('authorization primitives', () => {
     expect(hasPermission('GRADE_TEACHER', 'student:sensitive-read')).toBe(
       false,
     );
+    expect(hasPermission('SPECIAL_ED_COORDINATOR', 'journey:read')).toBe(false);
+    expect(hasPermission('SPECIAL_ED_TEACHER', 'journey:read')).toBe(false);
     expect(hasPermission('SPECIALIST', 'staff-directory:read')).toBe(false);
     expect(hasPermission('SPECIALIST', 'report:export')).toBe(false);
   });

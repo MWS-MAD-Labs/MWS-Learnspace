@@ -6,6 +6,9 @@ import {
   gpkAssignmentUpsertCommandSchema,
   organizationAccountCreateCommandSchema,
   organizationAccountUpdateCommandSchema,
+  learningJourneyCreateCommandSchema,
+  learningJourneyListQuerySchema,
+  learningJourneyUpdateCommandSchema,
   schoolDateSchema,
   studentCreateCommandSchema,
   studentListItemSchema,
@@ -125,6 +128,76 @@ describe('resource contracts', () => {
       organizationAccountUpdateCommandSchema.safeParse({
         role: 'PRINCIPAL',
         actorId: studentId,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('defines strict learning journey filters and mutation commands', () => {
+    const command = {
+      title: 'Inquiry Journey',
+      academicYearId: studentId,
+      semesterId: '22222222-2222-4222-8222-222222222222',
+      unitId: '33333333-3333-4333-8333-333333333333',
+      gradeId: '44444444-4444-4444-8444-444444444444',
+      subjectId: '55555555-5555-4555-8555-555555555555',
+      ownerMembershipIds: ['66666666-6666-4666-8666-666666666666'],
+      projects: [
+        {
+          title: 'Project One',
+          description: 'Explore a question.',
+          startsOn: '2026-08-01',
+          endsOn: '2026-08-31',
+          position: 0,
+          goals: [{ description: 'Learn one thing.', position: 0 }],
+          connections: [
+            {
+              subject: 'Science',
+              description: 'Observe patterns.',
+              position: 0,
+            },
+          ],
+        },
+      ],
+    };
+    expect(learningJourneyCreateCommandSchema.safeParse(command).success).toBe(
+      true,
+    );
+    expect(
+      learningJourneyUpdateCommandSchema.safeParse({
+        ...command,
+        expectedVersion: 3,
+      }).success,
+    ).toBe(true);
+    for (const forbiddenField of [
+      'organizationId',
+      'createdById',
+      'updatedById',
+      'actorId',
+      'state',
+    ]) {
+      expect(
+        learningJourneyCreateCommandSchema.safeParse({
+          ...command,
+          [forbiddenField]: studentId,
+        }).success,
+      ).toBe(false);
+    }
+    expect(
+      learningJourneyUpdateCommandSchema.safeParse({ ...command }).success,
+    ).toBe(false);
+    expect(
+      learningJourneyCreateCommandSchema.safeParse({
+        ...command,
+        projects: [
+          command.projects[0],
+          { ...command.projects[0], title: 'Duplicate position' },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      learningJourneyListQuerySchema.safeParse({
+        projectStartsOnOrAfter: '2026-09-01',
+        projectEndsOnOrBefore: '2026-08-01',
       }).success,
     ).toBe(false);
   });

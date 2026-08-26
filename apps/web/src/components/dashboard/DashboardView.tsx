@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
+import { useLearningJourneys } from '../../hooks/useLearningJourneys';
 import { SEED_ANNOUNCEMENTS, SEED_SCHEDULE_ITEMS } from '../../data/seedData';
 import { StatusBadge } from '../common/StatusBadge';
 import {
@@ -17,6 +18,7 @@ import {
 export const DashboardView: React.FC = () => {
   const {
     currentUser,
+    organizationId,
     students,
     setActiveTab,
     navigateToJourneyEditor,
@@ -26,7 +28,13 @@ export const DashboardView: React.FC = () => {
   } = useApp();
 
   const [announcements, setAnnouncements] = useState(SEED_ANNOUNCEMENTS);
-  const journeys = storageService.getLearningJourneys();
+  const canReadJourneys = currentUser.permissions.includes('journey:read');
+  const canWriteJourneys = currentUser.permissions.includes('journey:write');
+  const { journeys } = useLearningJourneys(
+    organizationId,
+    {},
+    { enabled: canReadJourneys },
+  );
   const iepRecords = storageService.getIEPRecords();
 
   // Active IEP goal stats
@@ -81,13 +89,15 @@ export const DashboardView: React.FC = () => {
               <CalendarCheck className="w-4 h-4" />
               Take Attendance
             </button>
-            <button
-              id="dashboard-create-journey-btn"
-              onClick={() => navigateToJourneyEditor()}
-              className="px-4 py-2.5 bg-[#F5B842] hover:bg-[#EEAA2B] text-stone-900 text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
-            >
-              <BookOpen className="w-4 h-4" />+ New Journey
-            </button>
+            {canWriteJourneys && (
+              <button
+                id="dashboard-create-journey-btn"
+                onClick={() => navigateToJourneyEditor()}
+                className="px-4 py-2.5 bg-[#F5B842] hover:bg-[#EEAA2B] text-stone-900 text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
+              >
+                <BookOpen className="w-4 h-4" />+ New Journey
+              </button>
+            )}
           </div>
         </div>
       </div>

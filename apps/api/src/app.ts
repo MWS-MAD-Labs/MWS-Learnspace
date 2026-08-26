@@ -13,6 +13,7 @@ import { createAuthRouter } from './authRoutes.js';
 import { OAuthService } from './oauthService.js';
 import { SessionService } from './sessionService.js';
 import { HttpError } from './httpErrors.js';
+import { createLearningJourneyRouter } from './learningJourneyRoutes.js';
 import { createResourceRouter } from './resourceRoutes.js';
 import { createTestAuthRouter } from './testAuthRoutes.js';
 
@@ -126,6 +127,10 @@ export function createApp({
           createTestAuthRouter(config, database.client, authServices.sessions),
         );
       }
+      app.use(
+        '/api/v1',
+        createLearningJourneyRouter(database.client, authServices.sessions),
+      );
       app.use(
         '/api/v1',
         createResourceRouter(database.client, authServices.sessions),

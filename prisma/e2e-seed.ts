@@ -19,6 +19,10 @@ export const e2eFixture = {
   authorizedClassId: '60000000-0000-4000-8000-000000000001',
   forbiddenClassId: '60000000-0000-4000-8000-000000000002',
   academicYearId: '70000000-0000-4000-8000-000000000001',
+  semesterId: '71000000-0000-4000-8000-000000000001',
+  subjectId: '72000000-0000-4000-8000-000000000001',
+  learningJourneyId: '73000000-0000-4000-8000-000000000001',
+  forbiddenLearningJourneyId: '73000000-0000-4000-8000-000000000002',
   schoolDate: '2026-08-24',
   students: [
     {
@@ -44,6 +48,8 @@ export const e2eFixture = {
 
 export async function seedE2eDatabase(prisma: PrismaClient) {
   await prisma.auditEvent.deleteMany();
+  await prisma.workflowEvent.deleteMany();
+  await prisma.learningJourney.deleteMany();
   await prisma.attendanceRecord.deleteMany();
   await prisma.session.deleteMany();
   await prisma.oAuthAccount.deleteMany();
@@ -133,6 +139,17 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
       endsOn: new Date('2027-06-30T00:00:00.000Z'),
     },
   });
+  await prisma.semester.create({
+    data: {
+      id: e2eFixture.semesterId,
+      organizationId: e2eFixture.organizationId,
+      academicYearId: e2eFixture.academicYearId,
+      name: 'Semester 1',
+      position: 1,
+      startsOn: new Date('2026-07-01T00:00:00.000Z'),
+      endsOn: new Date('2026-12-31T00:00:00.000Z'),
+    },
+  });
   await prisma.unit.create({
     data: {
       id: e2eFixture.unitId,
@@ -161,10 +178,76 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
       },
     ],
   });
+  await prisma.subject.create({
+    data: {
+      id: e2eFixture.subjectId,
+      organizationId: e2eFixture.organizationId,
+      code: 'GENERAL',
+      name: 'General Studies',
+    },
+  });
   await prisma.membershipGrade.create({
     data: {
       membershipId: e2eFixture.membershipId,
       gradeId: e2eFixture.authorizedGradeId,
+    },
+  });
+  await prisma.learningJourney.create({
+    data: {
+      id: e2eFixture.learningJourneyId,
+      organizationId: e2eFixture.organizationId,
+      title: 'Existing E2E Inquiry Draft',
+      academicYearId: e2eFixture.academicYearId,
+      semesterId: e2eFixture.semesterId,
+      unitId: e2eFixture.unitId,
+      gradeId: e2eFixture.authorizedGradeId,
+      subjectId: e2eFixture.subjectId,
+      createdById: e2eFixture.teacherId,
+      updatedById: e2eFixture.teacherId,
+      owners: {
+        create: { membershipId: e2eFixture.membershipId },
+      },
+      projects: {
+        create: {
+          title: 'Inquiry Kickoff',
+          description: 'Explore questions through observation and discussion.',
+          startsOn: new Date('2026-08-01T00:00:00.000Z'),
+          endsOn: new Date('2026-08-31T00:00:00.000Z'),
+          position: 0,
+          goals: {
+            create: { description: 'Form an inquiry question.', position: 0 },
+          },
+        },
+      },
+    },
+  });
+  await prisma.learningJourney.create({
+    data: {
+      id: e2eFixture.forbiddenLearningJourneyId,
+      organizationId: e2eFixture.organizationId,
+      title: 'Forbidden Grade 2 Draft',
+      academicYearId: e2eFixture.academicYearId,
+      semesterId: e2eFixture.semesterId,
+      unitId: e2eFixture.unitId,
+      gradeId: e2eFixture.forbiddenGradeId,
+      subjectId: e2eFixture.subjectId,
+      createdById: e2eFixture.directorId,
+      updatedById: e2eFixture.directorId,
+      owners: {
+        create: { membershipId: e2eFixture.directorMembershipId },
+      },
+      projects: {
+        create: {
+          title: 'Forbidden Scope Project',
+          description: 'This project is outside the Grade Teacher scope.',
+          startsOn: new Date('2026-09-01T00:00:00.000Z'),
+          endsOn: new Date('2026-09-30T00:00:00.000Z'),
+          position: 0,
+          goals: {
+            create: { description: 'Remain outside scope.', position: 0 },
+          },
+        },
+      },
     },
   });
   await prisma.schoolClass.createMany({

@@ -25,6 +25,7 @@ import {
   organizationAccountsResponseSchema,
   organizationAccountUpdateCommandSchema,
   organizationsResponseSchema,
+  semestersResponseSchema,
   staffDirectoryResponseSchema,
   studentCreateCommandSchema,
   studentDetailResponseSchema,
@@ -179,13 +180,18 @@ function requireAttendancePermission(
 
 function requireAcademicCollectionAccess(
   membership: MembershipScope,
-  resource: 'academicYears' | 'units' | 'grades' | 'classes' | 'subjects',
+  resource:
+    'academicYears' | 'semesters' | 'units' | 'grades' | 'classes' | 'subjects',
 ) {
   if (isLeadership(membership)) return;
-  if (membership.role === 'GRADE_TEACHER' && resource !== 'subjects') return;
+  if (membership.role === 'GRADE_TEACHER') return;
   if (
     membership.role === 'SUBJECT_TEACHER' &&
-    (resource === 'academicYears' || resource === 'subjects')
+    (resource === 'academicYears' ||
+      resource === 'semesters' ||
+      resource === 'units' ||
+      resource === 'grades' ||
+      resource === 'subjects')
   )
     return;
   throw new HttpError(403, 'AUTHORIZATION_DENIED', 'The request was denied.');
@@ -771,6 +777,40 @@ export function createResourceRouter(
   );
 
   router.get(
+    '/organizations/:organizationId/semesters',
+    async (request, response, next) => {
+      try {
+        const membership = membershipFor(
+          request,
+          request.params.organizationId,
+        );
+        requireAcademicCollectionAccess(membership, 'semesters');
+        const rows = await prisma.semester.findMany({
+          where: { organizationId: request.params.organizationId },
+          orderBy: [
+            { academicYear: { startsOn: 'desc' } },
+            { position: 'asc' },
+            { id: 'asc' },
+          ],
+        });
+        const data = rows.map((row) => ({
+          ...row,
+          startsOn: isoDate(row.startsOn),
+          endsOn: isoDate(row.endsOn),
+        }));
+        response.json(
+          semestersResponseSchema.parse({
+            data,
+            meta: { count: data.length },
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
     '/organizations/:organizationId/units',
     async (request, response, next) => {
       try {
@@ -783,6 +823,16 @@ export function createResourceRouter(
           organizationId: request.params.organizationId,
         };
         if (!isLeadership(membership)) {
+          if (membership.role === 'SUBJECT_TEACHER') {
+            const data = await prisma.unit.findMany({
+              where,
+              orderBy: [{ name: 'asc' }, { id: 'asc' }],
+            });
+            response.json(
+              unitsResponseSchema.parse({ data, meta: { count: data.length } }),
+            );
+            return;
+          }
           const unitIds = new Set(membership.unitIds);
           if (membership.gradeIds.length) {
             const gradeUnits = await prisma.grade.findMany({
@@ -828,6 +878,19 @@ export function createResourceRouter(
           organizationId: request.params.organizationId,
         };
         if (!isLeadership(membership)) {
+          if (membership.role === 'SUBJECT_TEACHER') {
+            const data = await prisma.grade.findMany({
+              where,
+              orderBy: [{ position: 'asc' }, { id: 'asc' }],
+            });
+            response.json(
+              gradesResponseSchema.parse({
+                data,
+                meta: { count: data.length },
+              }),
+            );
+            return;
+          }
           const scopes: Prisma.GradeWhereInput[] = [];
           if (membership.gradeIds.length)
             scopes.push({ id: { in: membership.gradeIds } });
@@ -898,7 +961,10 @@ export function createResourceRouter(
         const where: Prisma.SubjectWhereInput = {
           organizationId: request.params.organizationId,
         };
-        if (!isLeadership(membership)) {
+        if (
+          !isLeadership(membership) &&
+          membership.role === 'SUBJECT_TEACHER'
+        ) {
           if (!membership.subjectIds.length)
             throw new HttpError(
               403,

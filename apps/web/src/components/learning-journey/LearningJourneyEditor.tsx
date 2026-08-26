@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
+import { ApiClientError, isRequestCancelled } from '../../services/apiClient';
+import {
+  journeyCommand,
+  learningJourneyService,
+  mapJourneyToLegacy,
+  monthBoundary,
+  monthLabel,
+} from '../../services/learningJourneyService';
+import type { LearningJourneyMetadata } from '../../hooks/useLearningJourneys';
 import {
   LearningJourney,
   LearningJourneyProject,
@@ -35,17 +43,7 @@ const SUBJECT_OPTIONS = [
   'Social Studies',
   'Bahasa Indonesia',
 ];
-const UNIT_OPTIONS = ['Early Years', 'Elementary', 'Junior High'];
-const GRADE_OPTIONS = [
-  'K1',
-  'K2',
-  'Grade 1',
-  'Grade 2',
-  'Grade 3',
-  'Grade 4',
-  'Grade 5',
-  'Grade 6',
-];
+
 const MONTH_OPTIONS = [
   'August 2026',
   'September 2026',
@@ -60,24 +58,51 @@ const MONTH_OPTIONS = [
   'June 2027',
 ];
 
+function clampProjectsToSemester(
+  projects: LearningJourneyProject[],
+  semester: { startsOn: string; endsOn: string } | undefined,
+): LearningJourneyProject[] {
+  if (!semester) return projects;
+  return projects.map((project) => {
+    const currentStart =
+      project.startDate ?? monthBoundary(project.startMonth, false);
+    const currentEnd = project.endDate ?? monthBoundary(project.endMonth, true);
+    let startDate =
+      currentStart < semester.startsOn || currentStart > semester.endsOn
+        ? semester.startsOn
+        : currentStart;
+    let endDate =
+      currentEnd > semester.endsOn || currentEnd < semester.startsOn
+        ? semester.endsOn
+        : currentEnd;
+    if (endDate < startDate) {
+      startDate = semester.startsOn;
+      endDate = semester.endsOn;
+    }
+    return {
+      ...project,
+      startDate,
+      endDate,
+      startMonth: monthLabel(startDate),
+      endMonth: monthLabel(endDate),
+    };
+  });
+}
+
 export const LearningJourneyEditor: React.FC = () => {
   const {
     selectedJourneyId,
     currentUser,
+    organizationId,
     setActiveTab,
+    setSelectedJourneyId,
     showToast,
     refreshData,
   } = useApp();
 
   const [journey, setJourney] = useState<LearningJourney>(() => {
-    if (selectedJourneyId) {
-      const existing = storageService.getLearningJourney(selectedJourneyId);
-      if (existing) return existing;
-    }
-
-    // Default new journey template
     return {
-      id: `lj-${Date.now()}`,
+      id: '',
       title: 'New Interdisciplinary Unit',
       academicYear: '2026-2027',
       semester: 'Semester 1',
@@ -86,6 +111,9 @@ export const LearningJourneyEditor: React.FC = () => {
       subject: currentUser.subjectIds?.[0] || 'Physical Education',
       unitName: 'Unit 1: Exploration & Inquiry',
       ownerIds: [currentUser.id],
+      ownerMembershipIds: currentUser.membershipId
+        ? [currentUser.membershipId]
+        : [],
       authorName: currentUser.name,
       draftStatus: 'On Progress',
       principalReviewStatus: 'Not Started',
@@ -127,6 +155,95 @@ export const LearningJourneyEditor: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
   });
+  const [metadata, setMetadata] = useState<LearningJourneyMetadata>({
+    academicYears: [],
+    semesters: [],
+    units: [],
+    grades: [],
+    subjects: [],
+  });
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'error'>(
+    'loading',
+  );
+  const [loadError, setLoadError] = useState<string>();
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasVersionConflict, setHasVersionConflict] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const loadJourney = useCallback(async () => {
+    setLoadStatus('loading');
+    setLoadError(undefined);
+    try {
+      const [academicYears, semesters, units, grades, subjects, detail] =
+        await Promise.all([
+          learningJourneyService.getAcademicYears(organizationId),
+          learningJourneyService.getSemesters(organizationId),
+          learningJourneyService.getUnits(organizationId),
+          learningJourneyService.getGrades(organizationId),
+          learningJourneyService.getSubjects(organizationId),
+          selectedJourneyId
+            ? learningJourneyService.getJourney(
+                organizationId,
+                selectedJourneyId,
+              )
+            : Promise.resolve(undefined),
+        ]);
+      const nextMetadata = {
+        academicYears: academicYears.data,
+        semesters: semesters.data,
+        units: units.data,
+        grades: grades.data,
+        subjects: subjects.data,
+      };
+      setMetadata(nextMetadata);
+      if (detail) {
+        setJourney(mapJourneyToLegacy(detail.data));
+      } else {
+        const academicYear = nextMetadata.academicYears[0];
+        const semester = nextMetadata.semesters.find(
+          (item) => item.academicYearId === academicYear?.id,
+        );
+        const grade = nextMetadata.grades[0];
+        const unit =
+          nextMetadata.units.find((item) => item.id === grade?.unitId) ??
+          nextMetadata.units[0];
+        const subject = nextMetadata.subjects[0];
+        setJourney((current) => ({
+          ...current,
+          academicYearId: academicYear?.id,
+          academicYear: academicYear?.name ?? current.academicYear,
+          semesterId: semester?.id,
+          semester: (semester?.name ??
+            current.semester) as LearningJourney['semester'],
+          unitId: unit?.id,
+          unit: unit?.name ?? current.unit,
+          gradeId: grade?.id,
+          grade: grade?.name ?? current.grade,
+          subjectId: subject?.id,
+          subject: subject?.name ?? current.subject,
+          projects: current.projects.map((project) => ({
+            ...project,
+            startDate: semester?.startsOn ?? project.startDate,
+            endDate: semester?.endsOn ?? project.endDate,
+          })),
+        }));
+      }
+      setHasVersionConflict(false);
+      setLoadStatus('ready');
+    } catch (error) {
+      if (isRequestCancelled(error)) return;
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : 'The learning journey could not be loaded.',
+      );
+      setLoadStatus('error');
+    }
+  }, [organizationId, selectedJourneyId, reloadToken]);
+
+  useEffect(() => {
+    void loadJourney();
+  }, [loadJourney]);
 
   const [expandedProjects, setExpandedProjects] = useState<
     Record<string, boolean>
@@ -137,6 +254,12 @@ export const LearningJourneyEditor: React.FC = () => {
 
   // Locking Logic:
   // If submitted for review or approved, it is locked against edits
+  const canWrite = currentUser.permissions.includes('journey:write');
+  const isOwnDraft =
+    !journey.id ||
+    journey.createdBy === currentUser.id ||
+    journey.ownerMembershipIds?.includes(currentUser.membershipId ?? '') ===
+      true;
   const isUnderReview =
     journey.draftStatus === 'Done' &&
     (journey.principalReviewStatus === 'On Progress' ||
@@ -145,7 +268,8 @@ export const LearningJourneyEditor: React.FC = () => {
   const isReturned =
     journey.principalReviewStatus === 'Returned' ||
     journey.directorApprovalStatus === 'Returned';
-  const isLocked = (isUnderReview || isApproved) && !isReturned;
+  const isLocked =
+    !canWrite || !isOwnDraft || ((isUnderReview || isApproved) && !isReturned);
 
   const toggleProjectExpand = (pId: string) => {
     setExpandedProjects((prev) => ({
@@ -157,12 +281,29 @@ export const LearningJourneyEditor: React.FC = () => {
   // Add Project
   const handleAddProject = () => {
     if (isLocked) return;
+    const semester = metadata.semesters.find(
+      (item) => item.id === journey.semesterId,
+    );
+    const preferredStart = monthBoundary('September 2026', false);
+    const preferredEnd = monthBoundary('October 2026', true);
+    const startDate =
+      semester &&
+      preferredStart >= semester.startsOn &&
+      preferredStart <= semester.endsOn
+        ? preferredStart
+        : (semester?.startsOn ?? preferredStart);
+    const endDate =
+      semester && preferredEnd >= startDate && preferredEnd <= semester.endsOn
+        ? preferredEnd
+        : (semester?.endsOn ?? preferredEnd);
     const newProj: LearningJourneyProject = {
       id: `p-${Date.now()}`,
       title: `Unit Project ${journey.projects.length + 1}`,
       description: 'Describe project scope and inquiry questions...',
-      startMonth: 'September 2026',
-      endMonth: 'October 2026',
+      startMonth: monthLabel(startDate),
+      endMonth: monthLabel(endDate),
+      startDate,
+      endDate,
       color: '#81B29A',
       order: journey.projects.length + 1,
       crossCurricularConnections: [],
@@ -343,73 +484,111 @@ export const LearningJourneyEditor: React.FC = () => {
   };
 
   // Save Draft
-  const handleSaveDraft = () => {
-    if (isLocked) {
+  const handleSaveDraft = async () => {
+    if (isLocked || isSaving) return;
+    setIsSaving(true);
+    setHasVersionConflict(false);
+    try {
+      const command = journeyCommand(journey);
+      const response = journey.id
+        ? await learningJourneyService.updateJourney(
+            organizationId,
+            journey.id,
+            { ...command, expectedVersion: journey.version ?? 1 },
+          )
+        : await learningJourneyService.createJourney(organizationId, command);
+      const saved = mapJourneyToLegacy(response.data);
+      setJourney(saved);
+      setSelectedJourneyId(saved.id);
       showToast(
-        'error',
-        'Action Locked',
-        'This journey is locked and cannot be saved.',
+        'success',
+        'Draft Saved',
+        'Your learning journey draft has been persisted.',
       );
-      return;
+      await refreshData();
+    } catch (error) {
+      if (
+        error instanceof ApiClientError &&
+        error.code === 'LEARNING_JOURNEY_VERSION_CONFLICT'
+      ) {
+        setHasVersionConflict(true);
+        showToast(
+          'warning',
+          'Newer version available',
+          'Reload the current server version before saving again.',
+        );
+      } else {
+        showToast(
+          'error',
+          'Draft not saved',
+          error instanceof Error ? error.message : 'The save request failed.',
+        );
+      }
+    } finally {
+      setIsSaving(false);
     }
-    storageService.saveLearningJourney({
-      ...journey,
-      draftStatus: 'On Progress',
-      updatedBy: currentUser.id,
-      updatedAt: new Date().toISOString(),
-    });
-    showToast(
-      'success',
-      'Draft Saved',
-      'Your learning journey draft has been persisted.',
-    );
-    refreshData();
   };
 
-  // Submit for Review
+  // Workflow transitions intentionally remain outside general edits (P5-003).
   const handleSubmitForReview = () => {
-    if (isLocked) {
-      showToast(
-        'error',
-        'Action Locked',
-        'This journey is already submitted or approved.',
-      );
-      return;
-    }
-    const saved = storageService.saveLearningJourney({
-      ...journey,
-      draftStatus: 'Done',
-      principalReviewStatus: 'On Progress',
-      updatedBy: currentUser.id,
-      updatedAt: new Date().toISOString(),
-    });
-
-    storageService.updateWorkflowStage(
-      saved.id,
-      'Draft',
-      'Submitted',
-      'Curriculum ready for Principal review.',
-      currentUser,
-    );
-
     showToast(
-      'success',
-      'Submitted for Review',
-      'Learning journey successfully forwarded to Principal review queue.',
+      'info',
+      'Submission unavailable',
+      'Submit, review, and approval commands will be enabled in P5-003.',
     );
-    refreshData();
-    setActiveTab('LEARNING_JOURNEY_TRACKER');
   };
 
   const returnedHistory = journey.workflowHistory?.find(
     (w) => w.action === 'Returned',
   );
 
+  if (loadStatus === 'loading') {
+    return (
+      <div className="max-w-5xl mx-auto rounded-2xl border border-[#EFE7DC] bg-white p-6 text-sm text-stone-600">
+        Loading learning journey…
+      </div>
+    );
+  }
+
+  if (loadStatus === 'error') {
+    return (
+      <div className="max-w-5xl mx-auto rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800 flex items-center justify-between gap-4">
+        <span>{loadError}</span>
+        <button
+          onClick={() => setReloadToken((value) => value + 1)}
+          className="font-bold underline"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       id="learning-journey-editor-view"
       className="space-y-8 max-w-5xl mx-auto pb-28"
     >
+      {hasVersionConflict && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center justify-between gap-4">
+          <div>
+            <strong className="block text-sm">
+              A newer server version exists.
+            </strong>
+            <span className="text-xs">
+              Reload before saving to avoid overwriting another author’s
+              changes.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReloadToken((value) => value + 1)}
+            className="px-4 py-2 rounded-xl bg-amber-900 text-white text-xs font-bold"
+          >
+            Reload current version
+          </button>
+        </div>
+      )}
       {/* Top Header & Navigation */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -456,11 +635,12 @@ export const LearningJourneyEditor: React.FC = () => {
           </button>
           {!isLocked && (
             <button
-              onClick={handleSaveDraft}
+              onClick={() => void handleSaveDraft()}
+              disabled={isSaving}
               className="px-4 py-2 bg-[#FAF5EF] hover:bg-[#F2EAE0] border border-[#E8DFC8] text-stone-800 text-xs font-bold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5"
             >
               <Save className="w-4 h-4" />
-              Save Draft
+              {isSaving ? 'Saving…' : 'Save Draft'}
             </button>
           )}
         </div>
@@ -519,19 +699,38 @@ export const LearningJourneyEditor: React.FC = () => {
             <label className="text-xs font-bold text-stone-700 uppercase tracking-wider">
               Academic Year
             </label>
-            <input
-              type="text"
+            <select
               disabled={isLocked}
-              value={journey.academicYear}
-              onChange={(e) =>
-                setJourney({ ...journey, academicYear: e.target.value })
-              }
+              value={journey.academicYearId ?? ''}
+              onChange={(e) => {
+                const academicYear = metadata.academicYears.find(
+                  (item) => item.id === e.target.value,
+                );
+                const semester = metadata.semesters.find(
+                  (item) => item.academicYearId === academicYear?.id,
+                );
+                setJourney({
+                  ...journey,
+                  academicYearId: academicYear?.id,
+                  academicYear: academicYear?.name ?? '',
+                  semesterId: semester?.id,
+                  semester: (semester?.name ??
+                    '') as LearningJourney['semester'],
+                  projects: clampProjectsToSemester(journey.projects, semester),
+                });
+              }}
               className={`w-full px-3.5 py-2 text-xs border rounded-xl font-semibold ${
                 isLocked
                   ? 'bg-stone-100 border-stone-200 text-stone-600 cursor-not-allowed'
                   : 'bg-[#FAF5EF] border-[#E8DFC8] text-stone-900'
               }`}
-            />
+            >
+              {metadata.academicYears.map((academicYear) => (
+                <option key={academicYear.id} value={academicYear.id}>
+                  {academicYear.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-1.5">
@@ -540,18 +739,35 @@ export const LearningJourneyEditor: React.FC = () => {
             </label>
             <select
               disabled={isLocked}
-              value={journey.semester}
-              onChange={(e) =>
-                setJourney({ ...journey, semester: e.target.value as any })
-              }
+              value={journey.semesterId ?? ''}
+              onChange={(e) => {
+                const semester = metadata.semesters.find(
+                  (item) => item.id === e.target.value,
+                );
+                setJourney({
+                  ...journey,
+                  semesterId: semester?.id,
+                  semester: (semester?.name ??
+                    '') as LearningJourney['semester'],
+                  projects: clampProjectsToSemester(journey.projects, semester),
+                });
+              }}
               className={`w-full px-3.5 py-2 text-xs border rounded-xl font-semibold ${
                 isLocked
                   ? 'bg-stone-100 border-stone-200 text-stone-600 cursor-not-allowed'
                   : 'bg-[#FAF5EF] border-[#E8DFC8] text-stone-900'
               }`}
             >
-              <option value="Semester 1">Semester 1</option>
-              <option value="Semester 2">Semester 2</option>
+              {metadata.semesters
+                .filter(
+                  (semester) =>
+                    semester.academicYearId === journey.academicYearId,
+                )
+                .map((semester) => (
+                  <option key={semester.id} value={semester.id}>
+                    {semester.name}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -561,17 +777,31 @@ export const LearningJourneyEditor: React.FC = () => {
             </label>
             <select
               disabled={isLocked}
-              value={journey.unit}
-              onChange={(e) => setJourney({ ...journey, unit: e.target.value })}
+              value={journey.unitId ?? ''}
+              onChange={(e) => {
+                const unit = metadata.units.find(
+                  (item) => item.id === e.target.value,
+                );
+                const grade = metadata.grades.find(
+                  (item) => item.unitId === unit?.id,
+                );
+                setJourney({
+                  ...journey,
+                  unitId: unit?.id,
+                  unit: unit?.name ?? '',
+                  gradeId: grade?.id,
+                  grade: grade?.name ?? '',
+                });
+              }}
               className={`w-full px-3.5 py-2 text-xs border rounded-xl font-semibold ${
                 isLocked
                   ? 'bg-stone-100 border-stone-200 text-stone-600 cursor-not-allowed'
                   : 'bg-[#FAF5EF] border-[#E8DFC8] text-stone-900'
               }`}
             >
-              {UNIT_OPTIONS.map((u) => (
-                <option key={u} value={u}>
-                  {u}
+              {metadata.units.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.name}
                 </option>
               ))}
             </select>
@@ -583,21 +813,30 @@ export const LearningJourneyEditor: React.FC = () => {
             </label>
             <select
               disabled={isLocked}
-              value={journey.grade}
-              onChange={(e) =>
-                setJourney({ ...journey, grade: e.target.value })
-              }
+              value={journey.gradeId ?? ''}
+              onChange={(e) => {
+                const grade = metadata.grades.find(
+                  (item) => item.id === e.target.value,
+                );
+                setJourney({
+                  ...journey,
+                  gradeId: grade?.id,
+                  grade: grade?.name ?? '',
+                });
+              }}
               className={`w-full px-3.5 py-2 text-xs border rounded-xl font-semibold ${
                 isLocked
                   ? 'bg-stone-100 border-stone-200 text-stone-600 cursor-not-allowed'
                   : 'bg-[#FAF5EF] border-[#E8DFC8] text-stone-900'
               }`}
             >
-              {GRADE_OPTIONS.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
+              {metadata.grades
+                .filter((grade) => grade.unitId === journey.unitId)
+                .map((grade) => (
+                  <option key={grade.id} value={grade.id}>
+                    {grade.name}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -607,19 +846,26 @@ export const LearningJourneyEditor: React.FC = () => {
             </label>
             <select
               disabled={isLocked}
-              value={journey.subject}
-              onChange={(e) =>
-                setJourney({ ...journey, subject: e.target.value })
-              }
+              value={journey.subjectId ?? ''}
+              onChange={(e) => {
+                const subject = metadata.subjects.find(
+                  (item) => item.id === e.target.value,
+                );
+                setJourney({
+                  ...journey,
+                  subjectId: subject?.id,
+                  subject: subject?.name ?? '',
+                });
+              }}
               className={`w-full px-3.5 py-2 text-xs border rounded-xl font-semibold ${
                 isLocked
                   ? 'bg-stone-100 border-stone-200 text-stone-600 cursor-not-allowed'
                   : 'bg-[#FAF5EF] border-[#E8DFC8] text-stone-900'
               }`}
             >
-              {SUBJECT_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
+              {metadata.subjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name}
                 </option>
               ))}
             </select>
@@ -767,13 +1013,18 @@ export const LearningJourneyEditor: React.FC = () => {
                       <select
                         disabled={isLocked}
                         value={project.startMonth}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           handleUpdateProjectField(
                             project.id,
                             'startMonth',
                             e.target.value,
-                          )
-                        }
+                          );
+                          handleUpdateProjectField(
+                            project.id,
+                            'startDate',
+                            monthBoundary(e.target.value, false),
+                          );
+                        }}
                         className={`w-full px-3.5 py-2 text-xs border rounded-xl font-semibold ${
                           isLocked
                             ? 'bg-stone-100 border-stone-200 text-stone-600'
@@ -795,13 +1046,18 @@ export const LearningJourneyEditor: React.FC = () => {
                       <select
                         disabled={isLocked}
                         value={project.endMonth}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           handleUpdateProjectField(
                             project.id,
                             'endMonth',
                             e.target.value,
-                          )
-                        }
+                          );
+                          handleUpdateProjectField(
+                            project.id,
+                            'endDate',
+                            monthBoundary(e.target.value, true),
+                          );
+                        }}
                         className={`w-full px-3.5 py-2 text-xs border rounded-xl font-semibold ${
                           isLocked
                             ? 'bg-stone-100 border-stone-200 text-stone-600'
@@ -1015,18 +1271,21 @@ export const LearningJourneyEditor: React.FC = () => {
               <button
                 type="button"
                 id="editor-save-draft-btn"
-                onClick={handleSaveDraft}
+                onClick={() => void handleSaveDraft()}
+                disabled={isSaving}
                 className="px-5 py-2.5 bg-[#FAF5EF] hover:bg-[#F2EAE0] text-stone-800 text-xs font-bold rounded-xl border border-[#E8DFC8] shadow-2xs transition-colors flex items-center gap-2"
               >
                 <Save className="w-4 h-4" />
-                Save Draft
+                {isSaving ? 'Saving…' : 'Save Draft'}
               </button>
 
               <button
                 type="button"
                 id="editor-submit-review-btn"
                 onClick={handleSubmitForReview}
-                className="px-6 py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
+                disabled
+                title="Available in P5-003"
+                className="px-6 opacity-60 cursor-not-allowed py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
               >
                 <Send className="w-4 h-4" />
                 {isReturned
