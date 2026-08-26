@@ -19,6 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
+    "pretypecheck": "npm run build -w @learnspace/contracts",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
     "test": "npm test --workspaces --if-present -- --run",
     "test:integration:local": "sh scripts/test-integration-local.sh",
