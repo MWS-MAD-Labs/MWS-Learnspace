@@ -42,10 +42,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Explicitly gated development-only browser exporter that validates raw legacy storage and downloads sensitive migration artifacts without transmitting them.
 - Fail-closed administrative import CLI with approved target manifests, serializable dry-run/apply transactions, deterministic legacy ID mapping, idempotent source-key ledger, safe aggregate auditing, and a documented local Docker backup/import/rollback rehearsal.
 - API-backed Learning Journey collection/detail reads and draft creation/updates with strict nested contracts, organization and role scopes, active membership owners, transactional projects/goals/connections, audit events, integer optimistic concurrency, stale-version UI recovery, canonical server filters, and dedicated Compose Playwright coverage.
+- Explicit versioned Learning Journey submit, Principal review/return, and Director approval/return commands with session-derived actors, creator/owner submission authorization, conditional state/version updates, immutable workflow history and return feedback, same-transaction audit events, stale/simultaneous-command protection, and PostgreSQL transition-table coverage.
+- Dedicated persistent local PostgreSQL integration-test Compose service and `npm run test:integration:local` migration/test command.
 
 ### Changed
 
-- Migrated Learning Journey calendar, tracker, editor, dashboard, and curriculum-report reads away from browser persistence; workflow transitions remain disabled pending explicit P5-003 submit/review/approval commands.
+- Migrated the Learning Journey calendar, tracker, editor, dashboard, curriculum-report reads, and submit/review/approval workflow away from browser persistence; returned-review comments and reviewer attribution now remain visible after refresh.
 - Formatted the existing prototype source and fixed conditional React Hook execution in the observation workspace.
 - Documented the retained Google AI Studio metadata and active Express API tooling.
 - Updated project documentation for the implemented Milestone 1 workspace, commands, endpoints, environment contract, Compose workflow, required production secrets, and remaining prototype/data-security limitations.
@@ -71,6 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Unused direct Google GenAI, dotenv, and esbuild dependencies from the prototype manifest.
 - Attendance keys, methods, seed initialization, legacy browser attendance types, and all production attendance `localStorage` paths.
+- The final Learning Journey `storageService.updateWorkflowStage()` browser-persistence path.
 
 ## [0.0.0] - Prototype
 

@@ -2,10 +2,10 @@
 
 Learnspace is an educator portal for academic planning, attendance, special-education observations, Individualized Education Programs (IEPs), and weekly progress reporting.
 
-The repository is currently at **`0.2.0`**. Milestone 4 delivered the first fully migrated product vertical, and Milestone 5 now includes API-backed organization account and membership administration, authorized student directories, privileged student administration, transactional GPK staff assignments, and Learning Journey reads/draft editing in addition to PostgreSQL attendance.
+The repository is currently at **`0.2.0`**. Milestone 4 delivered the first fully migrated product vertical, and Milestone 5 now includes API-backed organization account and membership administration, authorized student directories, privileged student administration, transactional GPK staff assignments, and Learning Journey authoring and approval workflows in addition to PostgreSQL attendance.
 
 > [!IMPORTANT]
-> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, attendance, Learning Journey reads/draft editing, and the controlled prototype import tooling are server-backed. Learning Journey workflow transitions, observations, IEPs, and weekly reports still depend on incomplete Milestone 5 work, including seeded browser `localStorage` in the remaining domains. P6 tooling is implemented locally, but its release gate remains blocked until P5-013 removes sensitive browser persistence. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
+> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, attendance, complete Learning Journey authoring and approval workflows, and the controlled prototype import tooling are server-backed. Observations, IEPs, and weekly reports still depend on incomplete Milestone 5 work, including seeded browser `localStorage` in the remaining domains. P6 tooling is implemented locally, but its release gate remains blocked until P5-013 removes sensitive browser persistence. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
 
 ## Current capabilities
 
@@ -14,7 +14,7 @@ The repository is currently at **`0.2.0`**. Milestone 4 delivered the first full
 - Authorized student directories and privileged student detail administration with guardian-contact gating
 - Director-only People & access administration for authoritative user identities, organization memberships, roles, statuses, and unit/grade/subject scopes
 - Transactional GPK assignment, reassignment, ending, server-enforced caseload capacity, and audited session-derived actors
-- PostgreSQL-backed Learning Journey calendar, tracker, and draft editor with server filters, scoped ownership, nested projects/goals/connections, audit events, and optimistic concurrency; submit/review/approval transitions are deferred to P5-003
+- PostgreSQL-backed Learning Journey calendar, tracker, and draft editor with server filters, scoped ownership, nested projects/goals/connections, transactional submit/review/approval transitions, immutable workflow events, audit events, and optimistic concurrency
 - Special-education observation tools:
   - Functional Emotional Developmental Capacities (FEDC)
   - Sensory Profile
@@ -44,12 +44,12 @@ flowchart TB
 
 The workspace and service boundary are implemented, but the migration is intentionally incremental:
 
-- `apps/web` contains the React/Vite application. Organization account administration, attendance, authorized student loading, staff directory reads, GPK assignment, and Learning Journey reads/draft editing use typed API services; remaining observation, IEP, weekly-report, and related prototype domains still use `apps/web/src/services/storageService.ts` and `localStorage`.
-- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, organization account administration, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, scoped Learning Journey list/detail/create/update endpoints, runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
+- `apps/web` contains the React/Vite application. Organization account administration, attendance, authorized student loading, staff directory reads, GPK assignment, and Learning Journey authoring and approval workflows use typed API services; remaining observation, IEP, weekly-report, and related prototype domains still use `apps/web/src/services/storageService.ts` and `localStorage`.
+- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, organization account administration, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, scoped Learning Journey list/detail/create/update and workflow command endpoints, runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
 - `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, organization accounts, academic resources, students, staff directories, GPK assignments, attendance, and Learning Journey reads/draft commands.
 - `compose.yaml` defines production-oriented `web`, `api`, `migrate`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation. API startup waits for the one-shot migration job.
 - `compose.dev.yaml` is an optional override that publishes PostgreSQL on host port `5432` for database tools or a host-run API.
-- PostgreSQL is authoritative for authentication, user identity and membership administration, authorization scope, academic/student lookup and administration, GPK assignments, attendance, and Learning Journey reads/draft editing. Learning Journey workflow transitions remain deferred to P5-003; observations, IEPs, and weekly reports remain browser-backed while Milestone 5 continues.
+- PostgreSQL is authoritative for authentication, user identity and membership administration, authorization scope, academic/student lookup and administration, GPK assignments, attendance, and complete Learning Journey authoring and approval workflows; observations, IEPs, and weekly reports remain browser-backed while Milestone 5 continues.
 
 Frontend role checks are presentation behavior only and are not authorization. The API is the intended security boundary for protected operations as those operations are implemented.
 
@@ -84,6 +84,7 @@ Frontend role checks are presentation behavior only and are not authorization. T
 ├── compose.yaml                   # Web, API, and internal PostgreSQL stack
 ├── compose.dev.yaml               # Optional host PostgreSQL port override
 ├── compose.e2e.yaml               # Disposable attendance and P5 administration E2E stack
+├── compose.integration.yaml       # Persistent local PostgreSQL integration-test service
 ├── .env.example                   # Safe environment template
 └── package.json                   # npm workspace orchestration
 ```
@@ -146,6 +147,22 @@ npm run dev -w @learnspace/api
 
 The API listens on <http://localhost:4000> by default.
 
+### Run database integration tests locally
+
+The reusable local integration command starts the dedicated PostgreSQL service in `compose.integration.yaml` at `127.0.0.1:55433`, waits for it to become healthy, and applies committed migrations before running the API integration suite:
+
+```bash
+npm run test:integration:local
+```
+
+To use a different running PostgreSQL container, override the URL for that invocation:
+
+```bash
+DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:PORT/DATABASE npm run test:integration:local
+```
+
+Use a disposable test database. Integration tests create tenant fixtures and do not clean all records after completion.
+
 ### Root commands
 
 ```bash
@@ -157,6 +174,7 @@ npm run format:check  # Check formatting without modifying files
 npm run lint          # Lint the complete workspace
 npm run typecheck     # Type-check all workspaces that provide the script
 npm test              # Run workspace tests once
+npm run test:integration:local # Migrate and test against local Docker PostgreSQL
 npm run clean         # Remove generated workspace output and coverage
 npm run prisma:validate
 npm run prisma:generate
@@ -193,7 +211,8 @@ npm run typecheck -w @learnspace/contracts
 npm run build -w @learnspace/api
 npm run typecheck -w @learnspace/api
 npm test -w @learnspace/api -- --run
-npm run test:integration -w @learnspace/api # Requires disposable PostgreSQL
+npm run test:integration -w @learnspace/api # Requires DATABASE_URL
+npm run test:integration:local     # Starts Docker PostgreSQL on 127.0.0.1:55433
 npm run start -w @learnspace/api   # Run the previously built API
 
 npm run build -w @learnspace/web

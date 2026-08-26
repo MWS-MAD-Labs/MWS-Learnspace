@@ -48,10 +48,12 @@ This document maps the browser prototype types in `apps/web/src/types.ts` to the
 DRAFT --SUBMITTED--> PRINCIPAL_REVIEW
 PRINCIPAL_REVIEW --RETURNED--> DRAFT
 PRINCIPAL_REVIEW --APPROVED--> DIRECTOR_APPROVAL
-DIRECTOR_APPROVAL --RETURNED--> PRINCIPAL_REVIEW
+DIRECTOR_APPROVAL --RETURNED--> DRAFT
 DIRECTOR_APPROVAL --APPROVED--> APPROVED
 APPROVED --ARCHIVED--> ARCHIVED
 ```
+
+Learning Journey return commands require reviewer feedback. The aggregate returns to editable `DRAFT`, while the immutable `WorkflowEvent.fromState` identifies whether the Principal or Director requested the revision. Clients use the latest return event to display the reviewer, stage, and comment without introducing a parallel `RETURNED` aggregate state.
 
 ### IEP
 

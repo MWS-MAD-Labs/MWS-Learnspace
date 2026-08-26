@@ -21,6 +21,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
     "test": "npm test --workspaces --if-present -- --run",
+    "test:integration:local": "sh scripts/test-integration-local.sh",
     "prisma:validate": "npm run prisma:validate -w @learnspace/api",
     "prisma:generate": "npm run prisma:generate -w @learnspace/api",
     "db:migrate:dev": "npm run db:migrate:dev -w @learnspace/api --",

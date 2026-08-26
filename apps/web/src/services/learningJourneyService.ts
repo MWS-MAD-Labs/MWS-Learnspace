@@ -13,8 +13,11 @@ import type {
   GradesResponse,
   LearningJourneyCreateCommand,
   LearningJourneyDetailResponse,
+  LearningJourneyDirectorReviewCommand,
   LearningJourneyListQuery,
   LearningJourneyMutationResponse,
+  LearningJourneyPrincipalReviewCommand,
+  LearningJourneySubmitCommand,
   LearningJourneyUpdateCommand,
   LearningJourneysResponse,
   SemestersResponse,
@@ -45,18 +48,57 @@ export function monthLabel(date: string): string {
   }).format(new Date(`${date}T00:00:00.000Z`));
 }
 
+function workflowStage(
+  state: string,
+): 'Draft' | 'Principal Review' | 'Coordinator Review' | 'Director Approval' {
+  if (state === 'PRINCIPAL_REVIEW') return 'Principal Review';
+  if (state === 'COORDINATOR_REVIEW') return 'Coordinator Review';
+  if (state === 'DIRECTOR_APPROVAL') return 'Director Approval';
+  return 'Draft';
+}
+
+function workflowAction(
+  action: string,
+): 'Submitted' | 'Returned' | 'Approved' | 'Updated' {
+  if (action === 'RETURNED') return 'Returned';
+  if (action === 'APPROVED') return 'Approved';
+  if (action === 'UPDATED') return 'Updated';
+  return 'Submitted';
+}
+
+function roleLabel(role: string | null, roleTitle: string | null): string {
+  if (roleTitle) return roleTitle;
+  if (!role) return 'Staff Member';
+  return role
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 export function mapJourneyToLegacy(
   journey: LearningJourneyDetailResponse['data'],
 ): LearningJourney {
+  const latestEvent = journey.workflowEvents[0];
+  const latestReturn =
+    journey.state === 'DRAFT' && latestEvent?.action === 'RETURNED'
+      ? latestEvent
+      : undefined;
+  const returnedByPrincipal = latestReturn?.fromState === 'PRINCIPAL_REVIEW';
+  const returnedByDirector = latestReturn?.fromState === 'DIRECTOR_APPROVAL';
   const draftStatus = journey.state === 'DRAFT' ? 'On Progress' : 'Done';
-  const principalReviewStatus =
-    journey.state === 'PRINCIPAL_REVIEW'
-      ? 'On Progress'
-      : journey.state === 'DRAFT'
-        ? 'Not Started'
-        : 'Done';
-  const directorApprovalStatus =
-    journey.state === 'DIRECTOR_APPROVAL'
+  const principalReviewStatus = returnedByPrincipal
+    ? 'Returned'
+    : returnedByDirector
+      ? 'Done'
+      : journey.state === 'PRINCIPAL_REVIEW'
+        ? 'On Progress'
+        : journey.state === 'DRAFT'
+          ? 'Not Started'
+          : 'Done';
+  const directorApprovalStatus = returnedByDirector
+    ? 'Returned'
+    : journey.state === 'DIRECTOR_APPROVAL'
       ? 'On Progress'
       : journey.state === 'APPROVED' || journey.state === 'ACTIVE'
         ? 'Done'
@@ -83,7 +125,22 @@ export function mapJourneyToLegacy(
     draftStatus,
     principalReviewStatus,
     directorApprovalStatus,
-    workflowHistory: [],
+    workflowHistory: journey.workflowEvents.map((event) => ({
+      id: event.id,
+      stage: workflowStage(event.fromState),
+      action: workflowAction(event.action),
+      status:
+        event.action === 'RETURNED'
+          ? 'Returned'
+          : event.action === 'APPROVED'
+            ? 'Done'
+            : 'On Progress',
+      userId: event.actor.id,
+      userName: event.actor.displayName,
+      userRole: roleLabel(event.actor.role, event.actor.roleTitle),
+      timestamp: event.occurredAt,
+      comment: event.comment ?? undefined,
+    })),
     projects: journey.projects.map((project) => ({
       id: project.id,
       title: project.title,
@@ -231,6 +288,54 @@ export const learningJourneyService = {
       `${organizationPath(organizationId)}/learning-journeys/${encodeURIComponent(journeyId)}`,
       {
         method: 'PUT',
+        body: command,
+        schema: learningJourneyMutationResponseSchema,
+        signal,
+      },
+    );
+  },
+  submitJourney(
+    organizationId: string,
+    journeyId: string,
+    command: LearningJourneySubmitCommand,
+    signal?: AbortSignal,
+  ): Promise<LearningJourneyMutationResponse> {
+    return apiClient.request(
+      `${organizationPath(organizationId)}/learning-journeys/${encodeURIComponent(journeyId)}/submit`,
+      {
+        method: 'POST',
+        body: command,
+        schema: learningJourneyMutationResponseSchema,
+        signal,
+      },
+    );
+  },
+  principalReviewJourney(
+    organizationId: string,
+    journeyId: string,
+    command: LearningJourneyPrincipalReviewCommand,
+    signal?: AbortSignal,
+  ): Promise<LearningJourneyMutationResponse> {
+    return apiClient.request(
+      `${organizationPath(organizationId)}/learning-journeys/${encodeURIComponent(journeyId)}/principal-review`,
+      {
+        method: 'POST',
+        body: command,
+        schema: learningJourneyMutationResponseSchema,
+        signal,
+      },
+    );
+  },
+  directorReviewJourney(
+    organizationId: string,
+    journeyId: string,
+    command: LearningJourneyDirectorReviewCommand,
+    signal?: AbortSignal,
+  ): Promise<LearningJourneyMutationResponse> {
+    return apiClient.request(
+      `${organizationPath(organizationId)}/learning-journeys/${encodeURIComponent(journeyId)}/director-review`,
+      {
+        method: 'POST',
         body: command,
         schema: learningJourneyMutationResponseSchema,
         signal,

@@ -531,6 +531,32 @@ export const learningJourneyConnectionSchema = z
   })
   .strict();
 
+export const learningJourneyWorkflowEventSchema = z
+  .object({
+    id: uuidSchema,
+    fromState: workflowStateSchema,
+    toState: workflowStateSchema,
+    action: z.enum([
+      'SUBMITTED',
+      'APPROVED',
+      'RETURNED',
+      'UPDATED',
+      'ACTIVATED',
+      'ARCHIVED',
+    ]),
+    comment: z.string().nullable(),
+    occurredAt: z.string().datetime(),
+    actor: z
+      .object({
+        id: uuidSchema,
+        displayName: z.string().min(1),
+        role: staffMembershipRoleSchema.nullable(),
+        roleTitle: z.string().nullable(),
+      })
+      .strict(),
+  })
+  .strict();
+
 export const learningJourneyProjectSchema = z
   .object({
     id: uuidSchema,
@@ -558,6 +584,7 @@ const learningJourneyBaseSchema = z
     state: workflowStateSchema,
     version: z.number().int().positive(),
     owners: z.array(learningJourneyOwnerSummarySchema),
+    workflowEvents: z.array(learningJourneyWorkflowEventSchema),
     createdBy: z
       .object({ id: uuidSchema, displayName: z.string().min(1) })
       .strict(),
@@ -706,6 +733,32 @@ export const learningJourneyUpdateCommandSchema = z
   })
   .strict()
   .superRefine(validateLearningJourneyPositions);
+
+const learningJourneyExpectedVersionSchema = z
+  .object({ expectedVersion: z.number().int().positive() })
+  .strict();
+const learningJourneyDecisionFields = {
+  expectedVersion: z.number().int().positive(),
+  decision: z.enum(['APPROVE', 'RETURN']),
+  comment: z.string().trim().max(4000).optional(),
+};
+
+export const learningJourneySubmitCommandSchema =
+  learningJourneyExpectedVersionSchema;
+export const learningJourneyPrincipalReviewCommandSchema = z
+  .object(learningJourneyDecisionFields)
+  .strict()
+  .superRefine((value, context) => {
+    if (value.decision === 'RETURN' && !value.comment) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['comment'],
+        message: 'A comment is required when returning a learning journey.',
+      });
+    }
+  });
+export const learningJourneyDirectorReviewCommandSchema =
+  learningJourneyPrincipalReviewCommandSchema;
 export const learningJourneyMutationResponseSchema = z
   .object({ data: learningJourneyDetailSchema })
   .strict();
@@ -778,6 +831,15 @@ export type LearningJourneyCreateCommand = z.infer<
 >;
 export type LearningJourneyUpdateCommand = z.infer<
   typeof learningJourneyUpdateCommandSchema
+>;
+export type LearningJourneySubmitCommand = z.infer<
+  typeof learningJourneySubmitCommandSchema
+>;
+export type LearningJourneyPrincipalReviewCommand = z.infer<
+  typeof learningJourneyPrincipalReviewCommandSchema
+>;
+export type LearningJourneyDirectorReviewCommand = z.infer<
+  typeof learningJourneyDirectorReviewCommandSchema
 >;
 export type LearningJourneyMutationResponse = z.infer<
   typeof learningJourneyMutationResponseSchema

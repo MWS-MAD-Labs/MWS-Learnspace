@@ -7,7 +7,10 @@ import {
   organizationAccountCreateCommandSchema,
   organizationAccountUpdateCommandSchema,
   learningJourneyCreateCommandSchema,
+  learningJourneyDirectorReviewCommandSchema,
   learningJourneyListQuerySchema,
+  learningJourneyPrincipalReviewCommandSchema,
+  learningJourneySubmitCommandSchema,
   learningJourneyUpdateCommandSchema,
   schoolDateSchema,
   studentCreateCommandSchema,
@@ -200,6 +203,58 @@ describe('resource contracts', () => {
         projectEndsOnOrBefore: '2026-08-01',
       }).success,
     ).toBe(false);
+  });
+
+  it('defines strict versioned learning journey workflow commands', () => {
+    expect(
+      learningJourneySubmitCommandSchema.safeParse({ expectedVersion: 4 })
+        .success,
+    ).toBe(true);
+    expect(learningJourneySubmitCommandSchema.safeParse({}).success).toBe(
+      false,
+    );
+    expect(
+      learningJourneyPrincipalReviewCommandSchema.safeParse({
+        expectedVersion: 4,
+        decision: 'APPROVE',
+      }).success,
+    ).toBe(true);
+    expect(
+      learningJourneyDirectorReviewCommandSchema.safeParse({
+        expectedVersion: 5,
+        decision: 'RETURN',
+        comment: 'Please revise the assessment milestones.',
+      }).success,
+    ).toBe(true);
+    expect(
+      learningJourneyPrincipalReviewCommandSchema.safeParse({
+        expectedVersion: 4,
+        decision: 'RETURN',
+      }).success,
+    ).toBe(false);
+
+    for (const schema of [
+      learningJourneySubmitCommandSchema,
+      learningJourneyPrincipalReviewCommandSchema,
+      learningJourneyDirectorReviewCommandSchema,
+    ]) {
+      const valid =
+        schema === learningJourneySubmitCommandSchema
+          ? { expectedVersion: 4 }
+          : { expectedVersion: 4, decision: 'APPROVE' };
+      for (const forbiddenField of [
+        'actorId',
+        'organizationId',
+        'currentState',
+        'sourceState',
+        'state',
+        'targetState',
+      ]) {
+        expect(
+          schema.safeParse({ ...valid, [forbiddenField]: studentId }).success,
+        ).toBe(false);
+      }
+    }
   });
 
   it('never permits guardian contact fields in broad student list items', () => {

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useLearningJourneys } from '../../hooks/useLearningJourneys';
+import { ApiClientError } from '../../services/apiClient';
+import { learningJourneyService } from '../../services/learningJourneyService';
 import { LearningJourney } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import {
@@ -37,6 +39,8 @@ export const LearningJourneyStatusTracker: React.FC = () => {
     'Approve',
   );
   const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState<string>();
 
   // General Preview Modal state (for any user to view submitted curriculum)
   const [previewingJourney, setPreviewingJourney] =
@@ -95,15 +99,68 @@ export const LearningJourneyStatusTracker: React.FC = () => {
     setReviewingJourney(journey);
     setReviewAction('Approve');
     setReviewComment('');
+    setReviewError(undefined);
   };
 
-  const handleSubmitReview = () => {
-    showToast(
-      'info',
-      'Workflow transition unavailable',
-      'Review and approval commands will be enabled in P5-003.',
-    );
-    setReviewingJourney(null);
+  const handleSubmitReview = async () => {
+    if (!reviewingJourney || isSubmittingReview) return;
+    if (reviewAction === 'Return' && !reviewComment.trim()) {
+      setReviewError('Feedback is required when returning a journey.');
+      return;
+    }
+    setIsSubmittingReview(true);
+    setReviewError(undefined);
+    try {
+      const command = {
+        expectedVersion: reviewingJourney.version ?? 1,
+        decision:
+          reviewAction === 'Approve'
+            ? ('APPROVE' as const)
+            : ('RETURN' as const),
+        ...(reviewComment.trim() ? { comment: reviewComment.trim() } : {}),
+      };
+      if (isPrincipal) {
+        await learningJourneyService.principalReviewJourney(
+          organizationId,
+          reviewingJourney.id,
+          command,
+        );
+      } else {
+        await learningJourneyService.directorReviewJourney(
+          organizationId,
+          reviewingJourney.id,
+          command,
+        );
+      }
+      setReviewingJourney(null);
+      showToast(
+        'success',
+        reviewAction === 'Approve'
+          ? 'Decision approved'
+          : 'Returned for revision',
+        reviewAction === 'Approve'
+          ? isPrincipal
+            ? 'The journey was forwarded for director approval.'
+            : 'The learning journey received final approval.'
+          : 'The learning journey was returned to draft with your feedback.',
+      );
+      retry();
+    } catch (error) {
+      const message =
+        error instanceof ApiClientError &&
+        error.code === 'LEARNING_JOURNEY_VERSION_CONFLICT'
+          ? 'This journey changed while you were reviewing it. Close and reopen the latest version.'
+          : error instanceof ApiClientError &&
+              error.code === 'AUTHORIZATION_DENIED'
+            ? 'Your current role is not authorized to make this decision.'
+            : error instanceof Error
+              ? error.message
+              : 'The review decision could not be saved.';
+      setReviewError(message);
+      showToast('error', 'Review not saved', message);
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   // Delete journey (allowed only for drafts or admin)
@@ -889,8 +946,17 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                         ? 'Provide specific instructions for the author (e.g. adjust week 3 goal wording, include science connection)...'
                         : 'Add commendations or notes for the next stage...'
                     }
-                    className="w-full p-3.5 text-xs bg-white border border-[#E8DFC8] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#6E161E]/20 text-stone-900 shadow-2xs"
+                    disabled={isSubmittingReview}
+                    className="w-full p-3.5 text-xs bg-white border border-[#E8DFC8] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#6E161E]/20 text-stone-900 shadow-2xs disabled:opacity-60"
                   />
+                  {reviewError && (
+                    <p
+                      className="text-xs font-semibold text-rose-700"
+                      role="alert"
+                    >
+                      {reviewError}
+                    </p>
+                  )}
                 </div>
 
                 {/* Modal Footer Actions */}
@@ -898,22 +964,26 @@ export const LearningJourneyStatusTracker: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setReviewingJourney(null)}
-                    className="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 rounded-xl transition-colors"
+                    disabled={isSubmittingReview}
+                    className="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 rounded-xl transition-colors disabled:opacity-60"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     id="submit-review-modal-btn"
-                    onClick={handleSubmitReview}
-                    className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-xs transition-colors text-white flex items-center gap-1.5 ${
+                    onClick={() => void handleSubmitReview()}
+                    disabled={isSubmittingReview}
+                    className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-xs transition-colors text-white flex items-center gap-1.5 disabled:opacity-60 ${
                       reviewAction === 'Approve'
                         ? 'bg-emerald-600 hover:bg-emerald-700'
                         : 'bg-rose-600 hover:bg-rose-700'
                     }`}
                   >
                     <Send className="w-4 h-4" />
-                    Submit Review Decision
+                    {isSubmittingReview
+                      ? 'Saving Decision…'
+                      : 'Submit Review Decision'}
                   </button>
                 </div>
               </div>

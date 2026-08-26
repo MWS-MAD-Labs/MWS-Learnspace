@@ -296,62 +296,6 @@ class StorageService {
     return true;
   }
 
-  public updateWorkflowStage(
-    journeyId: string,
-    stage: 'Draft' | 'Principal Review' | 'Director Approval',
-    action: 'Submitted' | 'Returned' | 'Approved' | 'Updated',
-    comment: string,
-    user: User,
-  ): LearningJourney | undefined {
-    const journey = this.getLearningJourney(journeyId);
-    if (!journey) return undefined;
-
-    const historyEntry: WorkflowHistoryEntry = {
-      id: `wf-${Date.now()}`,
-      stage,
-      action,
-      status:
-        action === 'Returned'
-          ? 'Returned'
-          : action === 'Approved'
-            ? 'Done'
-            : 'On Progress',
-      userId: user.id,
-      userName: user.name,
-      userRole: user.roleTitle,
-      timestamp: new Date().toISOString(),
-      comment,
-    };
-
-    const updated = { ...journey };
-    updated.workflowHistory = [
-      historyEntry,
-      ...(updated.workflowHistory || []),
-    ];
-
-    if (stage === 'Draft') {
-      if (action === 'Submitted') {
-        updated.draftStatus = 'Done';
-        updated.principalReviewStatus = 'On Progress';
-      }
-    } else if (stage === 'Principal Review') {
-      if (action === 'Approved') {
-        updated.principalReviewStatus = 'Done';
-        updated.directorApprovalStatus = 'On Progress';
-      } else if (action === 'Returned') {
-        updated.principalReviewStatus = 'Returned';
-      }
-    } else if (stage === 'Director Approval') {
-      if (action === 'Approved') {
-        updated.directorApprovalStatus = 'Done';
-      } else if (action === 'Returned') {
-        updated.directorApprovalStatus = 'Returned';
-      }
-    }
-
-    return this.saveLearningJourney(updated);
-  }
-
   // FEDC Observations
   public getFEDCObservations(studentId?: string): FEDCObservationRecord[] {
     try {

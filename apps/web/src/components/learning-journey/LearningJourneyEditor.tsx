@@ -167,6 +167,7 @@ export const LearningJourneyEditor: React.FC = () => {
   );
   const [loadError, setLoadError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [hasVersionConflict, setHasVersionConflict] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -529,13 +530,63 @@ export const LearningJourneyEditor: React.FC = () => {
     }
   };
 
-  // Workflow transitions intentionally remain outside general edits (P5-003).
-  const handleSubmitForReview = () => {
-    showToast(
-      'info',
-      'Submission unavailable',
-      'Submit, review, and approval commands will be enabled in P5-003.',
-    );
+  const handleSubmitForReview = async () => {
+    if (isLocked || isSaving || isTransitioning) return;
+    if (!journey.id) {
+      showToast(
+        'warning',
+        'Save the draft first',
+        'The learning journey must be saved before it can be submitted.',
+      );
+      return;
+    }
+    setIsTransitioning(true);
+    setHasVersionConflict(false);
+    try {
+      const response = await learningJourneyService.submitJourney(
+        organizationId,
+        journey.id,
+        { expectedVersion: journey.version ?? 1 },
+      );
+      setJourney(mapJourneyToLegacy(response.data));
+      showToast(
+        'success',
+        'Submitted for principal review',
+        'The learning journey is now locked while the principal reviews it.',
+      );
+      await refreshData();
+    } catch (error) {
+      if (
+        error instanceof ApiClientError &&
+        error.code === 'LEARNING_JOURNEY_VERSION_CONFLICT'
+      ) {
+        setHasVersionConflict(true);
+        showToast(
+          'warning',
+          'Newer version available',
+          'Reload the current server version before submitting again.',
+        );
+      } else if (
+        error instanceof ApiClientError &&
+        error.code === 'AUTHORIZATION_DENIED'
+      ) {
+        showToast(
+          'error',
+          'Submission denied',
+          'Only an authorized draft creator or owner can submit this journey.',
+        );
+      } else {
+        showToast(
+          'error',
+          'Submission failed',
+          error instanceof Error
+            ? error.message
+            : 'The workflow transition could not be completed.',
+        );
+      }
+    } finally {
+      setIsTransitioning(false);
+    }
   };
 
   const returnedHistory = journey.workflowHistory?.find(
@@ -1282,15 +1333,19 @@ export const LearningJourneyEditor: React.FC = () => {
               <button
                 type="button"
                 id="editor-submit-review-btn"
-                onClick={handleSubmitForReview}
-                disabled
-                title="Available in P5-003"
-                className="px-6 opacity-60 cursor-not-allowed py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
+                onClick={() => void handleSubmitForReview()}
+                disabled={isSaving || isTransitioning || !journey.id}
+                title={
+                  !journey.id ? 'Save the draft before submitting' : undefined
+                }
+                className="px-6 disabled:opacity-60 disabled:cursor-not-allowed py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
               >
                 <Send className="w-4 h-4" />
-                {isReturned
-                  ? 'Resubmit for Principal Review'
-                  : 'Submit for Principal Review'}
+                {isTransitioning
+                  ? 'Submitting…'
+                  : isReturned
+                    ? 'Resubmit for Principal Review'
+                    : 'Submit for Principal Review'}
               </button>
             </>
           )}

@@ -10,8 +10,11 @@ import { z } from 'zod';
 import {
   learningJourneyCreateCommandSchema,
   learningJourneyDetailResponseSchema,
+  learningJourneyDirectorReviewCommandSchema,
   learningJourneyListQuerySchema,
   learningJourneyMutationResponseSchema,
+  learningJourneyPrincipalReviewCommandSchema,
+  learningJourneySubmitCommandSchema,
   learningJourneyUpdateCommandSchema,
   learningJourneysResponseSchema,
   uuidSchema,
@@ -67,7 +70,8 @@ function membershipFor(request: Request, organizationId: string) {
 
 function requireJourneyPermission(
   membership: MembershipScope,
-  permission: 'journey:read' | 'journey:write',
+  permission:
+    'journey:read' | 'journey:write' | 'journey:review' | 'journey:approve',
 ) {
   try {
     requirePermission(membership, permission);
@@ -152,6 +156,7 @@ const journeySelect = {
       },
     },
   },
+
   projects: {
     orderBy: [{ position: 'asc' as const }, { id: 'asc' as const }],
     select: {
@@ -176,7 +181,31 @@ type JourneyRow = Prisma.LearningJourneyGetPayload<{
   select: typeof journeySelect;
 }>;
 
-function mapJourney(row: JourneyRow) {
+type JourneyWorkflowEvent = {
+  id: string;
+  aggregateId: string;
+  fromState: WorkflowState;
+  toState: WorkflowState;
+  action:
+    | 'SUBMITTED'
+    | 'APPROVED'
+    | 'RETURNED'
+    | 'UPDATED'
+    | 'ACTIVATED'
+    | 'ARCHIVED';
+  comment: string | null;
+  occurredAt: Date;
+  actor: {
+    id: string;
+    displayName: string;
+    memberships: Array<{ role: MembershipRole; roleTitle: string | null }>;
+  };
+};
+
+function mapJourney(
+  row: JourneyRow,
+  workflowEvents: readonly JourneyWorkflowEvent[] = [],
+) {
   return {
     id: row.id,
     organizationId: row.organizationId,
@@ -203,6 +232,20 @@ function mapJourney(row: JourneyRow) {
       role: membership.role,
       roleTitle: membership.roleTitle,
     })),
+    workflowEvents: workflowEvents.map((event) => ({
+      id: event.id,
+      fromState: event.fromState,
+      toState: event.toState,
+      action: event.action,
+      comment: event.comment,
+      occurredAt: event.occurredAt.toISOString(),
+      actor: {
+        id: event.actor.id,
+        displayName: event.actor.displayName,
+        role: event.actor.memberships[0]?.role ?? null,
+        roleTitle: event.actor.memberships[0]?.roleTitle ?? null,
+      },
+    })),
     projects: row.projects.map((project) => ({
       ...project,
       startsOn: isoDate(project.startsOn),
@@ -213,6 +256,52 @@ function mapJourney(row: JourneyRow) {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+async function journeyWorkflowEvents(
+  prisma: Prisma.TransactionClient | PrismaClient,
+  organizationId: string,
+  journeyIds: readonly string[],
+): Promise<JourneyWorkflowEvent[]> {
+  if (!journeyIds.length) return [];
+  return prisma.workflowEvent.findMany({
+    where: {
+      organizationId,
+      aggregateType: 'LEARNING_JOURNEY',
+      aggregateId: { in: [...journeyIds] },
+    },
+    orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+    select: {
+      id: true,
+      aggregateId: true,
+      fromState: true,
+      toState: true,
+      action: true,
+      comment: true,
+      occurredAt: true,
+      actor: {
+        select: {
+          id: true,
+          displayName: true,
+          memberships: {
+            where: { organizationId },
+            take: 1,
+            select: { role: true, roleTitle: true },
+          },
+        },
+      },
+    },
+  });
+}
+
+async function mappedJourney(
+  prisma: Prisma.TransactionClient | PrismaClient,
+  row: JourneyRow,
+) {
+  const events = await journeyWorkflowEvents(prisma, row.organizationId, [
+    row.id,
+  ]);
+  return mapJourney(row, events);
 }
 
 async function actorMembershipId(
@@ -400,6 +489,111 @@ function duplicateJourneyError(): HttpError {
   );
 }
 
+function versionConflict(): HttpError {
+  return new HttpError(
+    409,
+    'LEARNING_JOURNEY_VERSION_CONFLICT',
+    'The learning journey was changed by another request.',
+  );
+}
+
+function invalidTransition(): HttpError {
+  return new HttpError(
+    409,
+    'LEARNING_JOURNEY_INVALID_TRANSITION',
+    'The learning journey is not in a valid state for this action.',
+  );
+}
+
+export type JourneyTransition = {
+  fromState: WorkflowState;
+  toState: WorkflowState;
+  action: 'SUBMITTED' | 'APPROVED' | 'RETURNED';
+  auditAction: string;
+  comment?: string;
+};
+
+export async function transitionJourney(input: {
+  transaction: Prisma.TransactionClient;
+  organizationId: string;
+  journeyId: string;
+  expectedVersion: number;
+  actorId: string;
+  actorMembershipId: string;
+  membership: MembershipScope;
+  requestId: string;
+  transition: JourneyTransition;
+  requireOwner: boolean;
+}): Promise<JourneyRow> {
+  const scope = journeyScopeWhere(input.membership);
+  if (!scope) deny();
+  const existing = await input.transaction.learningJourney.findFirst({
+    where: {
+      id: input.journeyId,
+      organizationId: input.organizationId,
+      AND: [scope],
+      ...(input.requireOwner
+        ? {
+            OR: [
+              { createdById: input.actorId },
+              {
+                owners: {
+                  some: { membershipId: input.actorMembershipId },
+                },
+              },
+            ],
+          }
+        : {}),
+    },
+    select: { state: true, version: true },
+  });
+  if (!existing) deny();
+  if (existing.version !== input.expectedVersion) throw versionConflict();
+  if (existing.state !== input.transition.fromState) throw invalidTransition();
+
+  const updated = await input.transaction.learningJourney.updateMany({
+    where: {
+      id: input.journeyId,
+      organizationId: input.organizationId,
+      state: input.transition.fromState,
+      version: input.expectedVersion,
+    },
+    data: {
+      state: input.transition.toState,
+      updatedById: input.actorId,
+      version: { increment: 1 },
+    },
+  });
+  if (updated.count !== 1) throw versionConflict();
+
+  await input.transaction.workflowEvent.create({
+    data: {
+      organizationId: input.organizationId,
+      aggregateType: 'LEARNING_JOURNEY',
+      aggregateId: input.journeyId,
+      fromState: input.transition.fromState,
+      toState: input.transition.toState,
+      action: input.transition.action,
+      actorId: input.actorId,
+      comment: input.transition.comment ?? null,
+    },
+  });
+  await createAuditRepository(input.transaction as PrismaClient).append({
+    organizationId: input.organizationId,
+    actorId: input.actorId,
+    action: input.transition.auditAction,
+    targetType: 'LearningJourney',
+    targetId: input.journeyId,
+    requestId: input.requestId,
+    result: 'SUCCEEDED',
+    metadata: { changedFields: ['state', 'version', 'updatedById'] },
+  });
+  return input.transaction.learningJourney.findFirstOrThrow({
+    where: { id: input.journeyId, organizationId: input.organizationId },
+    select: journeySelect,
+  });
+}
+
 export function createLearningJourneyRouter(
   prisma: PrismaClient,
   sessions: SessionService,
@@ -431,7 +625,20 @@ export function createLearningJourneyRouter(
           orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
           select: journeySelect,
         });
-        const data = rows.map(mapJourney);
+        const events = await journeyWorkflowEvents(
+          prisma,
+          path.organizationId,
+          rows.map((row) => row.id),
+        );
+        const eventsByJourney = new Map<string, JourneyWorkflowEvent[]>();
+        for (const event of events) {
+          const aggregateEvents = eventsByJourney.get(event.aggregateId) ?? [];
+          aggregateEvents.push(event);
+          eventsByJourney.set(event.aggregateId, aggregateEvents);
+        }
+        const data = rows.map((row) =>
+          mapJourney(row, eventsByJourney.get(row.id) ?? []),
+        );
         response.json(
           learningJourneysResponseSchema.parse({
             data,
@@ -467,9 +674,8 @@ export function createLearningJourneyRouter(
           select: journeySelect,
         });
         if (!row) deny();
-        response.json(
-          learningJourneyDetailResponseSchema.parse({ data: mapJourney(row) }),
-        );
+        const data = await mappedJourney(prisma, row);
+        response.json(learningJourneyDetailResponseSchema.parse({ data }));
       } catch (error) {
         next(error);
       }
@@ -537,12 +743,170 @@ export function createLearningJourneyRouter(
             select: journeySelect,
           });
         });
-        const data = mapJourney(row);
+        const data = await mappedJourney(prisma, row);
         response
           .status(201)
           .json(learningJourneyMutationResponseSchema.parse({ data }));
       } catch (error) {
         next(isUniqueConflict(error) ? duplicateJourneyError() : error);
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/learning-journeys/:journeyId/submit',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const path = parseRequest(
+          z
+            .object({ organizationId: uuidSchema, journeyId: uuidSchema })
+            .strict(),
+          request.params,
+        );
+        const command = parseRequest(
+          learningJourneySubmitCommandSchema,
+          request.body,
+        );
+        const auth = requireAuth(request);
+        const membership = membershipFor(request, path.organizationId);
+        requireJourneyPermission(membership, 'journey:write');
+        const row = await prisma.$transaction(async (transaction) => {
+          const membershipId = await actorMembershipId(
+            transaction,
+            path.organizationId,
+            auth.userId,
+          );
+          return transitionJourney({
+            transaction,
+            organizationId: path.organizationId,
+            journeyId: path.journeyId,
+            expectedVersion: command.expectedVersion,
+            actorId: auth.userId,
+            actorMembershipId: membershipId,
+            membership,
+            requestId: String(response.locals.requestId),
+            requireOwner: true,
+            transition: {
+              fromState: 'DRAFT',
+              toState: 'PRINCIPAL_REVIEW',
+              action: 'SUBMITTED',
+              auditAction: 'learning-journey.submit',
+            },
+          });
+        });
+        const data = await mappedJourney(prisma, row);
+        response.json(learningJourneyMutationResponseSchema.parse({ data }));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/learning-journeys/:journeyId/principal-review',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const path = parseRequest(
+          z
+            .object({ organizationId: uuidSchema, journeyId: uuidSchema })
+            .strict(),
+          request.params,
+        );
+        const command = parseRequest(
+          learningJourneyPrincipalReviewCommandSchema,
+          request.body,
+        );
+        const auth = requireAuth(request);
+        const membership = membershipFor(request, path.organizationId);
+        requireJourneyPermission(membership, 'journey:review');
+        const row = await prisma.$transaction(async (transaction) => {
+          const membershipId = await actorMembershipId(
+            transaction,
+            path.organizationId,
+            auth.userId,
+          );
+          const approved = command.decision === 'APPROVE';
+          return transitionJourney({
+            transaction,
+            organizationId: path.organizationId,
+            journeyId: path.journeyId,
+            expectedVersion: command.expectedVersion,
+            actorId: auth.userId,
+            actorMembershipId: membershipId,
+            membership,
+            requestId: String(response.locals.requestId),
+            requireOwner: false,
+            transition: {
+              fromState: 'PRINCIPAL_REVIEW',
+              toState: approved ? 'DIRECTOR_APPROVAL' : 'DRAFT',
+              action: approved ? 'APPROVED' : 'RETURNED',
+              auditAction: approved
+                ? 'learning-journey.principal-approve'
+                : 'learning-journey.principal-return',
+              comment: command.comment,
+            },
+          });
+        });
+        const data = await mappedJourney(prisma, row);
+        response.json(learningJourneyMutationResponseSchema.parse({ data }));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/learning-journeys/:journeyId/director-review',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const path = parseRequest(
+          z
+            .object({ organizationId: uuidSchema, journeyId: uuidSchema })
+            .strict(),
+          request.params,
+        );
+        const command = parseRequest(
+          learningJourneyDirectorReviewCommandSchema,
+          request.body,
+        );
+        const auth = requireAuth(request);
+        const membership = membershipFor(request, path.organizationId);
+        requireJourneyPermission(membership, 'journey:approve');
+        const row = await prisma.$transaction(async (transaction) => {
+          const membershipId = await actorMembershipId(
+            transaction,
+            path.organizationId,
+            auth.userId,
+          );
+          const approved = command.decision === 'APPROVE';
+          return transitionJourney({
+            transaction,
+            organizationId: path.organizationId,
+            journeyId: path.journeyId,
+            expectedVersion: command.expectedVersion,
+            actorId: auth.userId,
+            actorMembershipId: membershipId,
+            membership,
+            requestId: String(response.locals.requestId),
+            requireOwner: false,
+            transition: {
+              fromState: 'DIRECTOR_APPROVAL',
+              toState: approved ? 'APPROVED' : 'DRAFT',
+              action: approved ? 'APPROVED' : 'RETURNED',
+              auditAction: approved
+                ? 'learning-journey.director-approve'
+                : 'learning-journey.director-return',
+              comment: command.comment,
+            },
+          });
+        });
+        const data = await mappedJourney(prisma, row);
+        response.json(learningJourneyMutationResponseSchema.parse({ data }));
+      } catch (error) {
+        next(error);
       }
     },
   );
@@ -589,11 +953,7 @@ export function createLearningJourneyRouter(
           });
           if (!existing) deny();
           if (existing.version !== command.expectedVersion) {
-            throw new HttpError(
-              409,
-              'LEARNING_JOURNEY_VERSION_CONFLICT',
-              'The learning journey was changed by another request.',
-            );
+            throw versionConflict();
           }
           await validateReferences(transaction, path.organizationId, command);
           if (!command.ownerMembershipIds.includes(actorOwnerId)) deny();
@@ -615,13 +975,7 @@ export function createLearningJourneyRouter(
               version: { increment: 1 },
             },
           });
-          if (updated.count !== 1) {
-            throw new HttpError(
-              409,
-              'LEARNING_JOURNEY_VERSION_CONFLICT',
-              'The learning journey was changed by another request.',
-            );
-          }
+          if (updated.count !== 1) throw versionConflict();
           await transaction.learningJourneyOwner.deleteMany({
             where: { learningJourneyId: path.journeyId },
           });
@@ -654,7 +1008,7 @@ export function createLearningJourneyRouter(
             select: journeySelect,
           });
         });
-        const data = mapJourney(row);
+        const data = await mappedJourney(prisma, row);
         response.json(learningJourneyMutationResponseSchema.parse({ data }));
       } catch (error) {
         next(isUniqueConflict(error) ? duplicateJourneyError() : error);

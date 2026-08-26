@@ -52,6 +52,7 @@ Common status/code pairs:
 - `403 AUTHORIZATION_DENIED` or `CSRF_VALIDATION_FAILED`. Record-scope and cross-organization denials are non-enumerating.
 - `404 NOT_FOUND` for unmatched routes, not for protected cross-tenant records.
 - `409 ATTENDANCE_VERSION_CONFLICT` for stale attendance state or a serializable write race.
+- `409 LEARNING_JOURNEY_VERSION_CONFLICT` for stale journey commands, and `409 LEARNING_JOURNEY_INVALID_TRANSITION` when the aggregate is not in the command's required source state.
 - `413 PAYLOAD_TOO_LARGE`.
 - `500 INTERNAL_SERVER_ERROR`.
 
@@ -68,6 +69,8 @@ Common status/code pairs:
 Attendance bulk save is a command for exactly one class and one `schoolDate`. It validates the entire command before writing, then upserts attendance rows and appends the success audit event in the same database transaction. A failure rolls back all rows and the audit event.
 
 The command is idempotent for the submitted class/date/student desired state, subject to optimistic concurrency. Recorder identity always becomes the authenticated user, including updates.
+
+Learning Journey workflow changes use explicit `POST` commands for submit, Principal review, and Director review rather than accepting current or target state fields in general updates. Every command includes `expectedVersion`; actor, organization, and source/target state claims are rejected by strict contracts. The server derives the actor from the session, conditionally updates by organization, journey, required source state, and version, increments the journey version, and appends both an immutable `WorkflowEvent` and success `AuditEvent` in one transaction. Return decisions require feedback and return the aggregate to editable `DRAFT`; the event's `fromState` preserves whether the Principal or Director requested revision.
 
 ## Attendance optimistic concurrency
 
