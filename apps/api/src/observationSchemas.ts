@@ -3,6 +3,9 @@ import {
   fedcObservationCompleteCommandSchema,
   fedcObservationCreateDraftCommandSchema,
   fedcObservationSaveDraftCommandSchema,
+  sensoryProfileObservationCompleteCommandSchema,
+  sensoryProfileObservationCreateDraftCommandSchema,
+  sensoryProfileObservationSaveDraftCommandSchema,
 } from '@learnspace/contracts';
 
 const completedObservationSchema = z
@@ -18,16 +21,16 @@ export const fedcPayloadSchema = z.union([
   fedcCompletePayloadSchema,
 ]);
 
-export const sensoryProfilePayloadSchema = completedObservationSchema.extend({
-  responses: z.record(z.number().int().min(0).max(5)),
-  sectionScores: z.record(
-    z.object({
-      raw: z.number().int().nonnegative(),
-      max: z.number().int().positive(),
-    }),
-  ),
-  totalRawScore: z.number().int().nonnegative(),
-});
+export const sensoryProfileCreateDraftPayloadSchema =
+  sensoryProfileObservationCreateDraftCommandSchema;
+export const sensoryProfileSaveDraftPayloadSchema =
+  sensoryProfileObservationSaveDraftCommandSchema;
+export const sensoryProfileCompletePayloadSchema =
+  sensoryProfileObservationCompleteCommandSchema;
+export const sensoryProfilePayloadSchema = z.union([
+  sensoryProfileSaveDraftPayloadSchema,
+  sensoryProfileCompletePayloadSchema,
+]);
 
 export const sfaPayloadSchema = completedObservationSchema.extend({
   respondents: z.array(

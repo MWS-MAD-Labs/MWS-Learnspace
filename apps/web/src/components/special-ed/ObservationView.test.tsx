@@ -25,7 +25,15 @@ vi.mock('./FEDCObservationView', () => ({
   ),
 }));
 vi.mock('./SensoryProfileView', () => ({
-  SensoryProfileView: () => <div>Sensory form</div>,
+  SensoryProfileView: ({
+    assignment,
+  }: {
+    assignment: ObservationAssignment;
+  }) => (
+    <div data-testid="sensory-form">
+      Sensory form for {assignment.studentName}
+    </div>
+  ),
 }));
 vi.mock('./SFAObservationView', () => ({
   SFAObservationView: () => <div>SFA form</div>,
@@ -49,44 +57,59 @@ const assignmentA: ObservationAssignment = {
   dueDate: '2026-09-15',
   status: 'PENDING',
 };
+const sensoryAssignmentA: ObservationAssignment = {
+  ...assignmentA,
+  id: '77777777-7777-4777-8777-777777777777',
+  definitionId: '88888888-8888-4888-8888-888888888888',
+  definitionBody: { sections: [] },
+  instrumentType: 'SENSORY_PROFILE',
+  instrumentTitle: 'Sensory Profile Instrument',
+};
 
 const mockedUseApp = vi.mocked(useApp);
 const mockedUseObservationData = vi.mocked(useObservationData);
+let activeSpecialEdSubTab: 'FEDC' | 'SENSORY_PROFILE' | 'SFA';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockedUseApp.mockReturnValue({
-    organizationId: '66666666-6666-4666-8666-666666666666',
-    currentUser: {
-      id: userId,
-      name: 'Specialist One',
-      role: 'SPECIALIST',
-      assignedSpecialNeedsStudentIds: [studentAId, studentBId],
-    },
-    students: [
-      {
-        id: studentAId,
-        name: 'Student A',
-        fullName: 'Student A',
-        specialNeedsFlag: true,
-      },
-      {
-        id: studentBId,
-        name: 'Student B',
-        fullName: 'Student B',
-        specialNeedsFlag: true,
-      },
-    ],
-    selectedStudentId: studentAId,
-    setSelectedStudentId: vi.fn(),
-    specialEdSubTab: 'FEDC',
-    setSpecialEdSubTab: vi.fn(),
-    navigateToIEP: vi.fn(),
-    setActiveTab: vi.fn(),
-  } as unknown as ReturnType<typeof useApp>);
+  activeSpecialEdSubTab = 'FEDC';
+  mockedUseApp.mockImplementation(
+    () =>
+      ({
+        organizationId: '66666666-6666-4666-8666-666666666666',
+        currentUser: {
+          id: userId,
+          name: 'Specialist One',
+          role: 'SPECIALIST',
+          assignedSpecialNeedsStudentIds: [studentAId, studentBId],
+        },
+        students: [
+          {
+            id: studentAId,
+            name: 'Student A',
+            fullName: 'Student A',
+            specialNeedsFlag: true,
+          },
+          {
+            id: studentBId,
+            name: 'Student B',
+            fullName: 'Student B',
+            specialNeedsFlag: true,
+          },
+        ],
+        selectedStudentId: studentAId,
+        setSelectedStudentId: vi.fn(),
+        specialEdSubTab: activeSpecialEdSubTab,
+        setSpecialEdSubTab: vi.fn((tab) => {
+          activeSpecialEdSubTab = tab;
+        }),
+        navigateToIEP: vi.fn(),
+        setActiveTab: vi.fn(),
+      }) as unknown as ReturnType<typeof useApp>,
+  );
   mockedUseObservationData.mockReturnValue({
     definitions: [],
-    assignments: [assignmentA],
+    assignments: [assignmentA, sensoryAssignmentA],
     status: 'ready',
     error: undefined,
     retry: vi.fn(),
@@ -111,6 +134,28 @@ describe('ObservationView', () => {
     expect(screen.queryByTestId('fedc-form')).not.toBeInTheDocument();
     expect(
       screen.getByText('No active FEDC assignment for this student'),
+    ).toBeVisible();
+  });
+
+  it('opens the assignment-bound Sensory form and clears it after switching students', () => {
+    render(<ObservationView />);
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open assigned Sensory Profile form',
+      }),
+    );
+    expect(screen.getByTestId('sensory-form')).toHaveTextContent(
+      'Sensory form for Student A',
+    );
+
+    fireEvent.click(
+      document.querySelector(`#gpk-switch-student-${studentBId}`)!,
+    );
+
+    expect(screen.queryByTestId('sensory-form')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('No active Sensory Profile assignment for this student'),
     ).toBeVisible();
   });
 });

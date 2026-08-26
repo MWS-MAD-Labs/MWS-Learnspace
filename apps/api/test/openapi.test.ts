@@ -44,6 +44,12 @@ describe('OpenAPI contract', () => {
       ObservationAssignmentUpdateCommand: expect.any(Object),
       ObservationAssignmentCancelCommand: expect.any(Object),
       ObservationAssignmentMutationResponse: expect.any(Object),
+      SensoryProfileObservationCreateDraftCommand: expect.any(Object),
+      SensoryProfileObservationSaveDraftCommand: expect.any(Object),
+      SensoryProfileObservationCompleteCommand: expect.any(Object),
+      SensoryProfileObservationResponse: expect.any(Object),
+      SensoryProfileObservationHistoryResponse: expect.any(Object),
+      SensoryProfileObservationReferenceResponse: expect.any(Object),
     });
     expect(
       paths['/organizations/{organizationId}/observation-definitions'],
@@ -66,6 +72,30 @@ describe('OpenAPI contract', () => {
         '/organizations/{organizationId}/observation-assignments/{assignmentId}/cancel'
       ],
     ).toMatchObject({ post: expect.any(Object) });
+    expect(
+      paths[
+        '/organizations/{organizationId}/observation-assignments/{assignmentId}/sensory-profile-observation'
+      ],
+    ).toMatchObject({
+      get: expect.any(Object),
+      post: expect.any(Object),
+      put: expect.any(Object),
+    });
+    expect(
+      paths[
+        '/organizations/{organizationId}/observation-assignments/{assignmentId}/sensory-profile-observation/complete'
+      ],
+    ).toMatchObject({ post: expect.any(Object) });
+    expect(
+      paths[
+        '/organizations/{organizationId}/students/{studentId}/sensory-profile-observations'
+      ],
+    ).toMatchObject({ get: expect.any(Object) });
+    expect(
+      paths[
+        '/organizations/{organizationId}/students/{studentId}/sensory-profile-observations/reference'
+      ],
+    ).toMatchObject({ get: expect.any(Object) });
   });
 
   it('uses the runtime schemas for attendance request and response examples', () => {

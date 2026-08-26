@@ -34,6 +34,12 @@ import {
   observationDefinitionMutationResponseSchema,
   observationDefinitionsResponseSchema,
   observationDefinitionVersionCreateCommandSchema,
+  sensoryProfileObservationCompleteCommandSchema,
+  sensoryProfileObservationCreateDraftCommandSchema,
+  sensoryProfileObservationHistoryResponseSchema,
+  sensoryProfileObservationReferenceResponseSchema,
+  sensoryProfileObservationResponseSchema,
+  sensoryProfileObservationSaveDraftCommandSchema,
   staffDirectoryResponseSchema,
   studentCreateCommandSchema,
   studentDetailResponseSchema,
@@ -97,6 +103,17 @@ const components: Record<string, ZodTypeAny> = {
   FedcObservationResponse: fedcObservationResponseSchema,
   FedcObservationHistoryResponse: fedcObservationHistoryResponseSchema,
   FedcObservationReferenceResponse: fedcObservationReferenceResponseSchema,
+  SensoryProfileObservationCreateDraftCommand:
+    sensoryProfileObservationCreateDraftCommandSchema,
+  SensoryProfileObservationSaveDraftCommand:
+    sensoryProfileObservationSaveDraftCommandSchema,
+  SensoryProfileObservationCompleteCommand:
+    sensoryProfileObservationCompleteCommandSchema,
+  SensoryProfileObservationResponse: sensoryProfileObservationResponseSchema,
+  SensoryProfileObservationHistoryResponse:
+    sensoryProfileObservationHistoryResponseSchema,
+  SensoryProfileObservationReferenceResponse:
+    sensoryProfileObservationReferenceResponseSchema,
 };
 
 function zodDefinition(schema: ZodTypeAny): SchemaDefinition {
@@ -879,6 +896,129 @@ export function generateOpenApiDocument() {
             parameters: [organizationParameter, studentParameter],
             responses: {
               '200': jsonResponse('FedcObservationReferenceResponse'),
+              ...errorResponses,
+            },
+          },
+        },
+      '/organizations/{organizationId}/observation-assignments/{assignmentId}/sensory-profile-observation':
+        {
+          get: {
+            tags: ['Observations'],
+            operationId: 'getSensoryProfileObservationByAssignment',
+            parameters: [organizationParameter, assignmentParameter],
+            responses: {
+              '200': jsonResponse('SensoryProfileObservationResponse'),
+              ...errorResponses,
+            },
+          },
+          post: {
+            tags: ['Observations'],
+            operationId: 'createSensoryProfileObservationDraft',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/SensoryProfileObservationCreateDraftCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '201': jsonResponse(
+                'SensoryProfileObservationResponse',
+                'Sensory Profile draft created',
+              ),
+              ...errorResponses,
+              '409': jsonResponse(
+                'ApiError',
+                'Sensory Profile lifecycle conflict',
+              ),
+            },
+          },
+          put: {
+            tags: ['Observations'],
+            operationId: 'saveSensoryProfileObservationDraft',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/SensoryProfileObservationSaveDraftCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '200': jsonResponse('SensoryProfileObservationResponse'),
+              ...errorResponses,
+              '409': jsonResponse(
+                'ApiError',
+                'Sensory Profile lifecycle conflict',
+              ),
+            },
+          },
+        },
+      '/organizations/{organizationId}/observation-assignments/{assignmentId}/sensory-profile-observation/complete':
+        {
+          post: {
+            tags: ['Observations'],
+            operationId: 'completeSensoryProfileObservation',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/SensoryProfileObservationCompleteCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '200': jsonResponse('SensoryProfileObservationResponse'),
+              ...errorResponses,
+              '409': jsonResponse(
+                'ApiError',
+                'Sensory Profile lifecycle conflict',
+              ),
+            },
+          },
+        },
+      '/organizations/{organizationId}/students/{studentId}/sensory-profile-observations':
+        {
+          get: {
+            tags: ['Observations'],
+            operationId: 'listStudentSensoryProfileObservations',
+            parameters: [organizationParameter, studentParameter],
+            responses: {
+              '200': jsonResponse('SensoryProfileObservationHistoryResponse'),
+              ...errorResponses,
+            },
+          },
+        },
+      '/organizations/{organizationId}/students/{studentId}/sensory-profile-observations/reference':
+        {
+          get: {
+            tags: ['Observations'],
+            operationId: 'getStudentSensoryProfileReference',
+            parameters: [organizationParameter, studentParameter],
+            responses: {
+              '200': jsonResponse('SensoryProfileObservationReferenceResponse'),
               ...errorResponses,
             },
           },

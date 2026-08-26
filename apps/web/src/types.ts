@@ -345,25 +345,41 @@ export interface SensoryProfileItem {
 
 export interface SensoryProfileRecord {
   id: string;
+  organizationId?: string;
+  assignmentId?: string;
   studentId: string;
+  student?: {
+    id: string;
+    fullName: string;
+    studentNumber?: string | null;
+    avatarUrl?: string | null;
+  };
+  definition?: {
+    id: string;
+    key: string;
+    version: number;
+    title: string;
+    body: Record<string, unknown>;
+  };
   observationType: 'SENSORY_PROFILE';
   recordYear: string;
   observationDate: string;
   observerId: string;
   observerName: string;
-  teacherContactFrequency: string; // "Daily", "3-4 days/week", etc.
-  teacherContactLength: string; // "Full School Day", "1-2 years", etc.
-  status: 'Draft' | 'Completed';
-  responses: Record<string, SensoryRating>;
-  sectionScores: {
-    auditory: { raw: number; max: number };
-    visual: { raw: number; max: number };
-    touch: { raw: number; max: number };
-    movement: { raw: number; max: number };
-    behavioral: { raw: number; max: number };
+  observer?: {
+    id?: string;
+    userId?: string;
+    displayName: string;
   };
+  teacherContactFrequency: string;
+  teacherContactLength: string;
+  status: 'Draft' | 'Completed' | 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED';
+  responses: Record<string, SensoryRating>;
+  sectionScores: Record<string, { raw: number; max: number }>;
   totalRawScore: number;
+  maxPossibleScore?: number;
   notes?: string;
+  completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

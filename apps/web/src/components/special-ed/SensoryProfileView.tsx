@@ -1,390 +1,576 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import * as contracts from '@learnspace/contracts';
+import { z } from 'zod';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
-import { SENSORY_PROFILE_ITEMS } from '../../data/seedData';
-import { SensoryProfileRecord, SensoryRating } from '../../types';
-import { Save, CheckCircle2, ArrowRight } from 'lucide-react';
+import { useSensoryProfileObservations } from '../../hooks/useSensoryProfileObservations';
+import {
+  observationService,
+  type SensoryObservationCommand,
+} from '../../services/observationService';
+import type {
+  ObservationAssignment,
+  SensoryProfileItem,
+  SensoryProfileRecord,
+  SensoryRating,
+} from '../../types';
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  RefreshCw,
+  Save,
+} from 'lucide-react';
 
-const SECTIONS = [
-  'Auditory',
-  'Visual',
-  'Touch',
-  'Movement',
-  'Behavioral',
-] as const;
+type Props = { assignment: ObservationAssignment };
 
-export const SensoryProfileView: React.FC = () => {
-  const {
-    selectedStudentId,
-    setSelectedStudentId,
-    students,
-    currentUser,
-    showToast,
-    refreshData,
-    navigateToIEP,
-  } = useApp();
+type SensorySection = {
+  id: string;
+  title: string;
+  maxScore: number;
+  items: SensoryProfileItem[];
+};
 
-  const specialStudents = students.filter((s) => s.specialNeedsFlag);
-  const currentStudent =
-    students.find((s) => s.id === selectedStudentId) ||
-    specialStudents[0] ||
+const fallbackSensoryDefinitionBodySchema = z
+  .object({
+    sections: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            title: z.string().min(1),
+            maxScore: z.number().int().nonnegative(),
+            items: z.array(
+              z
+                .object({
+                  id: z.string().min(1),
+                  number: z.union([z.string(), z.number()]),
+                  text: z.string().min(1),
+                  section: z.string().optional(),
+                  quadrant: z.enum(['SK', 'AV', 'SN', 'RG']).optional(),
+                  schoolFactor: z.string().optional(),
+                  factorLabel: z.string().optional(),
+                })
+                .passthrough(),
+            ),
+          })
+          .passthrough(),
+      )
+      .min(1),
+  })
+  .passthrough();
+
+type SensoryContractSchemas = typeof contracts & {
+  sensoryProfileDefinitionBodySchema?: z.ZodType<unknown>;
+  sensoryDefinitionBodySchema?: z.ZodType<unknown>;
+};
+
+function pinnedSections(body: unknown): SensorySection[] | null {
+  const available = contracts as SensoryContractSchemas;
+  const contractSchema =
+    available.sensoryProfileDefinitionBodySchema ??
+    available.sensoryDefinitionBodySchema;
+  if (contractSchema) {
+    const parsed = contractSchema.safeParse(body);
+    if (!parsed.success) return null;
+    const items = (parsed.data as { items?: SensoryProfileItem[] }).items;
+    if (!Array.isArray(items) || items.length === 0) return null;
+    const sectionNames: SensoryProfileItem['section'][] = [
+      'Auditory',
+      'Visual',
+      'Touch',
+      'Movement',
+      'Behavioral',
+    ];
+    return sectionNames.flatMap((sectionName) => {
+      const sectionItems = items.filter((item) => item.section === sectionName);
+      if (sectionItems.length === 0) return [];
+      return [
+        {
+          id: sectionName.toLowerCase(),
+          title: `${sectionName} Processing`,
+          maxScore: sectionItems.length * 5,
+          items: sectionItems,
+        },
+      ];
+    });
+  }
+
+  const normalized = fallbackSensoryDefinitionBodySchema.safeParse(body);
+  if (!normalized.success) return null;
+  return normalized.data.sections.map((section) => ({
+    id: section.id,
+    title: section.title,
+    maxScore: section.maxScore,
+    items: section.items.map((item) => ({
+      id: item.id,
+      number:
+        typeof item.number === 'number'
+          ? item.number
+          : Number.parseInt(item.number, 10) || 0,
+      section: (item.section || section.title) as SensoryProfileItem['section'],
+      text: item.text,
+      quadrant: item.quadrant,
+      schoolFactor: item.schoolFactor,
+      factorLabel: item.factorLabel,
+    })),
+  }));
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function provisionalScores(
+  sections: SensorySection[],
+  responses: Record<string, SensoryRating>,
+) {
+  const sectionScores: Record<string, { raw: number; max: number }> = {};
+  let totalRawScore = 0;
+  sections.forEach((section) => {
+    const raw = section.items.reduce((sum, item) => {
+      const rating = responses[item.id];
+      return sum + (rating === undefined ? 0 : rating);
+    }, 0);
+    sectionScores[section.id] = { raw, max: section.maxScore };
+    totalRawScore += raw;
+  });
+  return { sectionScores, totalRawScore };
+}
+
+export const SensoryProfileView: React.FC<Props> = ({ assignment }) => {
+  const { organizationId, students, currentUser, showToast, navigateToIEP } =
+    useApp();
+  const student =
+    students.find((candidate) => candidate.id === assignment.studentId) ??
     students[0];
+  const history = useSensoryProfileObservations(
+    organizationId,
+    assignment.studentId,
+  );
+  const sections = useMemo(
+    () => pinnedSections(assignment.definitionBody),
+    [assignment.definitionBody],
+  );
+  const [record, setRecord] = useState<SensoryProfileRecord | null>(null);
+  const [responses, setResponses] = useState<Record<string, SensoryRating>>({});
+  const [observationDate, setObservationDate] = useState(today());
+  const [teacherContactFrequency, setTeacherContactFrequency] = useState('');
+  const [teacherContactLength, setTeacherContactLength] = useState('');
+  const [notes, setNotes] = useState('');
+  const [activeSectionId, setActiveSectionId] = useState<string>();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [mutationError, setMutationError] = useState<string>();
 
-  const [activeSection, setActiveSection] =
-    useState<(typeof SECTIONS)[number]>('Auditory');
+  useEffect(() => {
+    if (sections?.length && !sections.some((s) => s.id === activeSectionId)) {
+      setActiveSectionId(sections[0].id);
+    }
+  }, [activeSectionId, sections]);
 
-  const [record, setRecord] = useState<SensoryProfileRecord>(() => {
-    const existing = storageService.getSensoryProfiles(currentStudent.id);
-    if (existing.length > 0) return existing[0];
+  useEffect(() => {
+    if (history.status !== 'ready') return;
+    const existing =
+      history.observations.find(
+        (candidate) => candidate.assignmentId === assignment.id,
+      ) ??
+      (assignment.recordId
+        ? history.observations.find(
+            (candidate) => candidate.id === assignment.recordId,
+          )
+        : undefined);
+    setRecord(existing ?? null);
+    setResponses(existing?.responses ?? {});
+    setObservationDate(existing?.observationDate || today());
+    setTeacherContactFrequency(existing?.teacherContactFrequency || '');
+    setTeacherContactLength(existing?.teacherContactLength || '');
+    setNotes(existing?.notes || '');
+    setIsDirty(false);
+    setMutationError(undefined);
+  }, [
+    assignment.id,
+    assignment.recordId,
+    history.observations,
+    history.status,
+  ]);
 
-    return {
-      id: `sp-${Date.now()}`,
-      studentId: currentStudent.id,
-      observationType: 'SENSORY_PROFILE',
-      recordYear: '2026',
-      observationDate: '2026-10-16',
-      observerId: currentUser.id,
-      observerName: currentUser.name,
-      teacherContactFrequency: 'Daily (5 days/week)',
-      teacherContactLength: 'Full School Year',
-      status: 'Draft',
-      responses: {},
-      sectionScores: {
-        auditory: { raw: 0, max: 40 },
-        visual: { raw: 0, max: 40 },
-        touch: { raw: 0, max: 40 },
-        movement: { raw: 0, max: 40 },
-        behavioral: { raw: 0, max: 60 },
-      },
-      totalRawScore: 0,
-      notes: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+  const preview = useMemo(
+    () => provisionalScores(sections ?? [], responses),
+    [responses, sections],
+  );
+  const activeSection =
+    sections?.find((section) => section.id === activeSectionId) ??
+    sections?.[0];
+  const isCompleted = record?.status.toUpperCase() === 'COMPLETED';
+  const displayedTotal =
+    record && !isDirty ? record.totalRawScore : preview.totalRawScore;
+  const displayedMax =
+    record?.maxPossibleScore ||
+    sections?.reduce((total, section) => total + section.maxScore, 0) ||
+    0;
+
+  const command = (): SensoryObservationCommand => ({
+    observationDate,
+    responses: (Object.entries(responses) as [string, SensoryRating][]).reduce<
+      Record<string, SensoryRating>
+    >((included, [itemId, rating]) => {
+      included[itemId] = rating;
+      return included;
+    }, {}),
+    teacherContactFrequency: teacherContactFrequency.trim() || null,
+    teacherContactLength: teacherContactLength.trim() || null,
+    notes: notes.trim() || null,
   });
 
-  const handleRating = (itemId: string, rating: SensoryRating) => {
-    const updatedResponses: Record<string, SensoryRating> = {
-      ...record.responses,
-      [itemId]: rating,
-    };
-
-    // Calculate section scores
-    let aud = 0,
-      vis = 0,
-      tch = 0,
-      mov = 0,
-      beh = 0;
-    SENSORY_PROFILE_ITEMS.forEach((it) => {
-      const val = updatedResponses[it.id] || 0;
-      if (it.section === 'Auditory') aud += val;
-      else if (it.section === 'Visual') vis += val;
-      else if (it.section === 'Touch') tch += val;
-      else if (it.section === 'Movement') mov += val;
-      else if (it.section === 'Behavioral') beh += val;
-    });
-
-    const total = aud + vis + tch + mov + beh;
-
-    setRecord((prev) => ({
-      ...prev,
-      responses: updatedResponses,
-      sectionScores: {
-        auditory: { raw: aud, max: 40 },
-        visual: { raw: vis, max: 40 },
-        touch: { raw: tch, max: 40 },
-        movement: { raw: mov, max: 40 },
-        behavioral: { raw: beh, max: 60 },
-      },
-      totalRawScore: total,
-    }));
+  const save = async (complete: boolean) => {
+    setIsSaving(true);
+    setMutationError(undefined);
+    try {
+      let saved: SensoryProfileRecord;
+      if (!record) {
+        saved = await observationService.createSensoryObservation(
+          organizationId,
+          assignment.id,
+          command(),
+        );
+        setRecord(saved);
+        if (complete) {
+          saved = await observationService.completeSensoryObservation(
+            organizationId,
+            assignment.id,
+            command(),
+          );
+        }
+      } else if (complete) {
+        saved = await observationService.completeSensoryObservation(
+          organizationId,
+          assignment.id,
+          command(),
+        );
+      } else {
+        saved = await observationService.saveSensoryObservationDraft(
+          organizationId,
+          assignment.id,
+          command(),
+        );
+      }
+      setRecord(saved);
+      setResponses(saved.responses);
+      setObservationDate(saved.observationDate);
+      setTeacherContactFrequency(saved.teacherContactFrequency);
+      setTeacherContactLength(saved.teacherContactLength);
+      setNotes(saved.notes || '');
+      setIsDirty(false);
+      showToast(
+        'success',
+        complete ? 'Sensory Profile Completed' : 'Sensory Profile Draft Saved',
+        `The server saved the assignment-bound Sensory Profile for ${student?.fullName || assignment.studentName}.`,
+      );
+      history.retry();
+    } catch (caught) {
+      setMutationError(
+        caught instanceof Error
+          ? caught.message
+          : 'The Sensory Profile observation could not be saved.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleSave = (isCompleted = false) => {
-    const updated: SensoryProfileRecord = {
-      ...record,
-      studentId: currentStudent.id,
-      status: isCompleted ? 'Completed' : 'Draft',
-      updatedAt: new Date().toISOString(),
-    };
-    storageService.saveSensoryProfile(updated);
-    setRecord(updated);
-    showToast(
-      'success',
-      isCompleted ? 'Sensory Profile Completed' : 'Sensory Profile Draft Saved',
-      `Saved sensory processing profile for ${currentStudent.fullName}.`,
+  if (!sections || !activeSection) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800 flex items-center gap-2">
+        <AlertCircle className="h-4 w-4" />
+        The assigned Sensory Profile definition does not contain a valid scoring
+        rubric.
+      </div>
     );
-    refreshData();
-  };
+  }
 
-  const currentItems = SENSORY_PROFILE_ITEMS.filter(
-    (i) => i.section === activeSection,
-  );
+  if (history.status === 'loading') {
+    return (
+      <div className="rounded-2xl border border-[#EFE7DC] bg-white p-8 text-center text-sm text-stone-500">
+        Loading assignment-bound Sensory Profile observation…
+      </div>
+    );
+  }
+  if (history.status === 'error') {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800 flex items-center justify-between gap-3">
+        <span>{history.error}</span>
+        <button
+          type="button"
+          onClick={history.retry}
+          className="flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-bold"
+        >
+          <RefreshCw className="h-3.5 w-3.5" /> Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
       id="sensory-profile-view"
       className="space-y-6 max-w-6xl mx-auto pb-24"
     >
-      {/* Student & Observer Header */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <img
             src={
-              currentStudent.avatarUrl ||
+              student?.avatarUrl ||
               'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=120'
             }
-            alt={currentStudent.fullName}
-            className="w-14 h-14 rounded-2xl object-cover border-2 border-[#EFE7DC] shadow-xs"
+            alt={student?.fullName || assignment.studentName}
+            className="w-14 h-14 rounded-2xl object-cover border-2 border-[#EFE7DC]"
           />
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#6E161E] bg-[#6E161E]/10 px-2.5 py-0.5 rounded-full">
-                Sensory Profile 2
-              </span>
-              <span className="text-xs font-semibold text-stone-500">
-                School Companion Questionnaire (Ages 3–14)
-              </span>
-            </div>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#6E161E] bg-[#6E161E]/10 px-2.5 py-0.5 rounded-full">
+              Sensory Profile · Assignment v{assignment.definitionVersion}
+            </span>
             <h1 className="text-2xl font-black font-heading text-stone-900 mt-1">
-              {currentStudent.fullName}
+              {student?.fullName || assignment.studentName}
             </h1>
             <p className="text-xs text-stone-500 mt-0.5">
-              Grade: {currentStudent.grade} · Observer: {record.observerName} ·
-              Total Score:{' '}
-              <strong className="text-stone-900">
-                {record.totalRawScore} pts
-              </strong>
+              {assignment.instrumentTitle || 'Sensory Profile'} · Due{' '}
+              {assignment.dueDate}
             </p>
           </div>
         </div>
-
-        {/* Student Selector */}
-        <div className="flex items-center gap-3">
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
-              Target Student
+        <div className="p-3 bg-stone-50 border border-stone-200 rounded-2xl text-center min-w-35">
+          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
+            {record && !isDirty ? 'Server Score' : 'Provisional Preview'}
+          </span>
+          <span className="text-xl font-black text-emerald-800">
+            {displayedTotal}{' '}
+            <span className="text-xs text-stone-400 font-normal">
+              / {displayedMax}
             </span>
-            <select
-              id="sensory-student-select"
-              value={selectedStudentId}
-              onChange={(e) => {
-                setSelectedStudentId(e.target.value);
-                const ex = storageService.getSensoryProfiles(e.target.value);
-                if (ex.length > 0) setRecord(ex[0]);
-              }}
-              className="px-3.5 py-2 text-xs font-bold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-900 focus:outline-hidden"
-            >
-              {specialStudents.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.fullName} ({s.grade})
-                </option>
-              ))}
-            </select>
-          </div>
+          </span>
+          {(!record || isDirty) && (
+            <span className="block text-[10px] text-amber-700">
+              Not submitted as a score
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Scale Guide & Teacher Contact Details */}
+      {(mutationError || isCompleted) && (
+        <div
+          className={`rounded-2xl border p-4 text-xs flex items-center gap-2 ${
+            mutationError
+              ? 'border-rose-200 bg-rose-50 text-rose-800'
+              : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+          }`}
+        >
+          {mutationError ? (
+            <AlertCircle className="h-4 w-4" />
+          ) : (
+            <CheckCircle2 className="h-4 w-4" />
+          )}
+          {mutationError ||
+            'This observation is completed. Scores and totals shown are server-derived.'}
+        </div>
+      )}
+
       <div className="bg-[#FFFDF9] border border-[#EFE7DC] rounded-2xl p-4 shadow-xs space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-200/80 pb-3">
-          <span className="text-xs font-bold text-stone-800 uppercase tracking-wider">
-            Teacher Observation Context & Rating Scale
-          </span>
-          <div className="flex items-center gap-3 text-xs">
-            <span className="text-stone-500">Contact Frequency:</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label className="text-[10px] font-bold text-stone-500 uppercase">
+              Observation date
+            </label>
             <input
-              type="text"
-              value={record.teacherContactFrequency}
-              onChange={(e) =>
-                setRecord({
-                  ...record,
-                  teacherContactFrequency: e.target.value,
-                })
-              }
-              className="px-2.5 py-1 bg-white border border-[#E8DFC8] rounded-lg font-semibold text-stone-900 text-xs"
+              type="date"
+              disabled={isCompleted}
+              value={observationDate}
+              onChange={(event) => {
+                setObservationDate(event.target.value);
+                setIsDirty(true);
+              }}
+              className="w-full px-2.5 py-1.5 bg-white border border-[#E8DFC8] rounded-lg text-xs font-semibold"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-stone-500 uppercase">
+              Contact frequency
+            </label>
+            <input
+              disabled={isCompleted}
+              value={teacherContactFrequency}
+              onChange={(event) => {
+                setTeacherContactFrequency(event.target.value);
+                setIsDirty(true);
+              }}
+              className="w-full px-2.5 py-1.5 bg-white border border-[#E8DFC8] rounded-lg text-xs font-semibold"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-stone-500 uppercase">
+              Contact length
+            </label>
+            <input
+              disabled={isCompleted}
+              value={teacherContactLength}
+              onChange={(event) => {
+                setTeacherContactLength(event.target.value);
+                setIsDirty(true);
+              }}
+              className="w-full px-2.5 py-1.5 bg-white border border-[#E8DFC8] rounded-lg text-xs font-semibold"
             />
           </div>
         </div>
-
-        {/* 5-Point Rating Rubric */}
         <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-xs">
-          <div className="p-2 rounded-xl bg-purple-50 border border-purple-200">
-            <span className="font-black text-sm text-purple-900 block">5</span>
-            <span className="text-[11px] text-purple-800">Almost Always</span>
-          </div>
-          <div className="p-2 rounded-xl bg-blue-50 border border-blue-200">
-            <span className="font-black text-sm text-blue-900 block">4</span>
-            <span className="text-[11px] text-blue-800">Frequently</span>
-          </div>
-          <div className="p-2 rounded-xl bg-amber-50 border border-amber-200">
-            <span className="font-black text-sm text-amber-900 block">3</span>
-            <span className="text-[11px] text-amber-800">Half The Time</span>
-          </div>
-          <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200">
-            <span className="font-black text-sm text-emerald-900 block">2</span>
-            <span className="text-[11px] text-emerald-800">Occasionally</span>
-          </div>
-          <div className="p-2 rounded-xl bg-stone-100 border border-stone-200">
-            <span className="font-black text-sm text-stone-800 block">1</span>
-            <span className="text-[11px] text-stone-600">Almost Never</span>
-          </div>
-          <div className="p-2 rounded-xl bg-stone-50 border border-stone-200">
-            <span className="font-black text-sm text-stone-600 block">0</span>
-            <span className="text-[11px] text-stone-500">Does Not Apply</span>
-          </div>
+          {[
+            [5, 'Almost Always'],
+            [4, 'Frequently'],
+            [3, 'Half The Time'],
+            [2, 'Occasionally'],
+            [1, 'Almost Never'],
+            [0, 'Does Not Apply'],
+          ].map(([rating, label]) => (
+            <div
+              key={rating}
+              className="p-2 rounded-xl bg-white border border-[#E8DFC8]"
+            >
+              <strong className="text-sm block">{rating}</strong>
+              <span className="text-[11px] text-stone-600">{label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Section Tabs */}
       <div className="flex border-b border-stone-200 bg-white rounded-2xl p-1 shadow-xs gap-1 overflow-x-auto">
-        {SECTIONS.map((sec) => {
-          const isSelected = activeSection === sec;
-          const secKey = sec.toLowerCase() as keyof typeof record.sectionScores;
-          const score = record.sectionScores[secKey]?.raw || 0;
-          const max = record.sectionScores[secKey]?.max || 40;
-
+        {sections.map((section) => {
+          const score =
+            record && !isDirty
+              ? record.sectionScores[section.id]?.raw || 0
+              : preview.sectionScores[section.id]?.raw || 0;
           return (
             <button
-              key={sec}
-              id={`sensory-tab-${sec.toLowerCase()}`}
-              onClick={() => setActiveSection(sec)}
-              className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
-                isSelected
-                  ? 'bg-[#6E161E] text-white shadow-xs'
+              key={section.id}
+              type="button"
+              id={`sensory-tab-${section.id}`}
+              onClick={() => setActiveSectionId(section.id)}
+              className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-between ${
+                activeSection.id === section.id
+                  ? 'bg-[#6E161E] text-white'
                   : 'text-stone-600 hover:bg-[#FAF5EF]'
               }`}
             >
-              <span>{sec} Processing</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  isSelected
-                    ? 'bg-white/20 text-white'
-                    : 'bg-stone-100 text-stone-700'
-                }`}
-              >
-                {score}/{max}
+              <span>{section.title}</span>
+              <span>
+                {score}/{section.maxScore}
               </span>
             </button>
           );
         })}
       </div>
 
-      {/* Question Items List */}
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-stone-100">
           <h2 className="text-base font-bold text-stone-900">
-            {activeSection} Processing Items ({currentItems.length}{' '}
-            Observations)
+            {activeSection.title} ({activeSection.items.length} Observations)
           </h2>
           <span className="text-xs font-semibold text-stone-500">
-            Select 0 to 5 for each observed classroom behavior
+            Select 0 to 5 for each item
           </span>
         </div>
-
         <div className="space-y-3">
-          {currentItems.map((item) => {
-            const currentVal = record.responses[item.id];
-
+          {activeSection.items.map((item) => {
+            const currentValue = responses[item.id];
             return (
               <div
                 key={item.id}
                 id={`sensory-item-${item.id}`}
                 className="p-4 bg-[#FAF5EF] border border-[#E8DFC8] rounded-2xl space-y-3"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-start gap-3">
-                    <span className="w-6 h-6 rounded-lg bg-[#6E161E]/10 text-[#6E161E] font-bold text-xs flex items-center justify-center shrink-0">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-xs font-semibold text-stone-900 leading-relaxed">
+                    <span className="font-mono text-stone-500 mr-2">
                       {item.number}
                     </span>
-                    <p className="text-xs font-semibold text-stone-900 leading-relaxed pt-0.5">
-                      {item.text}
-                    </p>
-                  </div>
-
+                    {item.text}
+                  </p>
                   {item.factorLabel && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 shrink-0 self-start sm:self-auto">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 shrink-0">
                       {item.factorLabel}
                     </span>
                   )}
                 </div>
-
                 <div className="pt-2 border-t border-[#E8DFC8]/60 flex items-center justify-end gap-1.5">
-                  {[5, 4, 3, 2, 1, 0].map((val) => {
-                    const isSelected = currentVal === val;
-                    return (
-                      <button
-                        key={val}
-                        type="button"
-                        id={`btn-sensory-${item.id}-${val}`}
-                        onClick={() =>
-                          handleRating(item.id, val as SensoryRating)
-                        }
-                        className={`w-9 h-8 text-xs font-bold rounded-lg border transition-all ${
-                          isSelected
-                            ? 'bg-[#6E161E] text-white border-[#6E161E] shadow-xs'
-                            : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'
-                        }`}
-                      >
-                        {val}
-                      </button>
-                    );
-                  })}
+                  {[5, 4, 3, 2, 1, 0].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={isCompleted}
+                      aria-label={`Rate ${item.number} as ${value}`}
+                      id={`btn-sensory-${item.id}-${value}`}
+                      onClick={() => {
+                        setResponses((current) => ({
+                          ...current,
+                          [item.id]: value as SensoryRating,
+                        }));
+                        setIsDirty(true);
+                      }}
+                      className={`w-9 h-8 text-xs font-bold rounded-lg border ${
+                        currentValue === value
+                          ? 'bg-[#6E161E] text-white border-[#6E161E]'
+                          : 'bg-white text-stone-700 border-stone-300'
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  ))}
                 </div>
               </div>
             );
           })}
         </div>
-
-        {/* Notes */}
-        <div className="pt-4 border-t border-stone-100 space-y-1.5">
-          <label className="text-xs font-bold text-stone-700 uppercase tracking-wider">
-            Sensory Integration Notes & Environment Recommendations
-          </label>
-          <textarea
-            rows={3}
-            value={record.notes || ''}
-            onChange={(e) => setRecord({ ...record, notes: e.target.value })}
-            placeholder="Document sensory triggers, calming strategies, weighted blanket responses, noise dampening needs..."
-            className="w-full p-3 text-xs bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-900 leading-relaxed"
-          />
-        </div>
+        <textarea
+          rows={3}
+          disabled={isCompleted}
+          value={notes}
+          onChange={(event) => {
+            setNotes(event.target.value);
+            setIsDirty(true);
+          }}
+          placeholder="Sensory integration notes and environment recommendations…"
+          className="w-full p-3 text-xs bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl"
+        />
       </div>
 
-      {/* Sticky Bottom Actions */}
-      <div
-        id="sensory-sticky-bar"
-        className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-[#EFE7DC] px-6 py-4 shadow-lg flex items-center justify-between"
-      >
+      <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 border-t border-[#EFE7DC] px-6 py-4 shadow-lg flex items-center justify-between">
         <button
           type="button"
-          onClick={() => navigateToIEP(currentStudent.id)}
-          className="text-xs font-bold text-[#6E161E] hover:underline flex items-center gap-1.5"
+          onClick={() => navigateToIEP(assignment.studentId)}
+          className="text-xs font-bold text-[#6E161E] flex items-center gap-1.5"
         >
           View Annual IEP Plan <ArrowRight className="w-3.5 h-3.5" />
         </button>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            id="sensory-save-draft-btn"
-            onClick={() => handleSave(false)}
-            className="px-5 py-2.5 bg-[#FAF5EF] hover:bg-[#F2EAE0] text-stone-800 text-xs font-bold rounded-xl border border-[#E8DFC8] shadow-2xs transition-colors flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            Save Draft
-          </button>
-
-          <button
-            type="button"
-            id="sensory-complete-btn"
-            onClick={() => handleSave(true)}
-            className="px-6 py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Complete Sensory Profile
-          </button>
-        </div>
+        {!isCompleted && (
+          <div className="flex gap-3">
+            <button
+              type="button"
+              id="sensory-save-draft-btn"
+              disabled={isSaving}
+              onClick={() => void save(false)}
+              className="px-5 py-2.5 bg-[#FAF5EF] text-xs font-bold rounded-xl border border-[#E8DFC8] flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              {isSaving ? 'Saving…' : 'Save Draft'}
+            </button>
+            <button
+              type="button"
+              id="sensory-complete-btn"
+              disabled={isSaving}
+              onClick={() => void save(true)}
+              className="px-6 py-2.5 bg-[#6E161E] text-white text-xs font-bold rounded-xl flex items-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" /> Complete Sensory Profile
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

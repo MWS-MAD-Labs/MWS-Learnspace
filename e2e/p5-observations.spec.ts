@@ -391,3 +391,190 @@ test('P5-005 assigned specialist saves, reloads, and completes a server-scored F
   await specialistContext.close();
   await coordinatorContext.close();
 });
+
+test('P5-006 assigned specialist saves, reloads, and completes a server-scored Sensory Profile', async ({
+  browser,
+}, testInfo) => {
+  const coordinatorContext = await browser.newContext();
+  await authenticate(coordinatorContext, fixture.coordinatorEmail);
+  const coordinatorHeaders = await csrfHeaders(coordinatorContext.request);
+  const definitionsPath = `/api/v1/organizations/${fixture.organizationId}/observation-definitions`;
+  const assignmentsPath = `/api/v1/organizations/${fixture.organizationId}/observation-assignments`;
+  const definitionKey = `p5-006-e2e-${testInfo.retry}-${Date.now()}`;
+  const definitionBody = {
+    items: [
+      {
+        id: 'sensory-auditory-1',
+        number: 1,
+        section: 'Auditory',
+        text: 'Responds to spoken directions in a busy classroom.',
+        quadrant: 'SN',
+        schoolFactor: 'School Factor 1',
+        factorLabel: 'Auditory processing',
+      },
+      {
+        id: 'sensory-visual-1',
+        number: 2,
+        section: 'Visual',
+        text: 'Notices visual information on the board.',
+        quadrant: 'RG',
+        schoolFactor: 'School Factor 2',
+        factorLabel: 'Visual processing',
+      },
+      {
+        id: 'sensory-touch-1',
+        number: 3,
+        section: 'Touch',
+        text: 'Tolerates routine classroom materials.',
+        quadrant: 'AV',
+        schoolFactor: 'School Factor 3',
+        factorLabel: 'Touch processing',
+      },
+    ],
+  };
+
+  const createdDefinition = await coordinatorContext.request.post(
+    definitionsPath,
+    {
+      headers: coordinatorHeaders,
+      data: {
+        definitionKey,
+        type: 'SENSORY_PROFILE',
+        title: 'P5-006 Trusted Sensory Profile',
+        framework: 'Deterministic E2E scoring fixture',
+        body: definitionBody,
+      },
+    },
+  );
+  expect(createdDefinition.status()).toBe(201);
+  const definition = (await createdDefinition.json()).data;
+
+  const createdAssignment = await coordinatorContext.request.post(
+    assignmentsPath,
+    {
+      headers: coordinatorHeaders,
+      data: {
+        definitionId: definition.id,
+        assignedToMembershipId: fixture.specialistMembershipId,
+        studentId: fixture.studentId,
+        academicYear: fixture.academicYear,
+        dueDate: fixture.dueDate,
+        priority: 'HIGH',
+        notes: 'P5-006 browser lifecycle fixture.',
+      },
+    },
+  );
+  expect(createdAssignment.status()).toBe(201);
+  const assignment = (await createdAssignment.json()).data;
+
+  const specialistContext = await browser.newContext();
+  await authenticate(specialistContext, fixture.specialistEmail);
+  const specialistHeaders = await csrfHeaders(specialistContext.request);
+  const observationPath = `/api/v1/organizations/${fixture.organizationId}/observation-assignments/${assignment.id}/sensory-profile-observation`;
+  const page = await specialistContext.newPage();
+  await openObservationWorkspace(page);
+  await page
+    .locator(`#assigned-task-open-sensory_profile-${assignment.id}`)
+    .click();
+  await expect(page.locator('#sensory-profile-view')).toBeVisible();
+  await expect(
+    page.getByText('Provisional Preview', { exact: true }),
+  ).toBeVisible();
+
+  await page.locator('#btn-sensory-sensory-auditory-1-0').click();
+  const draftResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes(observationPath) &&
+      response.request().method() === 'POST',
+  );
+  await page.locator('#sensory-save-draft-btn').click();
+  expect((await draftResponse).status()).toBe(201);
+  await expect(page.getByText('Server Score', { exact: true })).toBeVisible();
+
+  const incompleteCompletion = await specialistContext.request.post(
+    `${observationPath}/complete`,
+    {
+      headers: specialistHeaders,
+      data: {
+        observationDate: '2026-08-26',
+        teacherContactFrequency: 'Daily',
+        teacherContactLength: '30 minutes',
+        responses: { 'sensory-auditory-1': 0 },
+        notes: 'Boundary zero is a recorded response.',
+      },
+    },
+  );
+  expect(incompleteCompletion.status()).toBe(400);
+  expect(await incompleteCompletion.json()).toMatchObject({
+    error: { code: 'SENSORY_PROFILE_RESPONSES_INCOMPLETE' },
+  });
+
+  await page.reload();
+  await openObservationWorkspace(page);
+  await page
+    .locator(`#assigned-task-open-sensory_profile-${assignment.id}`)
+    .click();
+  await expect(page.locator('#btn-sensory-sensory-auditory-1-0')).toHaveClass(
+    /text-white/,
+  );
+  await page.locator('#sensory-tab-visual').click();
+  await page.locator('#btn-sensory-sensory-visual-1-5').click();
+  await page.locator('#sensory-tab-touch').click();
+  await page.locator('#btn-sensory-sensory-touch-1-3').click();
+
+  const completeResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes(`${observationPath}/complete`) &&
+      response.request().method() === 'POST',
+  );
+  await page.locator('#sensory-complete-btn').click();
+  expect((await completeResponse).status()).toBe(200);
+  await expect(
+    page.getByText(
+      'This observation is completed. Scores and totals shown are server-derived.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(page.getByText('Server Score', { exact: true })).toBeVisible();
+
+  const history = await specialistContext.request.get(
+    `/api/v1/organizations/${fixture.organizationId}/students/${fixture.studentId}/sensory-profile-observations`,
+  );
+  expect(history.status()).toBe(200);
+  const completed = (await history.json()).data.find(
+    (record: { assignmentId: string }) => record.assignmentId === assignment.id,
+  );
+  expect(completed).toMatchObject({
+    status: 'COMPLETED',
+    definitionId: definition.id,
+    responses: {
+      'sensory-auditory-1': 0,
+      'sensory-visual-1': 5,
+      'sensory-touch-1': 3,
+    },
+    sectionScores: {
+      auditory: { raw: 0, max: 5 },
+      visual: { raw: 5, max: 5 },
+      touch: { raw: 3, max: 5 },
+      movement: { raw: 0, max: 0 },
+      behavioral: { raw: 0, max: 0 },
+    },
+    totalRawScore: 8,
+    definition: { id: definition.id, version: 1, body: definitionBody },
+  });
+
+  const reference = await coordinatorContext.request.get(
+    `/api/v1/organizations/${fixture.organizationId}/students/${fixture.studentId}/sensory-profile-observations/reference`,
+  );
+  expect(reference.status()).toBe(200);
+  expect(await reference.json()).toMatchObject({
+    data: {
+      assignmentId: assignment.id,
+      status: 'COMPLETED',
+      totalRawScore: 8,
+    },
+  });
+
+  await specialistContext.close();
+  await coordinatorContext.close();
+});

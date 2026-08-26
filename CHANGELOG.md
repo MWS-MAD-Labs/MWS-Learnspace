@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - API-backed Learning Journey collection/detail reads and draft creation/updates with strict nested contracts, organization and role scopes, active membership owners, transactional projects/goals/connections, audit events, integer optimistic concurrency, stale-version UI recovery, canonical server filters, and dedicated Compose Playwright coverage.
 - Explicit versioned Learning Journey submit, Principal review/return, and Director approval/return commands with session-derived actors, creator/owner submission authorization, conditional state/version updates, immutable workflow history and return feedback, same-transaction audit events, stale/simultaneous-command protection, and PostgreSQL transition-table coverage.
 - Dedicated persistent local PostgreSQL integration-test Compose service and `npm run test:integration:local` migration/test command.
+- Assignment-bound Sensory Profile APIs and web workflows with strict pinned-definition contracts, server-validated `0`–`5` ratings, trusted section/total scoring, transactional completion and audits, API-backed history/reference/reporting, and dedicated PostgreSQL and Compose-backed browser coverage.
 
 ### Changed
 
@@ -59,6 +60,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Replaced browser-selected startup identity with the API current-session response. The fake-data role switcher now requires both explicit development-only build flags and cannot change server identity.
 - Migrated the attendance workspace from browser seed/storage data to authorized API class rosters and PostgreSQL records, including loading, empty, retry, validation, read-only, conflict, and save-success states.
 - Migrated production user identity, membership, student directory, and GPK assignment administration away from browser storage; development fake-data behavior remains available only behind the explicit demo flags.
+- Migrated Sensory Profile authoring, completion, history, detailed reporting, and reference data away from browser persistence; completed records now retain their exact server-pinned definition and authoritative scores.
 - Restricted broad student responses from exposing addresses or guardian contacts, and limited sensitive student detail to documented leadership and Special Education Coordinator scope.
 - Updated the application and workspace package version to `0.2.0`, the first end-to-end feature migration release.
 

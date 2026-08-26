@@ -3,6 +3,7 @@ import { fedcDefinitionBodySchema } from '@learnspace/contracts';
 import { Student, User } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { useFEDCObservations } from '../../hooks/useFEDCObservations';
+import { useSensoryProfileObservations } from '../../hooks/useSensoryProfileObservations';
 import { storageService } from '../../services/storageService';
 import {
   Brain,
@@ -21,7 +22,7 @@ import {
   Info,
   RefreshCw,
 } from 'lucide-react';
-import { SENSORY_PROFILE_ITEMS, SFA_SETTINGS } from '../../data/seedData';
+import { SFA_SETTINGS } from '../../data/seedData';
 
 function recordFedcMilestones(record: unknown) {
   const candidate = record as {
@@ -29,6 +30,80 @@ function recordFedcMilestones(record: unknown) {
   };
   const parsed = fedcDefinitionBodySchema.safeParse(candidate.definition?.body);
   return parsed.success ? parsed.data.milestones : [];
+}
+
+function recordSensorySections(record: unknown) {
+  const candidate = record as {
+    definition?: { body?: { items?: unknown; sections?: unknown } };
+  };
+  const flatItems = candidate.definition?.body?.items;
+  if (Array.isArray(flatItems)) {
+    return ['Auditory', 'Visual', 'Touch', 'Movement', 'Behavioral'].flatMap(
+      (sectionName) => {
+        const items = flatItems.flatMap((itemValue) => {
+          if (!itemValue || typeof itemValue !== 'object') return [];
+          const item = itemValue as Record<string, unknown>;
+          if (item.section !== sectionName || !item.id || !item.text) return [];
+          return [
+            {
+              id: String(item.id),
+              number: String(item.number || ''),
+              text: String(item.text),
+              quadrant:
+                typeof item.quadrant === 'string' ? item.quadrant : undefined,
+              factorLabel:
+                typeof item.factorLabel === 'string'
+                  ? item.factorLabel
+                  : undefined,
+            },
+          ];
+        });
+        return items.length
+          ? [
+              {
+                id: sectionName.toLowerCase(),
+                title: `${sectionName} Processing`,
+                maxScore: items.length * 5,
+                items,
+              },
+            ]
+          : [];
+      },
+    );
+  }
+
+  const sections = candidate.definition?.body?.sections;
+  if (!Array.isArray(sections)) return [];
+  return sections.flatMap((sectionValue) => {
+    if (!sectionValue || typeof sectionValue !== 'object') return [];
+    const section = sectionValue as Record<string, unknown>;
+    if (!Array.isArray(section.items)) return [];
+    return [
+      {
+        id: String(section.id || section.title || ''),
+        title: String(section.title || section.id || 'Sensory section'),
+        maxScore: typeof section.maxScore === 'number' ? section.maxScore : 0,
+        items: section.items.flatMap((itemValue) => {
+          if (!itemValue || typeof itemValue !== 'object') return [];
+          const item = itemValue as Record<string, unknown>;
+          if (!item.id || !item.text) return [];
+          return [
+            {
+              id: String(item.id),
+              number: String(item.number || ''),
+              text: String(item.text),
+              quadrant:
+                typeof item.quadrant === 'string' ? item.quadrant : undefined,
+              factorLabel:
+                typeof item.factorLabel === 'string'
+                  ? item.factorLabel
+                  : undefined,
+            },
+          ];
+        }),
+      },
+    ];
+  });
 }
 
 interface ObservationHistoryViewerProps {
@@ -47,6 +122,10 @@ export const ObservationHistoryViewer: React.FC<
 > = ({ student, currentUser, onNavigateToIEP, onOpenAssessmentForm }) => {
   const { organizationId } = useApp();
   const fedcHistory = useFEDCObservations(organizationId, student.id);
+  const sensoryHistory = useSensoryProfileObservations(
+    organizationId,
+    student.id,
+  );
   const [selectedInstrument, setSelectedInstrument] = useState<
     'ALL' | 'FEDC' | 'SENSORY' | 'SFA'
   >('ALL');
@@ -70,7 +149,9 @@ export const ObservationHistoryViewer: React.FC<
   const fedcRecords = fedcHistory.observations.filter(
     (record) => record.status.toUpperCase() === 'COMPLETED',
   );
-  const sensoryRecords = storageService.getSensoryProfiles(student.id);
+  const sensoryRecords = sensoryHistory.observations.filter(
+    (record) => record.status.toUpperCase() === 'COMPLETED',
+  );
   const sfaRecords = storageService.getSFAObservations(student.id);
 
   // Available observation years
@@ -277,6 +358,25 @@ export const ObservationHistoryViewer: React.FC<
               <button
                 type="button"
                 onClick={fedcHistory.retry}
+                className="px-3 py-1.5 bg-white border border-rose-200 rounded-lg font-bold flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Retry
+              </button>
+            </div>
+          )}
+        {(selectedInstrument === 'ALL' || selectedInstrument === 'SENSORY') &&
+          sensoryHistory.status === 'loading' && (
+            <div className="bg-white border border-[#EFE7DC] rounded-2xl p-6 text-sm text-stone-500 text-center">
+              Loading Sensory Profile observation history…
+            </div>
+          )}
+        {(selectedInstrument === 'ALL' || selectedInstrument === 'SENSORY') &&
+          sensoryHistory.status === 'error' && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-rose-800">
+              <span>{sensoryHistory.error}</span>
+              <button
+                type="button"
+                onClick={sensoryHistory.retry}
                 className="px-3 py-1.5 bg-white border border-rose-200 rounded-lg font-bold flex items-center gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Retry
@@ -524,7 +624,11 @@ export const ObservationHistoryViewer: React.FC<
                         <button
                           id={`edit-sensory-form-btn-${rec.id}`}
                           onClick={() =>
-                            onOpenAssessmentForm('SENSORY_PROFILE', rec.id)
+                            onOpenAssessmentForm(
+                              'SENSORY_PROFILE',
+                              rec.id,
+                              rec.assignmentId,
+                            )
                           }
                           className="w-full py-1.5 text-xs font-bold text-stone-700 hover:text-emerald-800 bg-white hover:bg-stone-50 rounded-xl border border-[#E8DFC8] flex items-center justify-center gap-1 transition-all"
                         >
@@ -736,7 +840,8 @@ export const ObservationHistoryViewer: React.FC<
                       onOpenAssessmentForm(
                         type,
                         activeDetailRecord.data.id,
-                        activeDetailRecord.type === 'FEDC'
+                        activeDetailRecord.type === 'FEDC' ||
+                          activeDetailRecord.type === 'SENSORY'
                           ? activeDetailRecord.data.assignmentId
                           : undefined,
                       );
@@ -1091,7 +1196,16 @@ export const ObservationHistoryViewer: React.FC<
                       <p className="text-2xl font-black text-emerald-950">
                         {activeDetailRecord.data.totalRawScore}{' '}
                         <span className="text-sm font-normal text-emerald-600">
-                          / 220 Points
+                          /{' '}
+                          {activeDetailRecord.data.maxPossibleScore ||
+                            Object.values(
+                              activeDetailRecord.data.sectionScores || {},
+                            ).reduce(
+                              (total: number, score: any) =>
+                                total + (score.max || 0),
+                              0,
+                            )}{' '}
+                          Points
                         </span>
                       </p>
                       <p className="text-xs text-emerald-800 mt-0.5">
@@ -1202,97 +1316,90 @@ export const ObservationHistoryViewer: React.FC<
                         </p>
                       </div>
 
-                      {/* 44 Items List grouped by Section */}
-                      {[
-                        'Auditory',
-                        'Visual',
-                        'Touch',
-                        'Movement',
-                        'Behavioral',
-                      ].map((sec) => {
-                        const items = SENSORY_PROFILE_ITEMS.filter(
-                          (i) => i.section === sec,
-                        );
-                        return (
-                          <div
-                            key={sec}
-                            className="bg-white border border-[#E8DFC8] rounded-2xl overflow-hidden shadow-2xs"
-                          >
-                            <div className="bg-[#FAF5EF] px-4 py-2.5 border-b border-[#E8DFC8] flex items-center justify-between">
-                              <h5 className="font-bold text-xs text-stone-900">
-                                {sec} Processing Items ({items.length})
-                              </h5>
-                              <span className="text-[11px] font-bold text-emerald-900">
-                                School Companion
-                              </span>
-                            </div>
+                      {/* Pinned definition items grouped by section */}
+                      {recordSensorySections(activeDetailRecord.data).map(
+                        (section) => {
+                          const items = section.items;
+                          return (
+                            <div
+                              key={section.id}
+                              className="bg-white border border-[#E8DFC8] rounded-2xl overflow-hidden shadow-2xs"
+                            >
+                              <div className="bg-[#FAF5EF] px-4 py-2.5 border-b border-[#E8DFC8] flex items-center justify-between">
+                                <h5 className="font-bold text-xs text-stone-900">
+                                  {section.title} ({items.length})
+                                </h5>
+                                <span className="text-[11px] font-bold text-emerald-900">
+                                  School Companion
+                                </span>
+                              </div>
 
-                            <div className="divide-y divide-stone-100">
-                              {items.map((item) => {
-                                const val =
-                                  activeDetailRecord.data.responses?.[
-                                    item.id
-                                  ] ??
-                                  (item.id === 'sp-1' || item.id === 'sp-2'
-                                    ? 5
-                                    : item.id === 'sp-3'
-                                      ? 4
-                                      : 2);
-                                return (
-                                  <div
-                                    key={item.id}
-                                    className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-stone-50/60"
-                                  >
-                                    <div className="space-y-0.5 max-w-xl">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-mono text-[10px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.2 rounded">
-                                          Item #{item.number}
-                                        </span>
-                                        <span className="text-xs font-semibold text-stone-800">
-                                          {item.text}
-                                        </span>
+                              <div className="divide-y divide-stone-100">
+                                {items.map((item) => {
+                                  const val =
+                                    activeDetailRecord.data.responses?.[
+                                      item.id
+                                    ];
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-stone-50/60"
+                                    >
+                                      <div className="space-y-0.5 max-w-xl">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-mono text-[10px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.2 rounded">
+                                            Item #{item.number}
+                                          </span>
+                                          <span className="text-xs font-semibold text-stone-800">
+                                            {item.text}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[10px] text-stone-500">
+                                          <span>
+                                            Quadrant:{' '}
+                                            <strong>{item.quadrant}</strong>
+                                          </span>
+                                          <span>•</span>
+                                          <span>
+                                            {item.factorLabel ||
+                                              'SENSORY PROFILE'}
+                                          </span>
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-2 text-[10px] text-stone-500">
-                                        <span>
-                                          Quadrant:{' '}
-                                          <strong>{item.quadrant}</strong>
-                                        </span>
-                                        <span>•</span>
-                                        <span>
-                                          {item.factorLabel ||
-                                            'SENSORY PROFILE'}
+
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <span
+                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                                            val >= 4
+                                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                              : val === 3
+                                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                                : 'bg-stone-100 text-stone-700 border border-stone-200'
+                                          }`}
+                                        >
+                                          {val === 5
+                                            ? '5 - Almost Always'
+                                            : val === 4
+                                              ? '4 - Frequently'
+                                              : val === 3
+                                                ? '3 - Half Time'
+                                                : val === 2
+                                                  ? '2 - Occasionally'
+                                                  : val === 1
+                                                    ? '1 - Almost Never'
+                                                    : val === 0
+                                                      ? '0 - Does Not Apply'
+                                                      : 'Not answered'}
                                         </span>
                                       </div>
                                     </div>
-
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <span
-                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                                          val >= 4
-                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                            : val === 3
-                                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                              : 'bg-stone-100 text-stone-700 border border-stone-200'
-                                        }`}
-                                      >
-                                        {val === 5
-                                          ? '5 - Almost Always'
-                                          : val === 4
-                                            ? '4 - Frequently'
-                                            : val === 3
-                                              ? '3 - Half Time'
-                                              : val === 2
-                                                ? '2 - Occasionally'
-                                                : '1 - Almost Never'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        },
+                      )}
                     </div>
                   )}
 

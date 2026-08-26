@@ -139,6 +139,58 @@ const fedcCommand = {
   notes: 'Observed in class.',
 };
 
+const sensoryObservation = {
+  id: observationId,
+  organizationId,
+  assignmentId,
+  studentId,
+  student: fedcObservation.student,
+  definitionId,
+  observerId: userId,
+  definition: {
+    ...fedcObservation.definition,
+    definitionKey: 'sensory-profile',
+    type: 'SENSORY_PROFILE',
+    title: 'Sensory Profile Instrument',
+    body: {
+      items: [
+        {
+          id: 'sensory-1',
+          number: 1,
+          text: 'Responds to unexpected sounds.',
+          section: 'Auditory',
+        },
+      ],
+    },
+  },
+  observer: fedcObservation.observer,
+  observationDate: '2026-08-26',
+  status: 'IN_PROGRESS',
+  responses: { 'sensory-1': 0 },
+  sectionScores: {
+    auditory: { raw: 0, max: 5 },
+    visual: { raw: 0, max: 0 },
+    touch: { raw: 0, max: 0 },
+    movement: { raw: 0, max: 0 },
+    behavioral: { raw: 0, max: 0 },
+  },
+  totalRawScore: 0,
+  teacherContactFrequency: 'Daily',
+  teacherContactLength: 'Full school year',
+  notes: 'Observed in class.',
+  completedAt: null,
+  createdAt: '2026-08-26T00:00:00.000Z',
+  updatedAt: '2026-08-26T00:00:00.000Z',
+};
+
+const sensoryCommand = {
+  observationDate: '2026-08-26',
+  responses: { 'sensory-1': 0 as const },
+  teacherContactFrequency: 'Daily',
+  teacherContactLength: 'Full school year',
+  notes: 'Observed in class.',
+};
+
 function response(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -254,6 +306,97 @@ describe('observationService', () => {
       expect(body).not.toHaveProperty('maxPossibleScore');
       expect(JSON.stringify(body)).not.toContain('"score"');
     });
+  });
+
+  it('uses assignment-bound Sensory mutation routes and preserves rating zero without client scores', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () => response({ data: sensoryObservation }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await observationService.createSensoryObservation(
+      organizationId,
+      assignmentId,
+      sensoryCommand,
+    );
+    await observationService.saveSensoryObservationDraft(
+      organizationId,
+      assignmentId,
+      sensoryCommand,
+    );
+    await observationService.completeSensoryObservation(
+      organizationId,
+      assignmentId,
+      sensoryCommand,
+    );
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `/api/v1/organizations/${organizationId}/observation-assignments/${assignmentId}/sensory-profile-observation`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `/api/v1/organizations/${organizationId}/observation-assignments/${assignmentId}/sensory-profile-observation`,
+      expect.objectContaining({ method: 'PUT' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      `/api/v1/organizations/${organizationId}/observation-assignments/${assignmentId}/sensory-profile-observation/complete`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    fetchMock.mock.calls.forEach((call) => {
+      const init = call[1] as RequestInit;
+      const body = JSON.parse(init.body as string) as Record<string, unknown>;
+      expect(body).toEqual(sensoryCommand);
+      expect(body).not.toHaveProperty('sectionScores');
+      expect(body).not.toHaveProperty('totalRawScore');
+      expect(body).not.toHaveProperty('maxPossibleScore');
+      expect(body.responses).toEqual({ 'sensory-1': 0 });
+    });
+  });
+
+  it('loads Sensory detail, student history, and reference routes', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response({ data: sensoryObservation }))
+      .mockResolvedValueOnce(
+        response({ data: [sensoryObservation], meta: { count: 1 } }),
+      )
+      .mockResolvedValueOnce(response({ data: sensoryObservation }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const detail = await observationService.getSensoryObservation(
+      organizationId,
+      assignmentId,
+    );
+    const history = await observationService.getStudentSensoryObservations(
+      organizationId,
+      studentId,
+    );
+    const reference = await observationService.getStudentSensoryReference(
+      organizationId,
+      studentId,
+    );
+
+    expect(detail.responses['sensory-1']).toBe(0);
+    expect(history).toHaveLength(1);
+    expect(reference.latestObservation?.id).toBe(observationId);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `/api/v1/organizations/${organizationId}/observation-assignments/${assignmentId}/sensory-profile-observation`,
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `/api/v1/organizations/${organizationId}/students/${studentId}/sensory-profile-observations`,
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      `/api/v1/organizations/${organizationId}/students/${studentId}/sensory-profile-observations/reference`,
+      expect.objectContaining({ method: 'GET' }),
+    );
   });
 
   it('loads FEDC detail, student history, and reference routes', async () => {

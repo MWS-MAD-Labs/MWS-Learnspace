@@ -115,11 +115,27 @@ export const ObservationView: React.FC = () => {
         assignment.studentId === currentStudent?.id &&
         assignment.instrumentType === 'FEDC',
     ) ??
-    pendingAssignments.find(
+    (!activeAssignmentId
+      ? pendingAssignments.find(
+          (assignment) =>
+            assignment.studentId === currentStudent?.id &&
+            assignment.instrumentType === 'FEDC',
+        )
+      : undefined);
+  const activeSensoryAssignment =
+    myAssignments.find(
       (assignment) =>
+        assignment.id === activeAssignmentId &&
         assignment.studentId === currentStudent?.id &&
-        assignment.instrumentType === 'FEDC',
-    );
+        assignment.instrumentType === 'SENSORY_PROFILE',
+    ) ??
+    (!activeAssignmentId
+      ? pendingAssignments.find(
+          (assignment) =>
+            assignment.studentId === currentStudent?.id &&
+            assignment.instrumentType === 'SENSORY_PROFILE',
+        )
+      : undefined);
 
   return (
     <div
@@ -251,20 +267,25 @@ export const ObservationView: React.FC = () => {
                   </p>
                 </div>
 
-                {assignment.instrumentType === 'FEDC' ? (
+                {assignment.instrumentType === 'FEDC' ||
+                assignment.instrumentType === 'SENSORY_PROFILE' ? (
                   <button
-                    id={`assigned-task-open-fedc-${assignment.id}`}
+                    id={`assigned-task-open-${assignment.instrumentType.toLowerCase()}-${assignment.id}`}
                     type="button"
                     onClick={() => {
                       setChosenStudentId(assignment.studentId);
                       setSelectedStudentId(assignment.studentId);
                       setActiveAssignmentId(assignment.id);
-                      setSpecialEdSubTab('FEDC');
+                      setSpecialEdSubTab(assignment.instrumentType);
                       setViewMode('ACTIVE_FORM');
                     }}
                     className="px-3 py-1.5 bg-[#6E161E] border border-[#6E161E] text-white rounded-lg text-[10px] font-bold shrink-0"
                   >
-                    Open assigned FEDC form
+                    Open assigned{' '}
+                    {assignment.instrumentType === 'FEDC'
+                      ? 'FEDC'
+                      : 'Sensory Profile'}{' '}
+                    form
                   </button>
                 ) : (
                   <span className="px-3 py-1.5 bg-stone-100 border border-stone-200 text-stone-500 rounded-lg text-[10px] font-bold shrink-0">
@@ -409,7 +430,10 @@ export const ObservationView: React.FC = () => {
             currentUser={currentUser}
             onNavigateToIEP={navigateToIEP}
             onOpenAssessmentForm={(type, _recordId, assignmentId) => {
-              if (type === 'FEDC' && assignmentId) {
+              if (
+                (type === 'FEDC' || type === 'SENSORY_PROFILE') &&
+                assignmentId
+              ) {
                 const assignment = myAssignments.find(
                   (candidate) => candidate.id === assignmentId,
                 );
@@ -484,7 +508,21 @@ export const ObservationView: React.FC = () => {
                   </p>
                 </div>
               ))}
-            {specialEdSubTab === 'SENSORY_PROFILE' && <SensoryProfileView />}
+            {specialEdSubTab === 'SENSORY_PROFILE' &&
+              (activeSensoryAssignment ? (
+                <SensoryProfileView assignment={activeSensoryAssignment} />
+              ) : (
+                <div className="bg-white border border-dashed border-[#E8DFC8] rounded-2xl p-8 text-center space-y-2">
+                  <AlertCircle className="w-6 h-6 text-amber-600 mx-auto" />
+                  <h3 className="text-sm font-bold text-stone-900">
+                    No active Sensory Profile assignment for this student
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Sensory Profile observations must be started from a pending
+                    or in-progress coordinator assignment.
+                  </p>
+                </div>
+              ))}
             {specialEdSubTab === 'SFA' && <SFAObservationView />}
           </div>
         </div>

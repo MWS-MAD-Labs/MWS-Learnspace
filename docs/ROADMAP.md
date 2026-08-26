@@ -790,10 +790,11 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-006 — Migrate Sensory Profile observations
 
-- [ ] **Dependencies:** P5-004
+- [x] **Dependencies:** P5-004
 - **Change:** migrate responses, section scoring, completion, history, and reporting.
 - **Acceptance:** server validates rating range and recalculates all totals.
 - **Validate:** scoring boundary and authorization tests plus E2E flow.
+- **Completed (2026-08-27):** Added strict shared Sensory Profile definition, rating, draft, completion, history, and reference contracts; assignment-bound lifecycle APIs with exact-assignee writes, authorized history/reference reads, atomic assignment/record transitions, and session-derived audits; pinned-definition validation; integer `0` through `5` response enforcement; partial-draft support and complete-response requirements; and server-only section maximum, section raw-score, and total recalculation with client total/status/identity spoof rejection. The web now opens Sensory Profiles only from coordinator assignments, renders the pinned rubric, persists and reloads drafts through the API, treats returned scores as authoritative, locks completed records, and uses API-backed history, detailed reporting, and reference data. Production Sensory Profile `localStorage` initialization and read/write methods were removed. Unit, contract, component, OpenAPI, focused PostgreSQL integration, and Compose-backed Playwright coverage validate rating boundaries, authorization, draft reload, incomplete completion rejection, trusted totals, pinned definitions, history, and reference behavior.
 
 ## P5-007 — Migrate SFA observations
 

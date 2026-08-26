@@ -11,6 +11,11 @@ import {
   observationDefinitionCreateCommandSchema,
   observationDefinitionVersionCreateCommandSchema,
   observationStatusSchema,
+  sensoryProfileDefinitionBodySchema,
+  sensoryProfileObservationCompleteCommandSchema,
+  sensoryProfileObservationCreateDraftCommandSchema,
+  sensoryProfileObservationResponseSchema,
+  sensoryProfileObservationSaveDraftCommandSchema,
 } from '@learnspace/contracts';
 import { hasPermission } from '../src/authorization.js';
 
@@ -33,6 +38,24 @@ const definition = {
   type: 'FEDC',
   title: 'FEDC Development',
   body: { sections: [{ id: 'gross-motor', items: [] }] },
+};
+
+const sensoryProfileBody = {
+  items: [
+    {
+      id: 'sp-1',
+      number: 1,
+      section: 'Auditory',
+      text: 'Reacts strongly to unexpected sounds.',
+      quadrant: 'SN',
+    },
+    {
+      id: 'sp-2',
+      number: 2,
+      section: 'Behavioral',
+      text: 'Needs support after sensory overload.',
+    },
+  ],
 };
 
 const scorableFedcBody = {
@@ -161,6 +184,91 @@ describe('observation management contracts and authorization', () => {
         },
       }).success,
     ).toBe(false);
+  });
+
+  it('defines strict Sensory Profile commands and a pinned response projection', () => {
+    const command = {
+      observationDate: '2026-08-26',
+      teacherContactFrequency: 'Daily',
+      responses: { 'sp-1': 0, 'sp-2': 5 },
+    };
+    expect(
+      sensoryProfileObservationCreateDraftCommandSchema.safeParse({
+        observationDate: command.observationDate,
+      }).success,
+    ).toBe(true);
+    expect(
+      sensoryProfileObservationSaveDraftCommandSchema.safeParse(command)
+        .success,
+    ).toBe(true);
+    expect(
+      sensoryProfileObservationCompleteCommandSchema.safeParse(command).success,
+    ).toBe(true);
+    expect(
+      sensoryProfileDefinitionBodySchema.safeParse(sensoryProfileBody).success,
+    ).toBe(true);
+    expect(
+      sensoryProfileObservationSaveDraftCommandSchema.safeParse({
+        ...command,
+        totalRawScore: 5,
+      }).success,
+    ).toBe(false);
+
+    const timestamp = '2026-08-26T12:00:00.000Z';
+    expect(
+      sensoryProfileObservationResponseSchema.parse({
+        data: {
+          id: definitionId,
+          organizationId: membershipId,
+          assignmentId: studentId,
+          studentId,
+          definitionId,
+          observerId: membershipId,
+          observationDate: '2026-08-26',
+          status: 'COMPLETED',
+          teacherContactFrequency: 'Daily',
+          teacherContactLength: null,
+          responses: { 'sp-1': 0, 'sp-2': 5 },
+          sectionScores: {
+            auditory: { raw: 0, max: 5 },
+            visual: { raw: 0, max: 0 },
+            touch: { raw: 0, max: 0 },
+            movement: { raw: 0, max: 0 },
+            behavioral: { raw: 5, max: 5 },
+          },
+          totalRawScore: 5,
+          notes: null,
+          completedAt: timestamp,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          student: {
+            id: studentId,
+            organizationId: membershipId,
+            studentNumber: 'S-1',
+            fullName: 'Student',
+            nickname: null,
+            avatarUrl: null,
+          },
+          observer: { id: membershipId, displayName: 'Observer' },
+          definition: {
+            id: definitionId,
+            organizationId: membershipId,
+            definitionKey: 'sensory-profile',
+            version: 1,
+            type: 'SENSORY_PROFILE',
+            title: 'Sensory Profile',
+            framework: null,
+            description: null,
+            targetAges: null,
+            defaultFrequency: null,
+            body: sensoryProfileBody,
+            isActive: true,
+            publishedAt: timestamp,
+            createdAt: timestamp,
+          },
+        },
+      }).data.definition.body,
+    ).toEqual(sensoryProfileBody);
   });
 
   it('requires an exact scorable FEDC definition projection in record responses', () => {

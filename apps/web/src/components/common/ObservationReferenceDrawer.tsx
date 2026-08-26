@@ -3,6 +3,7 @@ import { fedcDefinitionBodySchema } from '@learnspace/contracts';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storageService';
 import { useFEDCObservationReference } from '../../hooks/useFEDCObservations';
+import { useSensoryProfileObservationReference } from '../../hooks/useSensoryProfileObservations';
 
 import {
   X,
@@ -34,6 +35,11 @@ export const ObservationReferenceDrawer: React.FC<
   const fedcReference = useFEDCObservationReference(organizationId, studentId, {
     enabled: isOpen,
   });
+  const sensoryReference = useSensoryProfileObservationReference(
+    organizationId,
+    studentId,
+    { enabled: isOpen },
+  );
 
   const student = students.find((candidate) => candidate.id === studentId);
   const latestFedc = fedcReference.reference?.latestObservation || undefined;
@@ -44,8 +50,8 @@ export const ObservationReferenceDrawer: React.FC<
     ? fedcDefinition.data.milestones
     : [];
 
-  const sensoryRecords = storageService.getSensoryProfiles(studentId);
-  const latestSensory = sensoryRecords[0];
+  const latestSensory =
+    sensoryReference.reference?.latestObservation || undefined;
 
   const sfaRecords = storageService.getSFAObservations(studentId);
   const latestSfa = sfaRecords[0];
@@ -307,27 +313,53 @@ export const ObservationReferenceDrawer: React.FC<
 
             {activeTab === 'SENSORY_PROFILE' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between bg-emerald-50/70 p-3 rounded-lg border border-emerald-200">
-                  <div>
-                    <span className="text-xs font-bold text-emerald-900">
-                      Sensory Profile Completed
-                    </span>
-                    <p className="text-xs text-emerald-700 mt-0.5">
-                      Observer:{' '}
-                      {latestSensory?.observerName || 'Special Ed Coordinator'}{' '}
-                      · Date: {latestSensory?.observationDate || 'N/A'}
-                    </p>
+                {sensoryReference.status === 'loading' && (
+                  <div className="p-4 rounded-lg border border-stone-200 bg-white text-xs text-stone-500 text-center">
+                    Loading Sensory Profile reference…
                   </div>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onNavigateToFull('SENSORY_PROFILE');
-                    }}
-                    className="flex items-center gap-1 text-xs font-semibold text-[#6E161E] hover:underline"
-                  >
-                    Open Full Form <ExternalLink className="w-3 h-3" />
-                  </button>
-                </div>
+                )}
+                {sensoryReference.status === 'error' && (
+                  <div className="p-4 rounded-lg border border-rose-200 bg-rose-50 text-xs text-rose-800 flex items-center justify-between gap-3">
+                    <span>{sensoryReference.error}</span>
+                    <button
+                      type="button"
+                      onClick={sensoryReference.retry}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-rose-200 font-bold flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Retry
+                    </button>
+                  </div>
+                )}
+                {sensoryReference.status === 'ready' && !latestSensory && (
+                  <div className="p-4 rounded-lg border border-dashed border-stone-300 bg-white text-xs text-stone-500 text-center">
+                    No Sensory Profile observation is available for this
+                    student.
+                  </div>
+                )}
+                {latestSensory && (
+                  <div className="flex items-center justify-between bg-emerald-50/70 p-3 rounded-lg border border-emerald-200">
+                    <div>
+                      <span className="text-xs font-bold text-emerald-900">
+                        Sensory Profile Completed
+                      </span>
+                      <p className="text-xs text-emerald-700 mt-0.5">
+                        Observer:{' '}
+                        {latestSensory?.observerName ||
+                          'Special Ed Coordinator'}{' '}
+                        · Date: {latestSensory?.observationDate || 'N/A'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onNavigateToFull('SENSORY_PROFILE');
+                      }}
+                      className="flex items-center gap-1 text-xs font-semibold text-[#6E161E] hover:underline"
+                    >
+                      Open Full Form <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
 
                 {latestSensory?.notes && (
                   <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
@@ -340,80 +372,31 @@ export const ObservationReferenceDrawer: React.FC<
                   </div>
                 )}
 
-                {/* Section Scores Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-white border border-stone-200 rounded-lg">
-                    <span className="text-xs text-stone-500 font-medium">
-                      Auditory Processing
-                    </span>
-                    <div className="text-lg font-bold text-stone-900 mt-0.5">
-                      {latestSensory?.sectionScores.auditory.raw || 0}{' '}
-                      <span className="text-xs text-stone-400 font-normal">
-                        / {latestSensory?.sectionScores.auditory.max || 40}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.5 rounded mt-1 inline-block">
-                      Elevated Sensitivity
-                    </span>
+                {latestSensory && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(latestSensory.sectionScores).map(
+                      ([sectionId, score]: [
+                        string,
+                        { raw: number; max: number },
+                      ]) => (
+                        <div
+                          key={sectionId}
+                          className="p-3 bg-white border border-stone-200 rounded-lg"
+                        >
+                          <span className="text-xs text-stone-500 font-medium capitalize">
+                            {sectionId.replaceAll('_', ' ')}
+                          </span>
+                          <div className="text-lg font-bold text-stone-900 mt-0.5">
+                            {score.raw}{' '}
+                            <span className="text-xs text-stone-400 font-normal">
+                              / {score.max}
+                            </span>
+                          </div>
+                        </div>
+                      ),
+                    )}
                   </div>
-
-                  <div className="p-3 bg-white border border-stone-200 rounded-lg">
-                    <span className="text-xs text-stone-500 font-medium">
-                      Touch Processing
-                    </span>
-                    <div className="text-lg font-bold text-stone-900 mt-0.5">
-                      {latestSensory?.sectionScores.touch.raw || 0}{' '}
-                      <span className="text-xs text-stone-400 font-normal">
-                        / {latestSensory?.sectionScores.touch.max || 40}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.5 rounded mt-1 inline-block">
-                      Tactile Defensiveness
-                    </span>
-                  </div>
-
-                  <div className="p-3 bg-white border border-stone-200 rounded-lg">
-                    <span className="text-xs text-stone-500 font-medium">
-                      Visual Processing
-                    </span>
-                    <div className="text-lg font-bold text-stone-900 mt-0.5">
-                      {latestSensory?.sectionScores.visual.raw || 0}{' '}
-                      <span className="text-xs text-stone-400 font-normal">
-                        / {latestSensory?.sectionScores.visual.max || 40}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">
-                      Typical Range
-                    </span>
-                  </div>
-
-                  <div className="p-3 bg-white border border-stone-200 rounded-lg">
-                    <span className="text-xs text-stone-500 font-medium">
-                      Movement / Vestibular
-                    </span>
-                    <div className="text-lg font-bold text-stone-900 mt-0.5">
-                      {latestSensory?.sectionScores.movement.raw || 0}{' '}
-                      <span className="text-xs text-stone-400 font-normal">
-                        / {latestSensory?.sectionScores.movement.max || 40}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">
-                      Typical Range
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-white border border-stone-200 rounded-lg">
-                  <span className="text-xs text-stone-500 font-medium">
-                    Behavioral Responses
-                  </span>
-                  <div className="text-lg font-bold text-stone-900 mt-0.5">
-                    {latestSensory?.sectionScores.behavioral.raw || 0}{' '}
-                    <span className="text-xs text-stone-400 font-normal">
-                      / {latestSensory?.sectionScores.behavioral.max || 60}
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 

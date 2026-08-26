@@ -21,6 +21,8 @@ import type {
   ObservationFormDefinition,
   FEDCObservationRecord,
   FEDCItemResponse,
+  SensoryProfileRecord,
+  SensoryRating,
   User,
   Student,
 } from '../types';
@@ -68,6 +70,20 @@ const fallbackFedcCommandSchema = z.object({
   ),
   notes: z.string().nullable().optional(),
 });
+const fallbackSensoryResponseSchema = z.object({ data: z.unknown() });
+const fallbackSensoryObservationsResponseSchema = z.object({
+  data: z.array(z.unknown()),
+  meta: z.object({ count: z.number().int().nonnegative() }).optional(),
+});
+const fallbackSensoryCommandSchema = z
+  .object({
+    observationDate: z.string(),
+    responses: z.record(z.string(), z.number().int().min(0).max(5)),
+    teacherContactFrequency: z.string().nullable().optional(),
+    teacherContactLength: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+  })
+  .strict();
 
 type ContractSchemas = typeof contracts & {
   fedcObservationSchema?: z.ZodType<unknown>;
@@ -87,6 +103,42 @@ type ContractSchemas = typeof contracts & {
   fedcObservationDraftCommandSchema?: z.ZodType<FEDCObservationCommand>;
   fedcObservationSaveDraftCommandSchema?: z.ZodType<FEDCObservationCommand>;
   fedcObservationCompleteCommandSchema?: z.ZodType<FEDCObservationCommand>;
+  sensoryProfileObservationMutationResponseSchema?: z.ZodType<{
+    data: unknown;
+  }>;
+  sensoryProfileObservationResponseSchema?: z.ZodType<{ data: unknown }>;
+  sensoryObservationMutationResponseSchema?: z.ZodType<{ data: unknown }>;
+  sensoryObservationResponseSchema?: z.ZodType<{ data: unknown }>;
+  sensoryProfileObservationsResponseSchema?: z.ZodType<{
+    data: unknown[];
+    meta?: { count: number };
+  }>;
+  sensoryProfileObservationHistoryResponseSchema?: z.ZodType<{
+    data: unknown[];
+    meta?: { count: number };
+  }>;
+  sensoryObservationsResponseSchema?: z.ZodType<{
+    data: unknown[];
+    meta?: { count: number };
+  }>;
+  sensoryObservationHistoryResponseSchema?: z.ZodType<{
+    data: unknown[];
+    meta?: { count: number };
+  }>;
+  sensoryProfileObservationReferenceResponseSchema?: z.ZodType<{
+    data: unknown;
+  }>;
+  sensoryObservationReferenceResponseSchema?: z.ZodType<{ data: unknown }>;
+  sensoryProfileObservationCreateCommandSchema?: z.ZodType<SensoryObservationCommand>;
+  sensoryProfileObservationCreateDraftCommandSchema?: z.ZodType<SensoryObservationCommand>;
+  sensoryObservationCreateCommandSchema?: z.ZodType<SensoryObservationCommand>;
+  sensoryObservationCreateDraftCommandSchema?: z.ZodType<SensoryObservationCommand>;
+  sensoryProfileObservationDraftCommandSchema?: z.ZodType<SensoryObservationCommand>;
+  sensoryProfileObservationSaveDraftCommandSchema?: z.ZodType<SensoryObservationCommand>;
+  sensoryObservationDraftCommandSchema?: z.ZodType<SensoryObservationCommand>;
+  sensoryObservationSaveDraftCommandSchema?: z.ZodType<SensoryObservationCommand>;
+  sensoryProfileObservationCompleteCommandSchema?: z.ZodType<SensoryObservationCommand>;
+  sensoryObservationCompleteCommandSchema?: z.ZodType<SensoryObservationCommand>;
 };
 
 const fedcContracts = contracts as ContractSchemas;
@@ -112,6 +164,38 @@ const fedcObservationDraftCommandSchema =
 const fedcObservationCompleteCommandSchema =
   fedcContracts.fedcObservationCompleteCommandSchema ??
   fallbackFedcCommandSchema;
+const sensoryObservationMutationResponseSchema =
+  fedcContracts.sensoryProfileObservationMutationResponseSchema ??
+  fedcContracts.sensoryProfileObservationResponseSchema ??
+  fedcContracts.sensoryObservationMutationResponseSchema ??
+  fedcContracts.sensoryObservationResponseSchema ??
+  fallbackSensoryResponseSchema;
+const sensoryObservationsResponseSchema =
+  fedcContracts.sensoryProfileObservationsResponseSchema ??
+  fedcContracts.sensoryProfileObservationHistoryResponseSchema ??
+  fedcContracts.sensoryObservationsResponseSchema ??
+  fedcContracts.sensoryObservationHistoryResponseSchema ??
+  fallbackSensoryObservationsResponseSchema;
+const sensoryObservationReferenceResponseSchema =
+  fedcContracts.sensoryProfileObservationReferenceResponseSchema ??
+  fedcContracts.sensoryObservationReferenceResponseSchema ??
+  fallbackSensoryResponseSchema;
+const sensoryObservationCreateCommandSchema =
+  fedcContracts.sensoryProfileObservationCreateCommandSchema ??
+  fedcContracts.sensoryProfileObservationCreateDraftCommandSchema ??
+  fedcContracts.sensoryObservationCreateCommandSchema ??
+  fedcContracts.sensoryObservationCreateDraftCommandSchema ??
+  fallbackSensoryCommandSchema;
+const sensoryObservationDraftCommandSchema =
+  fedcContracts.sensoryProfileObservationDraftCommandSchema ??
+  fedcContracts.sensoryProfileObservationSaveDraftCommandSchema ??
+  fedcContracts.sensoryObservationDraftCommandSchema ??
+  fedcContracts.sensoryObservationSaveDraftCommandSchema ??
+  fallbackSensoryCommandSchema;
+const sensoryObservationCompleteCommandSchema =
+  fedcContracts.sensoryProfileObservationCompleteCommandSchema ??
+  fedcContracts.sensoryObservationCompleteCommandSchema ??
+  fallbackSensoryCommandSchema;
 
 export interface FEDCObservationCommand {
   observationDate: string;
@@ -128,6 +212,18 @@ export interface FEDCObservationCommand {
 
 export interface FEDCObservationReference {
   latestObservation: FEDCObservationRecord | null;
+}
+
+export interface SensoryObservationCommand {
+  observationDate: string;
+  responses: Record<string, SensoryRating>;
+  teacherContactFrequency?: string | null;
+  teacherContactLength?: string | null;
+  notes?: string | null;
+}
+
+export interface SensoryObservationReference {
+  latestObservation: SensoryProfileRecord | null;
 }
 
 type ApiDefinition = ObservationDefinitionsResponse['data'][number];
@@ -188,6 +284,37 @@ function mapMilestoneScores(value: unknown): Record<number, number> {
     if (Number.isInteger(milestoneId) && typeof score === 'number') {
       mapped[milestoneId] = score;
     }
+  });
+  return mapped;
+}
+
+function mapSensoryResponses(value: unknown): Record<string, SensoryRating> {
+  const mapped: Record<string, SensoryRating> = {};
+  Object.entries(asRecord(value)).forEach(([itemId, response]) => {
+    const rating =
+      typeof response === 'number' ? response : asRecord(response).rating;
+    if (
+      typeof rating === 'number' &&
+      Number.isInteger(rating) &&
+      rating >= 0 &&
+      rating <= 5
+    ) {
+      mapped[itemId] = rating as SensoryRating;
+    }
+  });
+  return mapped;
+}
+
+function mapSensorySectionScores(
+  value: unknown,
+): Record<string, { raw: number; max: number }> {
+  const mapped: Record<string, { raw: number; max: number }> = {};
+  Object.entries(asRecord(value)).forEach(([sectionId, scoreValue]) => {
+    const score = asRecord(scoreValue);
+    mapped[sectionId] = {
+      raw: numberValue(score.raw),
+      max: numberValue(score.max),
+    };
   });
   return mapped;
 }
@@ -268,6 +395,90 @@ export function mapFEDCObservationReference(
     payload.latestFedcObservation ??
     value;
   return { latestObservation: mapFEDCObservation(latest) };
+}
+
+export function mapSensoryObservation(value: unknown): SensoryProfileRecord {
+  const record = asRecord(value);
+  const student = asRecord(record.student);
+  const definition = asRecord(record.definition);
+  const observer = asRecord(record.observer);
+  const observationDate = dateOnly(record.observationDate);
+  const definitionKey = text(
+    definition.key,
+    text(definition.definitionKey, text(record.definitionKey)),
+  );
+  return {
+    id: text(record.id),
+    organizationId: nullableText(record.organizationId),
+    assignmentId: nullableText(record.assignmentId),
+    studentId: text(record.studentId, text(student.id)),
+    student: text(student.id)
+      ? {
+          id: text(student.id),
+          fullName: text(
+            student.fullName,
+            text(student.displayName, 'Student'),
+          ),
+          studentNumber: nullableText(student.studentNumber),
+          avatarUrl: nullableText(student.avatarUrl),
+        }
+      : undefined,
+    definition: text(definition.id)
+      ? {
+          id: text(definition.id),
+          key: definitionKey,
+          version: numberValue(definition.version, 1),
+          title: text(definition.title, 'Sensory Profile Instrument'),
+          body: asRecord(definition.body),
+        }
+      : undefined,
+    observationType: 'SENSORY_PROFILE',
+    recordYear: observationDate.slice(0, 4),
+    observationDate,
+    observerId: text(
+      observer.userId,
+      text(observer.id, text(record.observerId)),
+    ),
+    observerName: text(
+      observer.displayName,
+      text(record.observerName, 'Staff observer'),
+    ),
+    observer: text(observer.displayName)
+      ? {
+          id: nullableText(observer.id),
+          userId: nullableText(observer.userId),
+          displayName: text(observer.displayName),
+        }
+      : undefined,
+    teacherContactFrequency: text(record.teacherContactFrequency),
+    teacherContactLength: text(record.teacherContactLength),
+    status: text(record.status, 'DRAFT') as SensoryProfileRecord['status'],
+    responses: mapSensoryResponses(record.responses),
+    sectionScores: mapSensorySectionScores(record.sectionScores),
+    totalRawScore: numberValue(record.totalRawScore),
+    maxPossibleScore:
+      typeof record.maxPossibleScore === 'number'
+        ? record.maxPossibleScore
+        : undefined,
+    notes: nullableText(record.notes),
+    completedAt: nullableText(record.completedAt) ?? null,
+    createdAt: text(record.createdAt),
+    updatedAt: text(record.updatedAt),
+  };
+}
+
+export function mapSensoryObservationReference(
+  value: unknown,
+): SensoryObservationReference {
+  if (!value) return { latestObservation: null };
+  const payload = asRecord(value);
+  const latest =
+    payload.latestObservation ??
+    payload.observation ??
+    payload.latestSensoryObservation ??
+    payload.latestSensoryProfileObservation ??
+    value;
+  return { latestObservation: mapSensoryObservation(latest) };
 }
 
 export function mapObservationDefinition(
@@ -604,6 +815,96 @@ export const observationService = {
       { schema: fedcObservationReferenceResponseSchema, signal },
     );
     return mapFEDCObservationReference(response.data);
+  },
+
+  async createSensoryObservation(
+    organizationId: string,
+    assignmentId: string,
+    command: SensoryObservationCommand,
+    signal?: AbortSignal,
+  ): Promise<SensoryProfileRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/sensory-profile-observation`,
+      {
+        method: 'POST',
+        body: sensoryObservationCreateCommandSchema.parse(command),
+        schema: sensoryObservationMutationResponseSchema,
+        signal,
+      },
+    );
+    return mapSensoryObservation(response.data);
+  },
+
+  async saveSensoryObservationDraft(
+    organizationId: string,
+    assignmentId: string,
+    command: SensoryObservationCommand,
+    signal?: AbortSignal,
+  ): Promise<SensoryProfileRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/sensory-profile-observation`,
+      {
+        method: 'PUT',
+        body: sensoryObservationDraftCommandSchema.parse(command),
+        schema: sensoryObservationMutationResponseSchema,
+        signal,
+      },
+    );
+    return mapSensoryObservation(response.data);
+  },
+
+  async completeSensoryObservation(
+    organizationId: string,
+    assignmentId: string,
+    command: SensoryObservationCommand,
+    signal?: AbortSignal,
+  ): Promise<SensoryProfileRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/sensory-profile-observation/complete`,
+      {
+        method: 'POST',
+        body: sensoryObservationCompleteCommandSchema.parse(command),
+        schema: sensoryObservationMutationResponseSchema,
+        signal,
+      },
+    );
+    return mapSensoryObservation(response.data);
+  },
+
+  async getSensoryObservation(
+    organizationId: string,
+    assignmentId: string,
+    signal?: AbortSignal,
+  ): Promise<SensoryProfileRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/sensory-profile-observation`,
+      { schema: sensoryObservationMutationResponseSchema, signal },
+    );
+    return mapSensoryObservation(response.data);
+  },
+
+  async getStudentSensoryObservations(
+    organizationId: string,
+    studentId: string,
+    signal?: AbortSignal,
+  ): Promise<SensoryProfileRecord[]> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/students/${encodeURIComponent(studentId)}/sensory-profile-observations`,
+      { schema: sensoryObservationsResponseSchema, signal },
+    );
+    return response.data.map(mapSensoryObservation);
+  },
+
+  async getStudentSensoryReference(
+    organizationId: string,
+    studentId: string,
+    signal?: AbortSignal,
+  ): Promise<SensoryObservationReference> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/students/${encodeURIComponent(studentId)}/sensory-profile-observations/reference`,
+      { schema: sensoryObservationReferenceResponseSchema, signal },
+    );
+    return mapSensoryObservationReference(response.data);
   },
 };
 

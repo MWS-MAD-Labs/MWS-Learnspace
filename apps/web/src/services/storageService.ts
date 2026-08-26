@@ -2,7 +2,6 @@ import {
   User,
   Student,
   LearningJourney,
-  SensoryProfileRecord,
   SFAObservationRecord,
   IEPRecord,
   IEPReport,
@@ -13,7 +12,6 @@ import {
   SEED_USERS,
   SEED_STUDENTS,
   SEED_LEARNING_JOURNEYS,
-  SEED_ALL_SENSORY_PROFILES,
   SEED_SFA_OBSERVATION,
   SEED_IEP_RECORDS,
   SEED_WEEKLY_REPORTS,
@@ -29,7 +27,6 @@ const STORAGE_KEYS = {
   CURRENT_USER_ID: 'mws_current_user_id_v2',
   STUDENTS: 'mws_students_v2',
   LEARNING_JOURNEYS: 'mws_learning_journeys_v2',
-  SENSORY_PROFILES: 'mws_sensory_profiles_v2',
   SFA_OBSERVATIONS: 'mws_sfa_observations_v2',
   IEP_RECORDS: 'mws_iep_records_v2',
   IEP_REPORTS: 'mws_iep_reports_v2',
@@ -67,12 +64,6 @@ class StorageService {
       );
     }
 
-    if (forceReset || !localStorage.getItem(STORAGE_KEYS.SENSORY_PROFILES)) {
-      localStorage.setItem(
-        STORAGE_KEYS.SENSORY_PROFILES,
-        JSON.stringify(SEED_ALL_SENSORY_PROFILES),
-      );
-    }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.SFA_OBSERVATIONS)) {
       localStorage.setItem(
         STORAGE_KEYS.SFA_OBSERVATIONS,
@@ -263,40 +254,6 @@ class StorageService {
       JSON.stringify(journeys),
     );
     return true;
-  }
-
-  // Sensory Profile
-  public getSensoryProfiles(studentId?: string): SensoryProfileRecord[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.SENSORY_PROFILES);
-      let records: SensoryProfileRecord[] = data
-        ? JSON.parse(data)
-        : SEED_ALL_SENSORY_PROFILES;
-      if (studentId) {
-        records = records.filter((r) => r.studentId === studentId);
-      }
-      return records;
-    } catch {
-      return SEED_ALL_SENSORY_PROFILES;
-    }
-  }
-
-  public saveSensoryProfile(
-    record: SensoryProfileRecord,
-  ): SensoryProfileRecord {
-    const list = this.getSensoryProfiles();
-    const idx = list.findIndex((r) => r.id === record.id);
-    if (idx >= 0) {
-      list[idx] = { ...record, updatedAt: new Date().toISOString() };
-    } else {
-      list.unshift({
-        ...record,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-    }
-    localStorage.setItem(STORAGE_KEYS.SENSORY_PROFILES, JSON.stringify(list));
-    return record;
   }
 
   // SFA Observations
