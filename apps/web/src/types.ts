@@ -538,9 +538,14 @@ export interface IEPServiceScheduleItem {
 
 export interface IEPRecord {
   id: string;
+  organizationId?: string;
+  version?: number;
   studentId: string;
   studentName?: string;
   grade?: string;
+  academicYearId?: string;
+  semesterId?: string;
+  state?: string;
   year: string; // "2026"
   academicYear: string; // "2026-2027"
   semester: string;
@@ -589,6 +594,8 @@ export interface IEPRecord {
     date: string;
   };
 
+  startsOn?: string;
+  endsOn?: string;
   createdBy: string;
   createdAt: string;
   updatedBy: string;

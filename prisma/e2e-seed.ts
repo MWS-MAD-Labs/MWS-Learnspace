@@ -70,11 +70,17 @@ export const e2eFixture = {
   specialEdCoordinatorEmail: 'p5.observation.coordinator@example.test',
   specialistId: '20000000-0000-4000-8000-000000000005',
   specialistEmail: 'p5.observation.specialist@example.test',
+  iepAuthorId: '20000000-0000-4000-8000-000000000006',
+  iepAuthorEmail: 'p5.iep.author@example.test',
+  iepUnassignedId: '20000000-0000-4000-8000-000000000007',
+  iepUnassignedEmail: 'p5.iep.unassigned@example.test',
   membershipId: '30000000-0000-4000-8000-000000000001',
   directorMembershipId: '30000000-0000-4000-8000-000000000002',
   principalMembershipId: '30000000-0000-4000-8000-000000000003',
   specialEdCoordinatorMembershipId: '30000000-0000-4000-8000-000000000004',
   specialistMembershipId: '30000000-0000-4000-8000-000000000005',
+  iepAuthorMembershipId: '30000000-0000-4000-8000-000000000006',
+  iepUnassignedMembershipId: '30000000-0000-4000-8000-000000000007',
   unitId: '40000000-0000-4000-8000-000000000001',
   authorizedGradeId: '50000000-0000-4000-8000-000000000001',
   forbiddenGradeId: '50000000-0000-4000-8000-000000000002',
@@ -85,6 +91,9 @@ export const e2eFixture = {
   subjectId: '72000000-0000-4000-8000-000000000001',
   learningJourneyId: '73000000-0000-4000-8000-000000000001',
   forbiddenLearningJourneyId: '73000000-0000-4000-8000-000000000002',
+  iepId: '74000000-0000-4000-8000-000000000001',
+  iepGoalId: '75000000-0000-4000-8000-000000000001',
+  iepStudentAssignmentId: '76000000-0000-4000-8000-000000000001',
   schoolDate: '2026-08-24',
   students: [
     {
@@ -105,6 +114,26 @@ export const e2eFixture = {
       number: 'E2E-003',
       name: 'Casey Attendance',
     },
+    {
+      id: '80000000-0000-4000-8000-000000000004',
+      enrollmentId: '90000000-0000-4000-8000-000000000004',
+      number: 'E2E-IEP-001',
+      name: 'River IEP Student',
+      specialNeedsFlag: true,
+      nickname: 'River',
+      primaryClassification: 'Autism Spectrum Disorder',
+      currentPlacement: 'Inclusive Grade 1 classroom with specialized support',
+    },
+    {
+      id: '80000000-0000-4000-8000-000000000005',
+      enrollmentId: '90000000-0000-4000-8000-000000000005',
+      number: 'E2E-IEP-002',
+      name: 'Skyler Inaccessible Student',
+      specialNeedsFlag: true,
+      nickname: 'Skyler',
+      primaryClassification: 'Specific Learning Disability',
+      currentPlacement: 'Grade 1 classroom with resource support',
+    },
   ],
 } as const;
 
@@ -112,6 +141,10 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
   await prisma.auditEvent.deleteMany();
   await prisma.workflowEvent.deleteMany();
   await prisma.learningJourney.deleteMany();
+  await prisma.goalAchievementEvent.deleteMany();
+  await prisma.weeklyGoalProgress.deleteMany();
+  await prisma.weeklyReport.deleteMany();
+  await prisma.iEP.deleteMany();
   await prisma.attendanceRecord.deleteMany();
   await prisma.fEDCObservation.deleteMany();
   await prisma.sensoryProfileObservation.deleteMany();
@@ -182,6 +215,18 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
         displayName: 'Sam Observation Specialist',
         status: 'ACTIVE',
       },
+      {
+        id: e2eFixture.iepAuthorId,
+        email: e2eFixture.iepAuthorEmail,
+        displayName: 'Avery IEP Author',
+        status: 'ACTIVE',
+      },
+      {
+        id: e2eFixture.iepUnassignedId,
+        email: e2eFixture.iepUnassignedEmail,
+        displayName: 'Uma Unassigned Teacher',
+        status: 'ACTIVE',
+      },
     ],
   });
   await prisma.membership.createMany({
@@ -221,6 +266,22 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
         userId: e2eFixture.specialistId,
         role: 'SPECIALIST',
         roleTitle: 'Occupational Therapist',
+        status: 'ACTIVE',
+      },
+      {
+        id: e2eFixture.iepAuthorMembershipId,
+        organizationId: e2eFixture.organizationId,
+        userId: e2eFixture.iepAuthorId,
+        role: 'SPECIAL_ED_TEACHER',
+        roleTitle: 'Assigned Special Education Teacher',
+        status: 'ACTIVE',
+      },
+      {
+        id: e2eFixture.iepUnassignedMembershipId,
+        organizationId: e2eFixture.organizationId,
+        userId: e2eFixture.iepUnassignedId,
+        role: 'SPECIAL_ED_TEACHER',
+        roleTitle: 'Unassigned Special Education Teacher',
         status: 'ACTIVE',
       },
     ],
@@ -393,6 +454,15 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
         dateOfBirth: new Date(
           `2019-01-${String(10 + index).padStart(2, '0')}T00:00:00.000Z`,
         ),
+        specialNeedsFlag:
+          'specialNeedsFlag' in student ? student.specialNeedsFlag : false,
+        nickname: 'nickname' in student ? student.nickname : null,
+        primaryClassification:
+          'primaryClassification' in student
+            ? student.primaryClassification
+            : null,
+        currentPlacement:
+          'currentPlacement' in student ? student.currentPlacement : null,
       },
     });
     await prisma.enrollment.create({
@@ -406,6 +476,153 @@ export async function seedE2eDatabase(prisma: PrismaClient) {
       },
     });
   }
+
+  const iepStudent = e2eFixture.students[3];
+  await prisma.staffStudentAssignment.create({
+    data: {
+      id: e2eFixture.iepStudentAssignmentId,
+      organizationId: e2eFixture.organizationId,
+      membershipId: e2eFixture.iepAuthorMembershipId,
+      studentId: iepStudent.id,
+      roleContext: 'IEP_CASE_MANAGER',
+      startsOn: new Date('2026-07-01T00:00:00.000Z'),
+      maxCaseload: 8,
+    },
+  });
+
+  await prisma.iEP.create({
+    data: {
+      id: e2eFixture.iepId,
+      organizationId: e2eFixture.organizationId,
+      studentId: iepStudent.id,
+      academicYearId: e2eFixture.academicYearId,
+      semesterId: null,
+      state: 'DRAFT',
+      consideration: 'Individualized special education support',
+      primaryClassification: 'Autism Spectrum Disorder',
+      currentPlacement: 'Inclusive Grade 1 classroom with specialized support',
+      homePartnershipSupport:
+        'Use the same visual schedule and calm-break language at home.',
+      homePartnershipRecommendations:
+        'Practice requesting a break during one predictable transition daily.',
+      progressMeasurementMethods: [
+        'Weekly case-manager observation log',
+        'Monthly work-sample review',
+      ],
+      parentCommunicationMethods: [
+        'Weekly portal update',
+        'Term review conference',
+      ],
+      parentApproved: false,
+      startsOn: new Date('2026-07-01T00:00:00.000Z'),
+      endsOn: new Date('2027-06-30T00:00:00.000Z'),
+      createdById: e2eFixture.iepAuthorId,
+      updatedById: e2eFixture.iepAuthorId,
+      teamMembers: {
+        create: [
+          {
+            role: 'Special Education Case Manager',
+            name: 'Avery IEP Author',
+            initials: 'AA',
+            confirmed: true,
+            position: 0,
+          },
+          {
+            role: 'Occupational Therapist',
+            name: 'Sam Observation Specialist',
+            initials: 'SO',
+            confirmed: true,
+            position: 1,
+          },
+          {
+            role: 'School Principal',
+            name: 'Priya P5 Principal',
+            initials: 'PP',
+            confirmed: false,
+            position: 2,
+          },
+        ],
+      },
+      performanceAreas: {
+        create: {
+          name: 'Self-regulation and transitions',
+          category: 'Social/Emotional',
+          strengths:
+            'Responds well to visual routines and communicates preferences clearly.',
+          needs:
+            'Needs explicit preparation and a consistent strategy for unexpected transitions.',
+          impactOfNeed:
+            'Unexpected changes can delay participation in the next learning activity.',
+          informationSource: 'Teacher observation and sensory profile',
+          assessmentProcess: 'Structured classroom observation',
+          assessmentDate: new Date('2026-08-18T00:00:00.000Z'),
+          summaryOfResults:
+            'River independently follows predictable transitions and needs one prompt when routines change.',
+          position: 0,
+        },
+      },
+      accommodations: {
+        create: [
+          {
+            category: 'ACADEMIC',
+            subject: 'General Studies',
+            code: 'A',
+            description: 'Provide visual directions with each multi-step task.',
+            position: 0,
+          },
+          {
+            category: 'INSTRUCTIONAL',
+            description: 'Use a first-then card before transitions.',
+            position: 0,
+          },
+          {
+            category: 'ENVIRONMENTAL',
+            description: 'Provide access to a quiet regulation space.',
+            position: 0,
+          },
+          {
+            category: 'ASSESSMENT',
+            description: 'Allow one planned movement break during assessments.',
+            position: 0,
+          },
+        ],
+      },
+      goals: {
+        create: {
+          id: e2eFixture.iepGoalId,
+          code: 'P5-008-G1',
+          performanceArea: 'Social/Emotional',
+          longTermGoal:
+            'River will participate independently across daily classroom transitions.',
+          shortTermGoal:
+            'River will use the taught break-request strategy during transitions.',
+          measurableGoal:
+            'River will independently request a break during an unexpected transition in 4 of 5 observed opportunities.',
+          strategyActivity:
+            'Model and rehearse the break-request phrase before schedule changes.',
+          learningExpectation:
+            'Communicate a self-regulation need before leaving an activity.',
+          learningStrategy: 'Visual first-then card and verbal rehearsal',
+          evaluationMethod: 'Weekly case-manager observation checklist',
+          schedule: 'Weekly',
+          targetDate: new Date('2027-03-31T00:00:00.000Z'),
+          active: true,
+          position: 0,
+        },
+      },
+      services: {
+        create: {
+          serviceName: 'Special Education Case Management',
+          type: 'INDIVIDUAL',
+          duration: '30 minutes',
+          frequency: 'Twice weekly',
+          location: 'Inclusive classroom and resource room',
+          days: 'Tuesday and Thursday',
+          position: 0,
+        },
+      },
+    },
+  });
 }
 
 async function main() {

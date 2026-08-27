@@ -64,11 +64,11 @@ These decisions reduce ambiguity for implementation agents. Change them only thr
 The current application has a useful React UI and domain inventory, but its educator workflows remain a prototype:
 
 - the npm workspace contains `apps/web`, `apps/api`, and `packages/contracts`;
-- FEDC, Sensory Profile, and SFA observation workflows are API/PostgreSQL-backed; IEP, weekly-report, and related remaining prototype domains are still initialized from `apps/web/src/data/seedData.ts` and persisted by `apps/web/src/services/storageService.ts` in browser `localStorage`; Learning Journey authoring and approval workflows are also API/PostgreSQL-backed;
+- FEDC, Sensory Profile, and SFA observation workflows and IEP plan authoring are API/PostgreSQL-backed; weekly reports and related remaining prototype domains are still initialized from `apps/web/src/data/seedData.ts` and persisted by `apps/web/src/services/storageService.ts` in browser `localStorage`; Learning Journey authoring and approval workflows are also API/PostgreSQL-backed;
 - authenticated identity, memberships, permissions, and record scopes come from Google OAuth and PostgreSQL-backed server sessions; the role switcher is isolated to explicit development fake-data builds;
 - authorization is enforced by the API for implemented protected resources; remaining prototype domains still contain presentation-only frontend role checks until they migrate;
 - the Express API, shared response contracts, PostgreSQL Compose service, Prisma lifecycle, production-oriented images, OAuth, sessions, and authorization foundation are implemented;
-- PostgreSQL is authoritative for attendance, complete Learning Journey authoring and approval workflows, observation definitions and assignments, and FEDC, Sensory Profile, and SFA records; IEPs and weekly reports remain browser-backed until their Milestone 5 slices;
+- PostgreSQL is authoritative for attendance, complete Learning Journey authoring and approval workflows, observation definitions and assignments, FEDC, Sensory Profile, SFA, and IEP plan records; IEP workflow transitions and weekly reports remain incomplete Milestone 5 slices;
 - `apps/web/src/types.ts` still contains overlapping status representations for remaining prototype domains that must be normalized;
 - no active Gemini integration exists; Google AI Studio provenance remains only in `metadata.json`;
 - Milestone 0 provides a dependency lockfile, CI pipeline, formatting and linting, type checking, and frontend smoke tests.
@@ -806,10 +806,11 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-008 — Migrate IEP plans
 
-- [ ] **Dependencies:** P5-001, P2-008
+- [x] **Dependencies:** P5-001, P2-008
 - **Change:** migrate team members, performance areas, accommodations, goals, services, parent approval metadata, and IEP lifecycle.
 - **Acceptance:** sensitive IEP access is limited to documented roles and assigned students; historical IEPs remain immutable or explicitly versioned according to policy.
 - **Validate:** role/scope tests, lifecycle tests, and E2E authoring flow.
+- **Completed (2026-08-27):** Added strict shared IEP list, detail, create, and optimistic update contracts for the complete nested plan; organization-scoped API routes with session-derived actors, transactional audits, academic and date-reference validation, draft-only content mutation, and integer version conflicts; documented leadership/coordinator reads, coordinator authoring, and date-effective assigned-student teacher/specialist scope with non-enumerating denials; PostgreSQL persistence for team members, performance areas, accommodations, goals, services, and parent approval metadata; database triggers preventing update or deletion of historical non-draft plans and their child content; API-backed authoring, status, dashboard, analytics, and weekly-report plan reads; read-only historical/leadership UI states; removal of production IEP plan `localStorage` persistence; generated OpenAPI coverage; and dedicated unit, contract, PostgreSQL integration, component, service, and Compose-backed Playwright coverage for scoped reads, nested persistence, versioned updates, reload, denial, leadership read-only behavior, and legacy-storage removal. Explicit submit/review/approval/archive commands and immutable workflow events remain in P5-009.
 
 ## P5-009 — Migrate IEP workflow transitions
 
@@ -862,7 +863,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 **Milestone exit gate:** any approved prototype data can be imported through a validated, versioned, auditable, and rehearsed process with rollback.
 
-> **Implementation status (updated 2026-08-27):** P6-001 through P6-004 are implemented and validated against a disposable local Docker database, including migration drift, concurrent apply, backup, restore, and rollback checks. Learning Journey workflows and the FEDC, Sensory Profile, and SFA observation slices are now API/PostgreSQL-backed, but the `0.9.0-beta.1` release gate remains blocked by the declared `P5-013` dependency: IEPs, weekly reports, remaining cross-domain dashboards/search/notifications, and related browser persistence must become authorized API/PostgreSQL resources before sensitive browser persistence can be removed. Repeat the rehearsal in staging after P5-013 passes.
+> **Implementation status (updated 2026-08-27):** P6-001 through P6-004 are implemented and validated against a disposable local Docker database, including migration drift, concurrent apply, backup, restore, and rollback checks. Learning Journey workflows, the FEDC, Sensory Profile, and SFA observation slices, and IEP plan authoring are now API/PostgreSQL-backed, but the `0.9.0-beta.1` release gate remains blocked by the declared `P5-013` dependency: IEP transitions, weekly reports, remaining cross-domain dashboards/search/notifications, and related browser persistence must become authorized API/PostgreSQL resources before sensitive browser persistence can be removed. Repeat the rehearsal in staging after P5-013 passes.
 
 ## P6-001 — Define a versioned export format
 

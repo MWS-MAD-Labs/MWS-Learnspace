@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useIEPs } from '../../hooks/useIEPs';
 import { storageService } from '../../services/storageService';
 import {
   IEPReport,
@@ -34,6 +35,7 @@ import {
 
 export const WeeklyReportView: React.FC = () => {
   const {
+    organizationId,
     selectedStudentId,
     setSelectedStudentId,
     students,
@@ -89,12 +91,13 @@ export const WeeklyReportView: React.FC = () => {
 
   const [selectedWeek, setSelectedWeek] = useState(8);
 
-  // Retrieve student's active IEP Plan and SMART goals
-  const studentIEP = useMemo<IEPRecord | undefined>(() => {
-    if (!currentStudent) return undefined;
-    const records = storageService.getIEPRecords(currentStudent.id);
-    return records[0];
-  }, [currentStudent?.id]);
+  // IEP plans are API-backed; weekly report persistence remains isolated here.
+  const iepData = useIEPs(
+    organizationId,
+    { studentId: currentStudent?.id },
+    { enabled: Boolean(currentStudent) },
+  );
+  const studentIEP = iepData.ieps[0];
 
   // Helper to build default or synced report populated from IEP Plan goals
   const buildReportFromIEP = (
@@ -224,12 +227,12 @@ export const WeeklyReportView: React.FC = () => {
     return buildReportFromIEP(currentStudent, selectedWeek, studentIEP);
   });
 
-  // Sync report on student, week, or IEP change
+  // Sync report on student, week, or IEP change.
   useEffect(() => {
-    if (!currentStudent) return;
+    if (!currentStudent || iepData.status !== 'ready') return;
     const synced = buildReportFromIEP(currentStudent, selectedWeek, studentIEP);
     setReport(synced);
-  }, [currentStudent?.id, selectedWeek, studentIEP?.id]);
+  }, [currentStudent?.id, selectedWeek, studentIEP?.id, iepData.status]);
 
   // Find latest return feedback if returned
   const latestReturnFeedback = useMemo(() => {
@@ -590,6 +593,32 @@ export const WeeklyReportView: React.FC = () => {
           <strong>Ms. Elena Johnson</strong>) to assign students to your
           profile.
         </p>
+      </div>
+    );
+  }
+
+  if (iepData.status === 'loading') {
+    return (
+      <div className="p-8 text-center text-sm text-stone-600">
+        Loading IEP goals…
+      </div>
+    );
+  }
+
+  if (iepData.status === 'error') {
+    return (
+      <div className="max-w-3xl mx-auto my-12 bg-white border border-rose-200 rounded-3xl p-8 text-center space-y-4 shadow-xs">
+        <p className="text-sm font-bold text-rose-900">
+          IEP goals could not be loaded.
+        </p>
+        <p className="text-xs text-stone-600">{iepData.error}</p>
+        <button
+          type="button"
+          onClick={iepData.retry}
+          className="px-4 py-2 bg-[#6E161E] text-white text-xs font-bold rounded-xl"
+        >
+          Retry
+        </button>
       </div>
     );
   }

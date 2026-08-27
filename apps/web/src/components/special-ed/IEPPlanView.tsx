@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
+import { useIEPs } from '../../hooks/useIEPs';
+import { iepService } from '../../services/iepService';
 import { IEPRecord, IEPGoal, Student } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { IEPStatusTracker } from './IEPStatusTracker';
@@ -35,6 +36,7 @@ const IEP_TABS = [
 
 export const IEPPlanView: React.FC = () => {
   const {
+    organizationId,
     selectedStudentId,
     setSelectedStudentId,
     students,
@@ -65,6 +67,10 @@ export const IEPPlanView: React.FC = () => {
     currentUser.isGPK ||
     (currentUser.role === 'SPECIAL_ED_TEACHER' &&
       !currentUser.isSpecialEdCoordinator);
+  const canAuthorIep =
+    Boolean(currentUser.isSpecialEdCoordinator) ||
+    currentUser.role === 'SPECIAL_ED_TEACHER' ||
+    currentUser.role === 'SPECIALIST';
 
   // Filter accessible students: SE teachers can ONLY access SN students assigned to them
   const accessibleStudents = useMemo(() => {
@@ -95,10 +101,11 @@ export const IEPPlanView: React.FC = () => {
     academicYear: '2026-2027',
     semester: 'Semester 1',
     unit: 'Elementary',
-    status: 'Active',
-    draftStatus: 'Done',
-    coordinatorReviewStatus: 'Done',
-    directorApprovalStatus: 'Done',
+    state: 'DRAFT',
+    status: 'Draft',
+    draftStatus: 'On Progress',
+    coordinatorReviewStatus: 'Not Started',
+    directorApprovalStatus: 'Not Started',
     workflowHistory: [],
     consideration: 'Individualized Special Support (GPK)',
     primaryClassification:
@@ -191,10 +198,6 @@ export const IEPPlanView: React.FC = () => {
         targetDate: '2027-02-15',
         active: true,
         achieved: false,
-        lastAddressedDate: '2026-10-23',
-        lastAddressedWeek: 8,
-        lastAddressedRating: 4,
-        timesAddressed: 3,
       },
       {
         id: 'g2',
@@ -206,10 +209,6 @@ export const IEPPlanView: React.FC = () => {
         targetDate: '2027-04-30',
         active: true,
         achieved: false,
-        lastAddressedDate: '2026-10-23',
-        lastAddressedWeek: 8,
-        lastAddressedRating: 3,
-        timesAddressed: 2,
       },
     ],
     serviceSchedule: [
@@ -253,30 +252,33 @@ export const IEPPlanView: React.FC = () => {
     updatedAt: new Date().toISOString(),
   });
 
-  const [iep, setIep] = useState<IEPRecord>(() => {
-    if (!currentStudent) {
-      return loadDefaultIEP({
-        id: 'temp',
-        fullName: 'Student',
-        name: 'Student',
-        specialNeedsFlag: true,
-      } as any);
-    }
-    const existing = storageService.getIEPRecords(currentStudent.id);
-    if (existing.length > 0) return existing[0];
-    return loadDefaultIEP(currentStudent);
-  });
+  const iepData = useIEPs(
+    organizationId,
+    { studentId: currentStudent?.id },
+    { enabled: Boolean(currentStudent) },
+  );
+  const [iep, setIep] = useState<IEPRecord>(() =>
+    loadDefaultIEP(
+      currentStudent ||
+        ({
+          id: 'temp',
+          fullName: 'Student',
+          name: 'Student',
+          specialNeedsFlag: true,
+        } as Student),
+    ),
+  );
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Sync IEP when student changes
   useEffect(() => {
-    if (!currentStudent) return;
-    const existing = storageService.getIEPRecords(currentStudent.id);
-    if (existing.length > 0) {
-      setIep(existing[0]);
-    } else {
-      setIep(loadDefaultIEP(currentStudent));
-    }
-  }, [currentStudent?.id]);
+    if (!currentStudent || iepData.status !== 'ready') return;
+    setIep(iepData.ieps[0] || loadDefaultIEP(currentStudent));
+    setEditingGoal(null);
+  }, [currentStudent?.id, iepData.status, iepData.ieps]);
+
+  const isDraft = (iep.state || 'DRAFT') === 'DRAFT';
+  const isPersisted = iepData.ieps.some((record) => record.id === iep.id);
+  const canEditPlan = canAuthorIep && isDraft && !isSaving;
 
   const achievedGoalsCount = iep.goals.filter((g) => g.achieved).length;
   const addressedGoalsCount = iep.goals.filter(
@@ -288,54 +290,8 @@ export const IEPPlanView: React.FC = () => {
     ? Math.round((achievedGoalsCount / iep.goals.length) * 100)
     : 0;
 
-  const handleToggleGoalAchieved = (goalId: string) => {
-    if (
-      !isCoordinatorOrLeadership &&
-      currentStudent.assignedGPKTeacherId !== currentUser.id &&
-      !currentUser.assignedSpecialNeedsStudentIds?.includes(currentStudent.id)
-    ) {
-      showToast(
-        'error',
-        'Unauthorized Access',
-        'You can only update IEP goals for students assigned to you.',
-      );
-      return;
-    }
-    setIep((prev) => {
-      const updatedGoals = prev.goals.map((g) => {
-        if (g.id === goalId) {
-          const nextAchieved = !g.achieved;
-          return {
-            ...g,
-            achieved: nextAchieved,
-            achievedDate: nextAchieved
-              ? g.achievedDate || new Date().toISOString().split('T')[0]
-              : undefined,
-            achievedNote: nextAchieved
-              ? g.achievedNote ||
-                'Mastery criteria achieved in classroom trials.'
-              : undefined,
-          };
-        }
-        return g;
-      });
-      const updated = {
-        ...prev,
-        goals: updatedGoals,
-        updatedAt: new Date().toISOString(),
-      };
-      storageService.saveIEPRecord(updated);
-      return updated;
-    });
-    showToast(
-      'success',
-      'IEP Goal Status Updated',
-      'Goal achievement status and date updated in the IEP Plan.',
-    );
-    refreshData();
-  };
-
   const handleOpenAddGoal = () => {
+    if (!canEditPlan) return;
     if (
       !isCoordinatorOrLeadership &&
       currentStudent.assignedGPKTeacherId !== currentUser.id &&
@@ -363,6 +319,7 @@ export const IEPPlanView: React.FC = () => {
   };
 
   const handleOpenEditGoal = (goal: IEPGoal) => {
+    if (!canEditPlan) return;
     if (
       !isCoordinatorOrLeadership &&
       currentStudent.assignedGPKTeacherId !== currentUser.id &&
@@ -398,13 +355,11 @@ export const IEPPlanView: React.FC = () => {
           g.id === editingGoal.id ? editingGoal : g,
         );
       }
-      const updatedRecord: IEPRecord = {
+      return {
         ...prev,
         goals: updatedGoals,
         updatedAt: new Date().toISOString(),
       };
-      storageService.saveIEPRecord(updatedRecord);
-      return updatedRecord;
     });
 
     showToast(
@@ -417,6 +372,7 @@ export const IEPPlanView: React.FC = () => {
   };
 
   const handleDeleteGoal = (goalId: string) => {
+    if (!canEditPlan) return;
     if (
       !isCoordinatorOrLeadership &&
       currentStudent.assignedGPKTeacherId !== currentUser.id &&
@@ -429,21 +385,17 @@ export const IEPPlanView: React.FC = () => {
       );
       return;
     }
-    setIep((prev) => {
-      const updatedGoals = prev.goals.filter((g) => g.id !== goalId);
-      const updatedRecord: IEPRecord = {
-        ...prev,
-        goals: updatedGoals,
-        updatedAt: new Date().toISOString(),
-      };
-      storageService.saveIEPRecord(updatedRecord);
-      return updatedRecord;
-    });
+    setIep((prev) => ({
+      ...prev,
+      goals: prev.goals.filter((g) => g.id !== goalId),
+      updatedAt: new Date().toISOString(),
+    }));
     showToast('info', 'Goal Removed', 'SMART IEP Goal removed from plan.');
     refreshData();
   };
 
-  const handleSaveIEP = () => {
+  const handleSaveIEP = async () => {
+    if (!canEditPlan) return;
     if (
       !isCoordinatorOrLeadership &&
       currentStudent.assignedGPKTeacherId !== currentUser.id &&
@@ -456,17 +408,35 @@ export const IEPPlanView: React.FC = () => {
       );
       return;
     }
-    storageService.saveIEPRecord({
-      ...iep,
-      studentId: currentStudent.id,
-      updatedAt: new Date().toISOString(),
-    });
-    showToast(
-      'success',
-      'IEP Plan Saved',
-      `Updated Individualized Education Program for ${currentStudent.fullName}. All goal dates synchronized.`,
-    );
-    refreshData();
+    setIsSaving(true);
+    try {
+      const commandRecord = {
+        ...iep,
+        studentId: currentStudent.id,
+        updatedAt: new Date().toISOString(),
+      };
+      const saved = isPersisted
+        ? await iepService.updateIEP(organizationId, commandRecord)
+        : await iepService.createIEP(organizationId, commandRecord);
+      setIep(saved);
+      showToast(
+        'success',
+        isPersisted ? 'IEP Plan Saved' : 'IEP Plan Created',
+        `Saved the Individualized Education Program for ${currentStudent.fullName}.`,
+      );
+      iepData.retry();
+      await refreshData();
+    } catch (caught) {
+      showToast(
+        'error',
+        'IEP Plan Not Saved',
+        caught instanceof Error
+          ? caught.message
+          : 'The IEP plan could not be saved.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePrint = () => {
@@ -498,6 +468,32 @@ export const IEPPlanView: React.FC = () => {
     );
   }
 
+  if (iepViewMode === 'DOCUMENT' && iepData.status === 'loading') {
+    return (
+      <div className="max-w-3xl mx-auto my-12 bg-white border border-[#EFE7DC] rounded-3xl p-8 text-center text-sm text-stone-600 shadow-xs">
+        Loading IEP plan…
+      </div>
+    );
+  }
+
+  if (iepViewMode === 'DOCUMENT' && iepData.status === 'error') {
+    return (
+      <div className="max-w-3xl mx-auto my-12 bg-white border border-rose-200 rounded-3xl p-8 text-center space-y-4 shadow-xs">
+        <p className="text-sm font-bold text-rose-900">
+          IEP plan could not be loaded.
+        </p>
+        <p className="text-xs text-stone-600">{iepData.error}</p>
+        <button
+          type="button"
+          onClick={iepData.retry}
+          className="px-4 py-2 bg-[#6E161E] text-white text-xs font-bold rounded-xl"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div id="iep-plan-view" className="space-y-6 max-w-6xl mx-auto pb-28">
       {/* SE Teacher Caseload Notice */}
@@ -518,6 +514,14 @@ export const IEPPlanView: React.FC = () => {
           <span className="font-black px-2.5 py-1 rounded-lg bg-amber-200/80 text-amber-950 text-[10px] shrink-0">
             {accessibleStudents.length} / 2 Students
           </span>
+        </div>
+      )}
+
+      {!isDraft && iepViewMode === 'DOCUMENT' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3.5 text-xs text-blue-900 flex items-center gap-2.5">
+          <ShieldCheck className="w-4 h-4 shrink-0" />
+          This IEP is {iep.status.toLowerCase()} and is read-only. Workflow
+          changes are managed by a later API milestone.
         </div>
       )}
 
@@ -566,7 +570,7 @@ export const IEPPlanView: React.FC = () => {
 
       {iepViewMode === 'STATUS_TRACKER' ? (
         <IEPStatusTracker
-          onSelectStudentForEdit={(studentId) => {
+          onSelectIEPForEdit={(studentId) => {
             setSelectedStudentId(studentId);
             setIepViewMode('DOCUMENT');
           }}
@@ -679,7 +683,8 @@ export const IEPPlanView: React.FC = () => {
                       onChange={(e) =>
                         setIep({ ...iep, consideration: e.target.value })
                       }
-                      className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl"
+                      disabled={!canEditPlan}
+                      className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl disabled:opacity-70 disabled:cursor-not-allowed"
                     />
                   </div>
                   <div className="space-y-1">
@@ -692,7 +697,8 @@ export const IEPPlanView: React.FC = () => {
                       onChange={(e) =>
                         setIep({ ...iep, currentPlacement: e.target.value })
                       }
-                      className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl"
+                      disabled={!canEditPlan}
+                      className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl disabled:opacity-70 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -819,15 +825,18 @@ export const IEPPlanView: React.FC = () => {
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
 
-                    <button
-                      type="button"
-                      id="btn-add-smart-goal"
-                      onClick={handleOpenAddGoal}
-                      className="px-4 py-2 bg-[#F5B842] hover:bg-[#EEAA2B] text-stone-900 text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>+ Add SMART Goal</span>
-                    </button>
+                    {canAuthorIep && (
+                      <button
+                        type="button"
+                        id="btn-add-smart-goal"
+                        onClick={handleOpenAddGoal}
+                        disabled={!canEditPlan}
+                        className="px-4 py-2 bg-[#F5B842] hover:bg-[#EEAA2B] text-stone-900 text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>+ Add SMART Goal</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -924,40 +933,29 @@ export const IEPPlanView: React.FC = () => {
                         </div>
 
                         {/* Top Action Buttons */}
-                        <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleGoalAchieved(goal.id)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
-                              goal.achieved
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                                : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-emerald-50 hover:text-emerald-900'
-                            }`}
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            {goal.achieved
-                              ? '✓ Target Achieved'
-                              : 'Mark Achieved'}
-                          </button>
+                        {canAuthorIep && (
+                          <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditGoal(goal)}
+                              disabled={!canEditPlan}
+                              className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              title="Edit SMART Goal"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditGoal(goal)}
-                            className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-xl transition-colors"
-                            title="Edit SMART Goal"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteGoal(goal.id)}
-                            className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-                            title="Delete Goal"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteGoal(goal.id)}
+                              disabled={!canEditPlan}
+                              className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              title="Delete Goal"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Goal Achievement Detail Banner (if achieved) */}
@@ -1246,17 +1244,24 @@ export const IEPPlanView: React.FC = () => {
               Drawer
             </button>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                id="iep-save-plan-btn"
-                onClick={handleSaveIEP}
-                className="px-6 py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                Save IEP Plan
-              </button>
-            </div>
+            {canAuthorIep && (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  id="iep-save-plan-btn"
+                  onClick={handleSaveIEP}
+                  disabled={!canEditPlan}
+                  className="px-6 py-2.5 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-4 h-4" />
+                  {isSaving
+                    ? 'Saving…'
+                    : isPersisted
+                      ? 'Save IEP Plan'
+                      : 'Create IEP Plan'}
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -1394,68 +1399,6 @@ export const IEPPlanView: React.FC = () => {
                   placeholder="E.g., Weekly GPK observation rubric and anecdotal logs"
                   className="w-full p-2.5 bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl"
                 />
-              </div>
-
-              {/* Goal Achievement Settings */}
-              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingGoal.achieved}
-                    onChange={(e) =>
-                      setEditingGoal({
-                        ...editingGoal,
-                        achieved: e.target.checked,
-                        achievedDate: e.target.checked
-                          ? editingGoal.achievedDate ||
-                            new Date().toISOString().split('T')[0]
-                          : undefined,
-                      })
-                    }
-                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="font-bold text-emerald-950">
-                    Mark Goal as Achieved / Mastered
-                  </span>
-                </label>
-
-                {editingGoal.achieved && (
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <div>
-                      <label className="text-[11px] font-bold text-emerald-900 block">
-                        Achieved Date
-                      </label>
-                      <input
-                        type="date"
-                        value={editingGoal.achievedDate || ''}
-                        onChange={(e) =>
-                          setEditingGoal({
-                            ...editingGoal,
-                            achievedDate: e.target.value,
-                          })
-                        }
-                        className="w-full p-2 bg-white border border-emerald-300 rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-emerald-900 block">
-                        Achievement Notes
-                      </label>
-                      <input
-                        type="text"
-                        value={editingGoal.achievedNote || ''}
-                        onChange={(e) =>
-                          setEditingGoal({
-                            ...editingGoal,
-                            achievedNote: e.target.value,
-                          })
-                        }
-                        placeholder="Mastery summary..."
-                        className="w-full p-2 bg-white border border-emerald-300 rounded-xl text-xs"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 

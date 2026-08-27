@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
+import { useIEPs } from '../../hooks/useIEPs';
 import { useLearningJourneys } from '../../hooks/useLearningJourneys';
 import { useFEDCObservations } from '../../hooks/useFEDCObservations';
 import { Users, BookOpen, Brain } from 'lucide-react';
@@ -9,12 +9,22 @@ export const ReportsAnalyticsView: React.FC = () => {
   const { students, currentUser, organizationId, navigateToIEP } = useApp();
 
   const canReadJourneys = currentUser.permissions.includes('journey:read');
+  const canReadIEPs =
+    currentUser.role === 'DIRECTOR' ||
+    currentUser.role === 'PRINCIPAL' ||
+    currentUser.role === 'SPECIAL_ED_COORDINATOR' ||
+    currentUser.role === 'SPECIAL_ED_TEACHER' ||
+    currentUser.isGPK === true;
   const { journeys } = useLearningJourneys(
     organizationId,
     {},
     { enabled: canReadJourneys },
   );
-  const iepRecords = storageService.getIEPRecords();
+  const { ieps: iepRecords } = useIEPs(
+    organizationId,
+    {},
+    { enabled: canReadIEPs },
+  );
   const featuredStudent = students.find((student) => student.specialNeedsFlag);
   const fedcHistory = useFEDCObservations(
     organizationId,

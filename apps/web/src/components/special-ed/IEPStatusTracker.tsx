@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
+import { useIEPs } from '../../hooks/useIEPs';
 import { IEPRecord, LJReviewStatus, LJApprovalStatus } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import {
@@ -21,6 +21,7 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
   onSelectIEPForEdit,
 }) => {
   const {
+    organizationId,
     currentUser,
     students,
     setSelectedStudentId,
@@ -63,39 +64,42 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
     );
   }, [students, currentUser, isCoordinator, isDirector]);
 
-  const iepRecords = storageService.getIEPRecords();
+  const iepData = useIEPs(organizationId);
+  const iepRecords = iepData.ieps;
 
   // Build combined rows for all special needs students
   const studentIEPRows = useMemo(() => {
     return specialStudents.map((student) => {
-      const record = iepRecords.find((r) => r.studentId === student.id) || {
-        id: `iep-${student.id}-2026`,
-        studentId: student.id,
-        year: '2026',
-        academicYear: '2026-2027',
-        semester: 'Semester 1',
-        unit: 'Elementary',
-        status: 'Draft' as const,
-        draftStatus: 'Not Started' as const,
-        coordinatorReviewStatus: 'Not Started' as LJReviewStatus,
-        directorApprovalStatus: 'Not Started' as LJApprovalStatus,
-        primaryClassification: student.primaryDiagnosis || 'Special Support',
-        currentPlacement: 'General Education with GPK Support',
-        teamMembers: [],
-        performanceAreas: [],
-        academicAccommodations: {
-          math: 'A',
-          science: 'A',
-          english: 'A',
-          pe: 'M',
-          makerspace: 'A',
-        },
-        instructionalAccommodations: [],
-        environmentalAccommodations: [],
-        assessmentAccommodations: [],
-        goals: [],
-        workflowHistory: [],
-      };
+      const record =
+        iepRecords.find((r) => r.studentId === student.id) ||
+        ({
+          id: `iep-${student.id}-2026`,
+          studentId: student.id,
+          year: '2026',
+          academicYear: '2026-2027',
+          semester: 'Semester 1',
+          unit: 'Elementary',
+          status: 'Draft' as const,
+          draftStatus: 'Not Started' as const,
+          coordinatorReviewStatus: 'Not Started' as LJReviewStatus,
+          directorApprovalStatus: 'Not Started' as LJApprovalStatus,
+          primaryClassification: student.primaryDiagnosis || 'Special Support',
+          currentPlacement: 'General Education with GPK Support',
+          teamMembers: [],
+          performanceAreas: [],
+          academicAccommodations: {
+            math: 'A',
+            science: 'A',
+            english: 'A',
+            pe: 'M',
+            makerspace: 'A',
+          },
+          instructionalAccommodations: [],
+          environmentalAccommodations: [],
+          assessmentAccommodations: [],
+          goals: [],
+          workflowHistory: [],
+        } as IEPRecord);
       return { student, iep: record };
     });
   }, [specialStudents, iepRecords]);
@@ -150,19 +154,11 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
   ).length;
 
   // Handle Submit Draft (Teacher Action)
-  const handleSubmitDraft = (iep: IEPRecord) => {
-    storageService.updateIEPWorkflow(
-      iep.id,
-      'draftStatus',
-      'Done',
-      currentUser,
-      'Submitted complete IEP proposal to Special Education Coordinator for review.',
-    );
-    refreshData();
+  const handleSubmitDraft = (_iep: IEPRecord) => {
     showToast(
-      'success',
-      'Draft Submitted',
-      'Annual IEP submitted to Coordinator for verification.',
+      'info',
+      'Workflow Unavailable',
+      'IEP workflow commands will be enabled after the workflow API migration.',
     );
   };
 
@@ -189,13 +185,11 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
     if (isCoordinator) {
       const status: LJReviewStatus =
         reviewAction === 'Approve' ? 'Done' : 'Returned';
-      storageService.updateIEPWorkflow(
-        reviewingIEP.id,
-        'coordinatorReviewStatus',
-        status,
-        currentUser,
-        reviewComment ||
-          'Coordinator reviewed and verified baseline assessments and accommodation targets.',
+      void status;
+      showToast(
+        'info',
+        'Workflow Unavailable',
+        'Coordinator review commands will be enabled after the workflow API migration.',
       );
       showToast(
         reviewAction === 'Approve' ? 'success' : 'info',
@@ -209,13 +203,11 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
     } else if (isDirector) {
       const status: LJApprovalStatus =
         reviewAction === 'Approve' ? 'Done' : 'Returned';
-      storageService.updateIEPWorkflow(
-        reviewingIEP.id,
-        'directorApprovalStatus',
-        status,
-        currentUser,
-        reviewComment ||
-          'Director authorized and ratified annual IEP accommodations and service schedule.',
+      void status;
+      showToast(
+        'info',
+        'Workflow Unavailable',
+        'Director approval commands will be enabled after the workflow API migration.',
       );
       showToast(
         reviewAction === 'Approve' ? 'success' : 'info',
@@ -229,8 +221,33 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
     }
 
     setReviewingIEP(null);
-    refreshData();
   };
+
+  if (iepData.status === 'loading') {
+    return (
+      <div className="p-8 text-center text-sm text-stone-600">
+        Loading IEP plans…
+      </div>
+    );
+  }
+
+  if (iepData.status === 'error') {
+    return (
+      <div className="p-8 text-center space-y-3 bg-white border border-rose-200 rounded-2xl">
+        <p className="text-sm font-bold text-rose-900">
+          IEP plans could not be loaded.
+        </p>
+        <p className="text-xs text-stone-600">{iepData.error}</p>
+        <button
+          type="button"
+          onClick={iepData.retry}
+          className="px-4 py-2 bg-[#6E161E] text-white text-xs font-bold rounded-xl"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div id="iep-status-tracker-container" className="space-y-6">
@@ -519,7 +536,9 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
                           <button
                             id={`submit-iep-draft-${student.id}`}
                             onClick={() => handleSubmitDraft(iep)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition-all text-xs shadow-2xs"
+                            disabled
+                            title="Available after the IEP workflow API migration"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-600 text-white rounded-xl font-bold transition-all text-xs shadow-2xs opacity-50 cursor-not-allowed"
                           >
                             <Send className="w-3.5 h-3.5" />
                             <span>Submit Draft</span>
@@ -531,7 +550,9 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
                           <button
                             id={`coord-review-iep-${student.id}`}
                             onClick={() => handleOpenReview(iep)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all text-xs shadow-2xs"
+                            disabled
+                            title="Available after the IEP workflow API migration"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white rounded-xl font-bold transition-all text-xs shadow-2xs opacity-50 cursor-not-allowed"
                           >
                             <ShieldCheck className="w-3.5 h-3.5" />
                             <span>Review</span>
@@ -543,7 +564,9 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
                           <button
                             id={`director-approve-iep-${student.id}`}
                             onClick={() => handleOpenReview(iep)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all text-xs shadow-2xs"
+                            disabled
+                            title="Available after the IEP workflow API migration"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-600 text-white rounded-xl font-bold transition-all text-xs shadow-2xs opacity-50 cursor-not-allowed"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Approve</span>

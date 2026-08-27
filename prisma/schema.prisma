@@ -719,6 +719,7 @@ model IEP {
   academicYearId                 String               @db.Uuid
   semesterId                     String?              @db.Uuid
   state                          WorkflowState        @default(DRAFT)
+  version                        Int                  @default(1)
   consideration                  String
   primaryClassification          String
   currentPlacement               String

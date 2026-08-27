@@ -23,6 +23,7 @@ describe('authorization primitives', () => {
     expect(hasPermission('GRADE_TEACHER', 'organization:admin')).toBe(false);
     expect(hasPermission('DIRECTOR', 'journey:approve')).toBe(true);
     expect(hasPermission('DIRECTOR', 'student:admin')).toBe(true);
+    expect(hasPermission('DIRECTOR', 'special-ed:write')).toBe(false);
     expect(hasPermission('DIRECTOR', 'student:sensitive-read')).toBe(true);
     expect(hasPermission('DIRECTOR', 'staff-assignment:admin')).toBe(true);
     expect(
@@ -32,6 +33,7 @@ describe('authorization primitives', () => {
       hasPermission('SPECIAL_ED_COORDINATOR', 'staff-directory:read'),
     ).toBe(true);
     expect(hasPermission('PRINCIPAL', 'staff-directory:read')).toBe(true);
+    expect(hasPermission('PRINCIPAL', 'special-ed:write')).toBe(false);
     expect(hasPermission('PRINCIPAL', 'student:sensitive-read')).toBe(true);
     expect(hasPermission('PRINCIPAL', 'staff-assignment:admin')).toBe(false);
     expect(hasPermission('GRADE_TEACHER', 'student:admin')).toBe(false);

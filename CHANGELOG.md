@@ -45,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Explicit versioned Learning Journey submit, Principal review/return, and Director approval/return commands with session-derived actors, creator/owner submission authorization, conditional state/version updates, immutable workflow history and return feedback, same-transaction audit events, stale/simultaneous-command protection, and PostgreSQL transition-table coverage.
 - Dedicated persistent local PostgreSQL integration-test Compose service and `npm run test:integration:local` migration/test command.
 - Assignment-bound Sensory Profile APIs and web workflows with strict pinned-definition contracts, server-validated `0`–`5` ratings, trusted section/total scoring, transactional completion and audits, API-backed history/reference/reporting, and dedicated PostgreSQL and Compose-backed browser coverage.
+- Strict IEP aggregate contracts and organization-scoped list/detail/create/update APIs for team members, performance areas, accommodations, goals, services, parent approval metadata, and plan dates, with session-derived actors, transactional audits, draft-only mutation, integer optimistic concurrency, assigned-student scope, PostgreSQL historical-content immutability, generated OpenAPI operations, and dedicated contract, integration, component, service, and Compose-backed authoring coverage.
 
 ### Changed
 
@@ -61,6 +62,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Migrated the attendance workspace from browser seed/storage data to authorized API class rosters and PostgreSQL records, including loading, empty, retry, validation, read-only, conflict, and save-success states.
 - Migrated production user identity, membership, student directory, and GPK assignment administration away from browser storage; development fake-data behavior remains available only behind the explicit demo flags.
 - Migrated Sensory Profile authoring, completion, history, detailed reporting, and reference data away from browser persistence; completed records now retain their exact server-pinned definition and authoritative scores.
+- Migrated IEP plan authoring and plan-backed dashboard, analytics, status, and weekly-report reads away from browser persistence; leadership readers are read-only, assigned special-education authors are server-scoped, and explicit workflow transitions remain deferred to P5-009.
 - Restricted broad student responses from exposing addresses or guardian contacts, and limited sensitive student detail to documented leadership and Special Education Coordinator scope.
 - Updated the application and workspace package version to `0.2.0`, the first end-to-end feature migration release.
 
@@ -76,6 +78,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Unused direct Google GenAI, dotenv, and esbuild dependencies from the prototype manifest.
 - Attendance keys, methods, seed initialization, legacy browser attendance types, and all production attendance `localStorage` paths.
 - The final Learning Journey `storageService.updateWorkflowStage()` browser-persistence path.
+- Production IEP plan `localStorage` initialization, CRUD, workflow mutation, and weekly-report-to-plan synchronization methods; weekly report persistence remains pending P5-010.
 
 ## [0.0.0] - Prototype
 

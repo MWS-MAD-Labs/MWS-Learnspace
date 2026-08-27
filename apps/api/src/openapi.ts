@@ -20,6 +20,11 @@ import {
   gpkAssignmentsResponseSchema,
   gpkAssignmentUpsertCommandSchema,
   gradesResponseSchema,
+  iepCreateCommandSchema,
+  iepDetailResponseSchema,
+  iepMutationResponseSchema,
+  iepUpdateCommandSchema,
+  iepsResponseSchema,
   organizationAccountCreateCommandSchema,
   organizationAccountMutationResponseSchema,
   organizationAccountsResponseSchema,
@@ -72,6 +77,11 @@ const components: Record<string, ZodTypeAny> = {
   UnitsResponse: unitsResponseSchema,
   GradesResponse: gradesResponseSchema,
   ClassesResponse: classesResponseSchema,
+  IepsResponse: iepsResponseSchema,
+  IepDetailResponse: iepDetailResponseSchema,
+  IepCreateCommand: iepCreateCommandSchema,
+  IepUpdateCommand: iepUpdateCommandSchema,
+  IepMutationResponse: iepMutationResponseSchema,
   SubjectsResponse: subjectsResponseSchema,
   StaffDirectoryResponse: staffDirectoryResponseSchema,
   OrganizationAccountsResponse: organizationAccountsResponseSchema,
@@ -1148,6 +1158,107 @@ export function generateOpenApiDocument() {
             },
           },
         },
+      '/organizations/{organizationId}/ieps': {
+        get: {
+          tags: ['IEPs'],
+          operationId: 'listIeps',
+          parameters: [
+            organizationParameter,
+            ...['studentId', 'academicYearId', 'semesterId'].map((name) => ({
+              name,
+              in: 'query',
+              required: false,
+              schema: { type: 'string', format: 'uuid' },
+            })),
+            {
+              name: 'state',
+              in: 'query',
+              required: false,
+              schema: {
+                type: 'string',
+                enum: [
+                  'DRAFT',
+                  'PRINCIPAL_REVIEW',
+                  'COORDINATOR_REVIEW',
+                  'DIRECTOR_APPROVAL',
+                  'APPROVED',
+                  'ACTIVE',
+                  'ARCHIVED',
+                ],
+              },
+            },
+          ],
+          responses: {
+            '200': jsonResponse('IepsResponse'),
+            ...errorResponses,
+          },
+        },
+        post: {
+          tags: ['IEPs'],
+          operationId: 'createIep',
+          parameters: [organizationParameter, csrfParameter],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/IepCreateCommand' },
+              },
+            },
+          },
+          responses: {
+            '201': jsonResponse('IepMutationResponse', 'IEP draft created'),
+            ...errorResponses,
+            '409': jsonResponse('ApiError', 'IEP content conflict'),
+          },
+        },
+      },
+      '/organizations/{organizationId}/ieps/{iepId}': {
+        get: {
+          tags: ['IEPs'],
+          operationId: 'getIep',
+          parameters: [
+            organizationParameter,
+            {
+              name: 'iepId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            '200': jsonResponse('IepDetailResponse'),
+            ...errorResponses,
+          },
+        },
+        put: {
+          tags: ['IEPs'],
+          operationId: 'updateIepDraft',
+          description: 'Replaces the full authored aggregate for a DRAFT IEP.',
+          parameters: [
+            organizationParameter,
+            {
+              name: 'iepId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            csrfParameter,
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/IepUpdateCommand' },
+              },
+            },
+          },
+          responses: {
+            '200': jsonResponse('IepMutationResponse'),
+            ...errorResponses,
+            '409': jsonResponse('ApiError', 'IEP version or content conflict'),
+          },
+        },
+      },
       '/organizations/{organizationId}/classes/{classId}/attendance': {
         get: {
           tags: ['Attendance'],

@@ -2,7 +2,6 @@ import {
   User,
   Student,
   LearningJourney,
-  IEPRecord,
   IEPReport,
   WorkflowHistoryEntry,
 } from '../types';
@@ -11,7 +10,6 @@ import {
   SEED_USERS,
   SEED_STUDENTS,
   SEED_LEARNING_JOURNEYS,
-  SEED_IEP_RECORDS,
   SEED_WEEKLY_REPORTS,
 } from '../data/seedData';
 
@@ -25,7 +23,6 @@ const STORAGE_KEYS = {
   CURRENT_USER_ID: 'mws_current_user_id_v2',
   STUDENTS: 'mws_students_v2',
   LEARNING_JOURNEYS: 'mws_learning_journeys_v2',
-  IEP_RECORDS: 'mws_iep_records_v2',
   IEP_REPORTS: 'mws_iep_reports_v2',
 };
 
@@ -61,12 +58,6 @@ class StorageService {
       );
     }
 
-    if (forceReset || !localStorage.getItem(STORAGE_KEYS.IEP_RECORDS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.IEP_RECORDS,
-        JSON.stringify(SEED_IEP_RECORDS),
-      );
-    }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.IEP_REPORTS)) {
       localStorage.setItem(
         STORAGE_KEYS.IEP_REPORTS,
@@ -247,258 +238,6 @@ class StorageService {
     return true;
   }
 
-  // IEP Records
-  public syncIEPGoalsWithWeeklyReports(
-    studentId: string,
-  ): IEPRecord | undefined {
-    try {
-      const recordsData = localStorage.getItem(STORAGE_KEYS.IEP_RECORDS);
-      const records: IEPRecord[] = recordsData
-        ? JSON.parse(recordsData)
-        : SEED_IEP_RECORDS;
-      const iepIdx = records.findIndex((r) => r.studentId === studentId);
-      if (iepIdx < 0) return undefined;
-
-      const iep = records[iepIdx];
-      const reports = this.getIEPReports(studentId);
-
-      // Deep sync each goal
-      iep.goals = iep.goals.map((goal) => {
-        // Find all weekly reports where this goal was addressed
-        const matchingWeeklyLogs: {
-          reportId: string;
-          weekNumber: number;
-          weekRange?: string;
-          date: string;
-          rating?: 1 | 2 | 3 | 4 | 5;
-          notes?: string;
-          markedAchieved?: boolean;
-        }[] = [];
-
-        reports.forEach((rep) => {
-          if (!rep.goalProgress) return;
-          const gp = rep.goalProgress.find((p) => p.goalId === goal.id);
-          if (gp && gp.addressedThisWeek) {
-            const logDate =
-              rep.weekEnd ||
-              rep.weekStart ||
-              (rep.updatedAt ? rep.updatedAt.split('T')[0] : '2026-11-10');
-            matchingWeeklyLogs.push({
-              reportId: rep.id,
-              weekNumber: rep.weekNumber,
-              weekRange: rep.weekRange,
-              date: logDate,
-              rating: gp.rating,
-              notes: gp.notes,
-              markedAchieved: Boolean(gp.markedAchievedThisWeek),
-            });
-          }
-        });
-
-        // Sort chronologically by week number
-        matchingWeeklyLogs.sort((a, b) => a.weekNumber - b.weekNumber);
-
-        let lastAddressedDate = goal.lastAddressedDate;
-        let lastAddressedWeek = goal.lastAddressedWeek;
-        let lastAddressedRating = goal.lastAddressedRating;
-
-        if (matchingWeeklyLogs.length > 0) {
-          const latestLog = matchingWeeklyLogs[matchingWeeklyLogs.length - 1];
-          lastAddressedDate = latestLog.date;
-          lastAddressedWeek = latestLog.weekNumber;
-          lastAddressedRating = latestLog.rating;
-        }
-
-        // Check achievement in reports
-        let achieved = goal.achieved;
-        let achievedDate = goal.achievedDate;
-        let achievedNote = goal.achievedNote;
-        let achievedInReportId = goal.achievedInReportId;
-
-        // Check if marked achieved in any weekly report
-        for (const rep of reports) {
-          if (!rep.goalProgress) continue;
-          const gp = rep.goalProgress.find((p) => p.goalId === goal.id);
-          if (gp && gp.markedAchievedThisWeek) {
-            achieved = true;
-            achievedDate =
-              gp.achievedDate ||
-              rep.weekEnd ||
-              rep.weekStart ||
-              achievedDate ||
-              new Date().toISOString().split('T')[0];
-            achievedNote =
-              gp.achievedNote ||
-              gp.notes ||
-              achievedNote ||
-              'Mastered in weekly observation log.';
-            achievedInReportId = rep.id;
-            break;
-          }
-        }
-
-        return {
-          ...goal,
-          lastAddressedDate,
-          lastAddressedWeek,
-          lastAddressedRating,
-          timesAddressed: matchingWeeklyLogs.length,
-          addressedHistory: matchingWeeklyLogs,
-          achieved,
-          achievedDate,
-          achievedNote,
-          achievedInReportId,
-        };
-      });
-
-      records[iepIdx] = { ...iep, updatedAt: new Date().toISOString() };
-      localStorage.setItem(STORAGE_KEYS.IEP_RECORDS, JSON.stringify(records));
-      return records[iepIdx];
-    } catch {
-      return undefined;
-    }
-  }
-
-  public getIEPRecords(studentId?: string): IEPRecord[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.IEP_RECORDS);
-      let records: IEPRecord[] = data ? JSON.parse(data) : SEED_IEP_RECORDS;
-      if (studentId) {
-        records = records.filter((r) => r.studentId === studentId);
-      }
-      return records;
-    } catch {
-      return SEED_IEP_RECORDS;
-    }
-  }
-
-  public getIEPRecord(id: string): IEPRecord | undefined {
-    return this.getIEPRecords().find((r) => r.id === id);
-  }
-
-  public saveIEPRecord(record: IEPRecord): IEPRecord {
-    const list = this.getIEPRecords();
-    const idx = list.findIndex((r) => r.id === record.id);
-    if (idx >= 0) {
-      list[idx] = { ...record, updatedAt: new Date().toISOString() };
-    } else {
-      list.unshift({
-        ...record,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-    }
-    localStorage.setItem(STORAGE_KEYS.IEP_RECORDS, JSON.stringify(list));
-
-    // Sync with weekly reports
-    this.syncIEPGoalsWithWeeklyReports(record.studentId);
-
-    const updated = this.getIEPRecord(record.id);
-    return updated || record;
-  }
-
-  public updateIEPWorkflow(
-    iepId: string,
-    fieldOrStage: string,
-    statusOrAction: string,
-    userOrNotes: User | string,
-    notesOrUser?: string | User,
-  ): IEPRecord | undefined {
-    const iep = this.getIEPRecord(iepId);
-    if (!iep) return undefined;
-
-    let user: User;
-    let notes: string = '';
-
-    if (
-      typeof userOrNotes === 'object' &&
-      userOrNotes !== null &&
-      'id' in userOrNotes
-    ) {
-      user = userOrNotes as User;
-      notes = typeof notesOrUser === 'string' ? notesOrUser : '';
-    } else {
-      user =
-        (notesOrUser as User) ||
-        ({ id: 'usr-unknown', name: 'Staff User', roleTitle: 'Staff' } as User);
-      notes = typeof userOrNotes === 'string' ? userOrNotes : '';
-    }
-
-    const stageNormalized =
-      fieldOrStage === 'draftStatus' || fieldOrStage === 'DRAFT'
-        ? 'DRAFT'
-        : fieldOrStage === 'coordinatorReviewStatus' ||
-            fieldOrStage === 'COORDINATOR_REVIEW'
-          ? 'COORDINATOR_REVIEW'
-          : 'DIRECTOR_APPROVAL';
-
-    const isApproveOrDone =
-      statusOrAction === 'Done' ||
-      statusOrAction === 'APPROVED' ||
-      statusOrAction === 'Approved';
-    const isReturn =
-      statusOrAction === 'Returned' || statusOrAction === 'RETURNED';
-
-    const historyEntry: WorkflowHistoryEntry = {
-      id: `wf-iep-${Date.now()}`,
-      stage:
-        stageNormalized === 'DRAFT'
-          ? 'Draft'
-          : stageNormalized === 'COORDINATOR_REVIEW'
-            ? 'Coordinator Review'
-            : 'Director Approval',
-      action: isApproveOrDone
-        ? stageNormalized === 'DRAFT'
-          ? 'Submitted'
-          : 'Approved'
-        : isReturn
-          ? 'Returned'
-          : 'Updated',
-      status: statusOrAction,
-      userId: user.id,
-      userName: user.name,
-      userRole: user.roleTitle,
-      actorId: user.id,
-      actorName: user.name,
-      actorRole: user.roleTitle,
-      timestamp: new Date().toISOString(),
-      notes: notes,
-      comment: notes,
-    };
-
-    const updated: IEPRecord = {
-      ...iep,
-      workflowHistory: [historyEntry, ...(iep.workflowHistory || [])],
-    };
-
-    if (stageNormalized === 'DRAFT') {
-      updated.draftStatus = 'Done';
-      updated.coordinatorReviewStatus = 'On Progress';
-      updated.status = 'In Review';
-    } else if (stageNormalized === 'COORDINATOR_REVIEW') {
-      if (isApproveOrDone) {
-        updated.coordinatorReviewStatus = 'Done';
-        updated.directorApprovalStatus = 'On Progress';
-        updated.status = 'In Review';
-      } else if (isReturn) {
-        updated.coordinatorReviewStatus = 'Returned';
-        updated.draftStatus = 'On Progress';
-        updated.status = 'Draft';
-      }
-    } else if (stageNormalized === 'DIRECTOR_APPROVAL') {
-      if (isApproveOrDone) {
-        updated.directorApprovalStatus = 'Done';
-        updated.status = 'Approved';
-      } else if (isReturn) {
-        updated.directorApprovalStatus = 'Returned';
-        updated.coordinatorReviewStatus = 'Returned';
-        updated.status = 'In Review';
-      }
-    }
-
-    return this.saveIEPRecord(updated);
-  }
-
   // IEP Reports (Weekly Progress)
   public getIEPReports(studentId?: string): IEPReport[] {
     try {
@@ -530,9 +269,6 @@ class StorageService {
       });
     }
     localStorage.setItem(STORAGE_KEYS.IEP_REPORTS, JSON.stringify(list));
-
-    // Automatically update the IEP Plan with the date the goals are being addressed and when goals are achieved!
-    this.syncIEPGoalsWithWeeklyReports(report.studentId);
 
     return report;
   }

@@ -126,6 +126,29 @@ describe('OpenAPI contract', () => {
     ).toMatchObject({ get: expect.any(Object) });
   });
 
+  it('registers the strict IEP aggregate contracts and organization routes', () => {
+    const document = generateOpenApiDocument();
+    expect(document.components.schemas).toMatchObject({
+      IepsResponse: expect.any(Object),
+      IepDetailResponse: expect.any(Object),
+      IepCreateCommand: expect.any(Object),
+      IepUpdateCommand: expect.any(Object),
+      IepMutationResponse: expect.any(Object),
+    });
+    expect(
+      document.paths['/organizations/{organizationId}/ieps'],
+    ).toMatchObject({
+      get: expect.any(Object),
+      post: expect.any(Object),
+    });
+    expect(
+      document.paths['/organizations/{organizationId}/ieps/{iepId}'],
+    ).toMatchObject({ get: expect.any(Object), put: expect.any(Object) });
+    expect(
+      document.paths['/organizations/{organizationId}/ieps/{iepId}'],
+    ).not.toHaveProperty('delete');
+  });
+
   it('uses the runtime schemas for attendance request and response examples', () => {
     expect(
       attendanceBulkSaveCommandSchema.parse({

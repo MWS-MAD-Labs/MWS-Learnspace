@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
+import { useIEPs } from '../../hooks/useIEPs';
 import { useLearningJourneys } from '../../hooks/useLearningJourneys';
 import { SEED_ANNOUNCEMENTS, SEED_SCHEDULE_ITEMS } from '../../data/seedData';
 import { StatusBadge } from '../common/StatusBadge';
@@ -30,16 +30,26 @@ export const DashboardView: React.FC = () => {
   const [announcements, setAnnouncements] = useState(SEED_ANNOUNCEMENTS);
   const canReadJourneys = currentUser.permissions.includes('journey:read');
   const canWriteJourneys = currentUser.permissions.includes('journey:write');
+  const canReadIEPs =
+    currentUser.role === 'DIRECTOR' ||
+    currentUser.role === 'PRINCIPAL' ||
+    currentUser.role === 'SPECIAL_ED_COORDINATOR' ||
+    currentUser.role === 'SPECIAL_ED_TEACHER' ||
+    currentUser.isGPK === true;
   const { journeys } = useLearningJourneys(
     organizationId,
     {},
     { enabled: canReadJourneys },
   );
-  const iepRecords = storageService.getIEPRecords();
+  const { ieps: iepRecords } = useIEPs(
+    organizationId,
+    {},
+    { enabled: canReadIEPs },
+  );
 
   // Active IEP goal stats
   const activeIep = iepRecords[0];
-  const totalGoals = activeIep?.goals?.length || 4;
+  const totalGoals = activeIep?.goals?.length || 0;
   const achievedGoals = activeIep?.goals?.filter((g) => g.achieved).length || 0;
 
   const toggleRsvp = (annId: string) => {

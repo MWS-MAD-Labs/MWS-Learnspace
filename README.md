@@ -5,7 +5,7 @@ Learnspace is an educator portal for academic planning, attendance, special-educ
 The repository is currently at **`0.2.0`**. Milestone 4 delivered the first fully migrated product vertical, and Milestone 5 now includes API-backed organization account and membership administration, authorized student directories, privileged student administration, transactional GPK staff assignments, and Learning Journey authoring and approval workflows in addition to PostgreSQL attendance.
 
 > [!IMPORTANT]
-> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, attendance, complete Learning Journey authoring and approval workflows, observation definitions and assignments, FEDC observations, Sensory Profiles, SFA assessments, and the controlled prototype import tooling are server-backed. IEPs, weekly reports, and related remaining domains still depend on seeded browser `localStorage`. P6 tooling is implemented locally, but its release gate remains blocked until P5-013 removes sensitive browser persistence. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
+> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, attendance, complete Learning Journey authoring and approval workflows, observation definitions and assignments, FEDC observations, Sensory Profiles, SFA assessments, IEP plan authoring, and the controlled prototype import tooling are server-backed. IEP transitions, weekly reports, and related remaining domains still include incomplete or browser-backed behavior. P6 tooling is implemented locally, but its release gate remains blocked until P5-013 removes sensitive browser persistence. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
 
 ## Current capabilities
 
@@ -19,7 +19,7 @@ The repository is currently at **`0.2.0`**. Milestone 4 delivered the first full
   - Functional Emotional Developmental Capacities (FEDC)
   - Sensory Profile
   - School Function Assessment (SFA)
-- Annual IEP plans, goals, accommodations, and approval workflow
+- PostgreSQL-backed annual IEP draft plans, goals, accommodations, services, parent approval metadata, scoped authoring, and immutable historical content; approval transitions remain scheduled for P5-009
 - Weekly IEP progress reports with goal synchronization
 - Role-oriented views for teachers, coordinators, principals, and directors
 - Seeded demo records for evaluating the workflows
@@ -34,7 +34,7 @@ The repository is currently at **`0.2.0`**. Milestone 4 delivered the first full
 flowchart TB
     Browser[Browser] --> Web[React/Vite web application]
     Web --> LocalStorage[(Browser localStorage for remaining prototype domains)]
-    Web -->|typed account, academic, student, assignment, attendance, journey, and observation requests| Proxy
+    Web -->|typed account, academic, student, assignment, attendance, journey, observation, and IEP requests| Proxy
     Browser -->|same-origin /api traffic in Compose| Proxy[Non-root nginx web container]
     Proxy --> API[Express TypeScript API]
     API --> DB[(PostgreSQL 16)]
@@ -44,12 +44,12 @@ flowchart TB
 
 The workspace and service boundary are implemented, but the migration is intentionally incremental:
 
-- `apps/web` contains the React/Vite application. Organization account administration, attendance, authorized student loading, staff directory reads, GPK assignment, Learning Journey authoring and approval workflows, observation definitions and assignments, FEDC observations, Sensory Profiles, and SFA assessments use typed API services; IEP, weekly-report, and related remaining prototype domains still use `apps/web/src/services/storageService.ts` and `localStorage`.
-- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, organization account administration, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, scoped Learning Journey workflows, and assignment-bound FEDC, Sensory Profile, and SFA observation lifecycles with server-side validation and scoring, plus runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
-- `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, organization accounts, academic resources, students, staff directories, GPK assignments, attendance, Learning Journeys, observation definitions and assignments, and FEDC, Sensory Profile, and SFA records and commands.
+- `apps/web` contains the React/Vite application. Organization account administration, attendance, authorized student loading, staff directory reads, GPK assignment, Learning Journey authoring and approval workflows, observation definitions and assignments, FEDC observations, Sensory Profiles, SFA assessments, and IEP plan reads/authoring use typed API services; weekly reports and related remaining prototype domains still use `apps/web/src/services/storageService.ts` and `localStorage`.
+- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, organization account administration, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, scoped Learning Journey workflows, assignment-bound FEDC, Sensory Profile, and SFA observation lifecycles, and role/student-scoped transactional IEP plan authoring with optimistic concurrency and historical immutability, plus runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
+- `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, organization accounts, academic resources, students, staff directories, GPK assignments, attendance, Learning Journeys, observation definitions and assignments, FEDC, Sensory Profile, SFA, and IEP records and commands.
 - `compose.yaml` defines production-oriented `web`, `api`, `migrate`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation. API startup waits for the one-shot migration job.
 - `compose.dev.yaml` is an optional override that publishes PostgreSQL on host port `5432` for database tools or a host-run API.
-- PostgreSQL is authoritative for authentication, user identity and membership administration, authorization scope, academic/student lookup and administration, GPK assignments, attendance, complete Learning Journey workflows, observation definitions and assignments, and FEDC, Sensory Profile, and SFA records; IEPs and weekly reports remain browser-backed while Milestone 5 continues.
+- PostgreSQL is authoritative for authentication, user identity and membership administration, authorization scope, academic/student lookup and administration, GPK assignments, attendance, complete Learning Journey workflows, observation definitions and assignments, FEDC, Sensory Profile, SFA, and IEP plan records; IEP transitions and weekly reports remain incomplete while Milestone 5 continues.
 
 Frontend role checks are presentation behavior only and are not authorization. The API is the intended security boundary for protected operations as those operations are implemented.
 
@@ -330,7 +330,7 @@ On 2026-08-19, the complete Compose stack was built and runtime-validated with t
 
 ## Prototype data and security caveats
 
-For the remaining prototype domains, `apps/web/src/services/storageService.ts` copies seeded records into browser `localStorage`. This caveat applies to IEPs, weekly reports, and other not-yet-migrated data—not to attendance, Learning Journeys, or the FEDC, Sensory Profile, and SFA observation workflows. Browser-backed data:
+For the remaining prototype domains, `apps/web/src/services/storageService.ts` copies seeded records into browser `localStorage`. This caveat applies to weekly reports and other not-yet-migrated data—not to attendance, Learning Journeys, IEP plans, or the FEDC, Sensory Profile, and SFA observation workflows. Browser-backed data:
 
 - exists only in one browser profile;
 - is not synchronized between users or devices;
