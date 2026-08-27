@@ -830,7 +830,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-011 — Replace IEP goal synchronization with transactional projections
 
-- [ ] **Dependencies:** P5-010
+- [x] **Dependencies:** P5-010
 - **Change:**
   - Treat weekly goal progress and achievement records as source events.
   - Recalculate goal summary fields in an idempotent transaction.
@@ -838,6 +838,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
   - Never select the first IEP for a student implicitly.
 - **Acceptance:** repeated projection runs produce identical results; changing a weekly report correctly updates derived summaries and preserves audit history.
 - **Validate:** idempotency, correction, retry, concurrent update, historical IEP, and achievement provenance tests.
+- **Completed (2026-08-27):** Added persisted IEP goal summary projections derived exclusively from weekly goal-progress rows and append-only, source-report-versioned achievement events; per-goal PostgreSQL advisory locking and full recalculation inside report create/update transactions; correction/retry semantics that preserve provenance without duplicate counting; deterministic migration backfill; projection-only updates for historical IEP goals without weakening authored-content immutability; explicit weekly-report IEP selection with no first-plan or fabricated-ID fallback; importer parity with historical event timestamps; bounded IEP list responses containing projection summaries only; full history/provenance on detail and mutation responses; selected-plan detail hydration for the IEP addressed-history UI; enriched contracts and OpenAPI; and focused unit, web, and PostgreSQL coverage for idempotency, correction/retry, concurrent projection, historical IEP targeting, immutable achievement provenance, list payload bounds, and detail history rendering.
 
 ## P5-012 — Migrate dashboards, reports, search, and notifications
 

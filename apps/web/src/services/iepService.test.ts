@@ -59,6 +59,17 @@ const apiIEP = {
       schedule: 'Weekly',
       targetDate: '2027-03-01',
       position: 0,
+      achieved: false,
+      achievedDate: null,
+      achievedNote: null,
+      achievedInReportId: null,
+      achievedEventId: null,
+      lastAddressedDate: null,
+      lastAddressedWeek: null,
+      lastAddressedRating: null,
+      timesAddressed: 0,
+      addressedHistory: [],
+      achievementEvents: [],
     },
   ],
   services: [],
@@ -75,12 +86,23 @@ const apiIEP = {
   updatedAt: '2026-08-21T10:00:00.000Z',
 };
 
+const apiIEPList = {
+  ...apiIEP,
+  goals: apiIEP.goals.map(
+    ({
+      addressedHistory: _addressedHistory,
+      achievementEvents: _events,
+      ...goal
+    }) => goal,
+  ),
+};
+
 afterEach(() => vi.unstubAllGlobals());
 
 describe('iepService', () => {
   it('lists student IEPs using the organization API', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ data: [apiIEP], meta: { count: 1 } }), {
+      new Response(JSON.stringify({ data: [apiIEPList], meta: { count: 1 } }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       }),
@@ -100,6 +122,24 @@ describe('iepService', () => {
       state: 'DRAFT',
       status: 'Draft',
     });
+  });
+
+  it('loads a single IEP with addressed history from the detail API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: apiIEP }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const record = await iepService.getIEP(organizationId, iepId);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/v1/organizations/${organizationId}/ieps/${iepId}`,
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(record.goals[0]?.addressedHistory).toEqual([]);
   });
 
   it('creates a default draft with academic-year dates and no inferred semester', async () => {
@@ -203,10 +243,13 @@ describe('iepService', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ data: [apiIEP], meta: { count: 1 } }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
+        new Response(
+          JSON.stringify({ data: [apiIEPList], meta: { count: 1 } }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        ),
       )
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ data: apiIEP }), {

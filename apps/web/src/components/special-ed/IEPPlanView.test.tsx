@@ -2,13 +2,18 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useApp } from '../../context/AppContext';
 import { useIEPs } from '../../hooks/useIEPs';
+import { iepService } from '../../services/iepService';
 import type { IEPRecord } from '../../types';
 import { IEPPlanView } from './IEPPlanView';
 
 vi.mock('../../context/AppContext', () => ({ useApp: vi.fn() }));
 vi.mock('../../hooks/useIEPs', () => ({ useIEPs: vi.fn() }));
 vi.mock('../../services/iepService', () => ({
-  iepService: { createIEP: vi.fn(), updateIEP: vi.fn() },
+  iepService: {
+    getIEP: vi.fn(),
+    createIEP: vi.fn(),
+    updateIEP: vi.fn(),
+  },
 }));
 vi.mock('./IEPStatusTracker', () => ({
   IEPStatusTracker: () => <div>IEP tracker</div>,
@@ -59,9 +64,11 @@ const approvedIEP: IEPRecord = {
 
 const mockedUseApp = vi.mocked(useApp);
 const mockedUseIEPs = vi.mocked(useIEPs);
+const mockedGetIEP = vi.mocked(iepService.getIEP);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockedGetIEP.mockResolvedValue(approvedIEP);
   mockedUseApp.mockReturnValue({
     organizationId,
     selectedStudentId: studentId,
@@ -106,7 +113,7 @@ describe('IEPPlanView', () => {
     expect(retry).toHaveBeenCalledOnce();
   });
 
-  it('renders non-draft plans as read-only', () => {
+  it('renders non-draft plans as read-only', async () => {
     mockedUseIEPs.mockReturnValue({
       ieps: [approvedIEP],
       status: 'ready',
@@ -116,11 +123,63 @@ describe('IEPPlanView', () => {
 
     render(<IEPPlanView />);
 
-    expect(screen.getByText(/read-only/)).toBeVisible();
+    expect(await screen.findByText(/read-only/)).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Profile & Team' }));
     expect(screen.getByDisplayValue('Individual support')).toBeDisabled();
     expect(
       screen.getByRole('button', { name: 'Save IEP Plan' }),
     ).toBeDisabled();
+  });
+
+  it('hydrates addressed history from the selected IEP detail response', async () => {
+    const detailedIEP: IEPRecord = {
+      ...approvedIEP,
+      goals: [
+        {
+          id: '55555555-5555-4555-8555-555555555555',
+          code: 'G-1',
+          performanceArea: 'Literacy',
+          measurableGoal: 'Read independently.',
+          evaluationMethod: 'Work samples',
+          schedule: 'Weekly',
+          active: true,
+          achieved: false,
+          timesAddressed: 1,
+          lastAddressedDate: '2026-10-23',
+          lastAddressedWeek: 8,
+          addressedHistory: [
+            {
+              reportId: '66666666-6666-4666-8666-666666666666',
+              weekNumber: 8,
+              date: '2026-10-23',
+              rating: 4,
+              notes: 'Independent reading improved.',
+              markedAchieved: false,
+            },
+          ],
+        },
+      ],
+    };
+    mockedUseIEPs.mockReturnValue({
+      ieps: [approvedIEP],
+      status: 'ready',
+      error: undefined,
+      retry: vi.fn(),
+    });
+    mockedGetIEP.mockResolvedValue(detailedIEP);
+
+    render(<IEPPlanView />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: /View Addressed History \(1\)/,
+      }),
+    );
+
+    expect(screen.getByText(/Independent reading improved\./)).toBeVisible();
+    expect(mockedGetIEP).toHaveBeenCalledWith(
+      organizationId,
+      approvedIEP.id,
+      expect.any(AbortSignal),
+    );
   });
 });

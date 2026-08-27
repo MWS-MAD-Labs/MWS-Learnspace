@@ -246,6 +246,10 @@ export const iepReviewCommandSchema = z
     }
   });
 
+const actorSchema = z
+  .object({ id: uuidSchema, displayName: requiredText(256) })
+  .strict();
+
 const withId = <T extends z.ZodRawShape>(shape: T) =>
   z.object({ id: uuidSchema, ...shape }).strict();
 
@@ -254,12 +258,48 @@ export const iepPerformanceAreaSchema = withId(
   performanceAreaWriteSchema.shape,
 );
 export const iepAccommodationSchema = withId(accommodationWriteSchema.shape);
-export const iepGoalSchema = withId(goalWriteSchema.shape);
+export const iepGoalSummarySchema = withId({
+  ...goalWriteSchema.shape,
+  achieved: z.boolean(),
+  achievedDate: schoolDateSchema.nullable(),
+  achievedNote: z.string().nullable(),
+  achievedInReportId: uuidSchema.nullable(),
+  achievedEventId: uuidSchema.nullable(),
+  lastAddressedDate: schoolDateSchema.nullable(),
+  lastAddressedWeek: z.number().int().min(1).max(53).nullable(),
+  lastAddressedRating: z.number().int().min(1).max(5).nullable(),
+  timesAddressed: z.number().int().nonnegative(),
+});
+export const iepGoalSchema = iepGoalSummarySchema.extend({
+  addressedHistory: z.array(
+    z
+      .object({
+        reportId: uuidSchema,
+        weekNumber: z.number().int().min(1).max(53),
+        date: schoolDateSchema,
+        rating: z.number().int().min(1).max(5).nullable(),
+        notes: z.string().nullable(),
+        markedAchieved: z.boolean(),
+      })
+      .strict(),
+  ),
+  achievementEvents: z.array(
+    z
+      .object({
+        id: uuidSchema,
+        weeklyReportId: uuidSchema.nullable(),
+        achieved: z.boolean(),
+        achievedDate: schoolDateSchema.nullable(),
+        note: z.string().nullable(),
+        sourceReportVersion: z.number().int().positive().nullable(),
+        occurredAt: z.string().datetime(),
+        actor: actorSchema,
+      })
+      .strict(),
+  ),
+});
 export const iepServiceSchema = withId(serviceWriteSchema.shape);
 
-const actorSchema = z
-  .object({ id: uuidSchema, displayName: requiredText(256) })
-  .strict();
 const studentSchema = z
   .object({
     id: uuidSchema,
@@ -294,42 +334,46 @@ export const iepWorkflowEventSchema = z
   })
   .strict();
 
+const iepResponseFields = {
+  id: uuidSchema,
+  organizationId: uuidSchema,
+  student: studentSchema,
+  academicYear: academicYearSchema,
+  semester: semesterSchema.nullable(),
+  state: workflowStateSchema,
+  version: z.number().int().positive(),
+  consideration: requiredText(10_000),
+  primaryClassification: requiredText(256),
+  currentPlacement: requiredText(256),
+  homePartnershipSupport: z.string().nullable(),
+  homePartnershipRecommendations: z.string().nullable(),
+  progressMeasurementMethods: z.array(z.string()),
+  parentCommunicationMethods: z.array(z.string()),
+  parentApproved: z.boolean(),
+  parentName: z.string().nullable(),
+  parentApprovalDate: schoolDateSchema.nullable(),
+  startsOn: schoolDateSchema,
+  endsOn: schoolDateSchema,
+  teamMembers: z.array(iepTeamMemberSchema),
+  performanceAreas: z.array(iepPerformanceAreaSchema),
+  accommodations: z.array(iepAccommodationSchema),
+  services: z.array(iepServiceSchema),
+  workflowEvents: z.array(iepWorkflowEventSchema),
+  createdBy: actorSchema,
+  updatedBy: actorSchema,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+};
+
+export const iepListItemSchema = z
+  .object({ ...iepResponseFields, goals: z.array(iepGoalSummarySchema) })
+  .strict();
 export const iepSchema = z
-  .object({
-    id: uuidSchema,
-    organizationId: uuidSchema,
-    student: studentSchema,
-    academicYear: academicYearSchema,
-    semester: semesterSchema.nullable(),
-    state: workflowStateSchema,
-    version: z.number().int().positive(),
-    consideration: requiredText(10_000),
-    primaryClassification: requiredText(256),
-    currentPlacement: requiredText(256),
-    homePartnershipSupport: z.string().nullable(),
-    homePartnershipRecommendations: z.string().nullable(),
-    progressMeasurementMethods: z.array(z.string()),
-    parentCommunicationMethods: z.array(z.string()),
-    parentApproved: z.boolean(),
-    parentName: z.string().nullable(),
-    parentApprovalDate: schoolDateSchema.nullable(),
-    startsOn: schoolDateSchema,
-    endsOn: schoolDateSchema,
-    teamMembers: z.array(iepTeamMemberSchema),
-    performanceAreas: z.array(iepPerformanceAreaSchema),
-    accommodations: z.array(iepAccommodationSchema),
-    goals: z.array(iepGoalSchema),
-    services: z.array(iepServiceSchema),
-    workflowEvents: z.array(iepWorkflowEventSchema),
-    createdBy: actorSchema,
-    updatedBy: actorSchema,
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime(),
-  })
+  .object({ ...iepResponseFields, goals: z.array(iepGoalSchema) })
   .strict();
 
 export const iepsResponseSchema = z
-  .object({ data: z.array(iepSchema), meta: collectionMetaSchema })
+  .object({ data: z.array(iepListItemSchema), meta: collectionMetaSchema })
   .strict();
 export const iepDetailResponseSchema = z.object({ data: iepSchema }).strict();
 export const iepMutationResponseSchema = iepDetailResponseSchema;

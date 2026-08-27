@@ -101,7 +101,8 @@ export const WeeklyReportView: React.FC = () => {
     { studentId: currentStudent?.id },
     { enabled: Boolean(currentStudent) },
   );
-  const studentIEP = iepData.ieps[0];
+  const [selectedIepId, setSelectedIepId] = useState('');
+  const studentIEP = iepData.ieps.find((iep) => iep.id === selectedIepId);
 
   // Helper to build default or synced report populated from IEP Plan goals
   const buildReportFromIEP = (
@@ -193,7 +194,7 @@ export const WeeklyReportView: React.FC = () => {
     return {
       id: `wr-${stud.id}-w${week}`,
       studentId: stud.id,
-      iepId: iep?.id || `iep-${stud.id}-2026`,
+      iepId: iep?.id || '',
       year: '2026',
       weekNumber: week,
       weekRange: dates.range,
@@ -243,6 +244,7 @@ export const WeeklyReportView: React.FC = () => {
       )
       .then((reports) => {
         setWeeklyReports(reports);
+        setSelectedIepId(reports[0]?.iepId ?? '');
         setWeeklyReportStatus('ready');
       })
       .catch((error: unknown) => {
@@ -259,7 +261,12 @@ export const WeeklyReportView: React.FC = () => {
 
   // Sync report on student, week, IEP, or loaded weekly-report change.
   useEffect(() => {
-    if (!currentStudent || iepData.status !== 'ready') return;
+    if (
+      !currentStudent ||
+      iepData.status !== 'ready' ||
+      weeklyReportStatus !== 'ready'
+    )
+      return;
     const synced = buildReportFromIEP(currentStudent, selectedWeek, studentIEP);
     setReport(synced);
   }, [
@@ -267,6 +274,7 @@ export const WeeklyReportView: React.FC = () => {
     selectedWeek,
     studentIEP?.id,
     iepData.status,
+    weeklyReportStatus,
     weeklyReports,
   ]);
 
@@ -457,10 +465,18 @@ export const WeeklyReportView: React.FC = () => {
       );
       return;
     }
+    if (!studentIEP) {
+      showToast(
+        'warning',
+        'Select an IEP Plan',
+        'Choose the exact IEP plan this weekly report belongs to before saving.',
+      );
+      return;
+    }
     const updated: IEPReport = {
       ...report,
       studentId: currentStudent.id,
-      iepId: studentIEP?.id || report.iepId,
+      iepId: studentIEP.id,
       teacherId: report.teacherId || currentUser.id,
       teacherName: report.teacherName || currentUser.name,
       draftStatus: isDraftSubmitted ? report.draftStatus : 'On Progress',
@@ -502,6 +518,15 @@ export const WeeklyReportView: React.FC = () => {
       return;
     }
 
+    if (!studentIEP) {
+      showToast(
+        'warning',
+        'Select an IEP Plan',
+        'Choose the exact IEP plan this weekly report belongs to before submitting.',
+      );
+      return;
+    }
+
     if (addressedGoalsCount === 0) {
       showToast(
         'warning',
@@ -517,7 +542,7 @@ export const WeeklyReportView: React.FC = () => {
       const saved = await persistReport({
         ...report,
         studentId: currentStudent.id,
-        iepId: studentIEP?.id || report.iepId,
+        iepId: studentIEP.id,
         teacherId: currentUser.id,
         teacherName: currentUser.name,
         updatedAt: new Date().toISOString(),
@@ -1081,15 +1106,33 @@ export const WeeklyReportView: React.FC = () => {
                   </span>
                   <span className="text-xs font-bold text-stone-800">
                     {studentIEP
-                      ? `IEP ${studentIEP.academicYear} · ${studentIEP.primaryClassification}`
-                      : 'No IEP Plan Found'}
+                      ? `${studentIEP.startsOn}–${studentIEP.endsOn} · ${studentIEP.primaryClassification}`
+                      : iepData.ieps.length
+                        ? 'Select the exact IEP plan'
+                        : 'No IEP Plan Found'}
                   </span>
                 </div>
                 <p className="text-xs text-stone-600 mt-0.5">
-                  Goals are pulled directly from the student's active IEP Plan.
-                  Choose the goals addressed this week; logged dates and
-                  achievements sync automatically to the plan.
+                  Goals are pulled from the explicitly selected IEP. Logged
+                  dates and achievements are projected back to that same plan.
                 </p>
+                {!weeklyReports[0] && iepData.ieps.length > 0 && (
+                  <select
+                    value={selectedIepId}
+                    onChange={(event) => setSelectedIepId(event.target.value)}
+                    disabled={isFormReadOnly}
+                    className="mt-2 w-full max-w-md rounded-xl border border-[#E8DFC8] bg-white px-3 py-2 text-xs font-semibold text-stone-800"
+                    aria-label="IEP plan for this weekly report"
+                  >
+                    <option value="">Select an IEP plan</option>
+                    {iepData.ieps.map((iep) => (
+                      <option key={iep.id} value={iep.id}>
+                        {iep.startsOn}–{iep.endsOn} ·{' '}
+                        {iep.primaryClassification}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
 

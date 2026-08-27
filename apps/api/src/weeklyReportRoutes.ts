@@ -26,6 +26,10 @@ import {
   type AuthenticatedRequest,
 } from './authRoutes.js';
 import { HttpError, parseRequest } from './httpErrors.js';
+import {
+  appendReportAchievementEvents,
+  projectIepGoals,
+} from './iepGoalProjection.js';
 import { activeAssignedStudentIds } from './iepRoutes.js';
 import type { SessionService } from './sessionService.js';
 
@@ -369,6 +373,19 @@ export function createWeeklyReportRouter(
             },
             select: { id: true },
           });
+          await appendReportAchievementEvents(tx, {
+            organizationId: path.organizationId,
+            iepId: command.iepId,
+            weeklyReportId: report.id,
+            sourceReportVersion: 1,
+            actorId: session.userId,
+            current: command.goalProgress,
+          });
+          await projectIepGoals(
+            tx,
+            command.iepId,
+            command.goalProgress.map((progress) => progress.goalId),
+          );
           await createAuditRepository(tx as PrismaClient).append({
             organizationId: path.organizationId,
             actorId: session.userId,
@@ -474,6 +491,26 @@ export function createWeeklyReportRouter(
               achievedNote: p.achievedNote ?? null,
             })),
           });
+          await appendReportAchievementEvents(tx, {
+            organizationId: path.organizationId,
+            iepId: command.iepId,
+            weeklyReportId: path.reportId,
+            sourceReportVersion: command.expectedVersion + 1,
+            actorId: session.userId,
+            previous: existing.goalProgress.map((progress) => ({
+              goalId: progress.goalId,
+              markedAchievedThisWeek: progress.markedAchievedThisWeek,
+              achievedDate: progress.achievedDate
+                ? iso(progress.achievedDate)
+                : null,
+              achievedNote: progress.achievedNote,
+            })),
+            current: command.goalProgress,
+          });
+          await projectIepGoals(tx, command.iepId, [
+            ...existing.goalProgress.map((progress) => progress.goalId),
+            ...command.goalProgress.map((progress) => progress.goalId),
+          ]);
           await createAuditRepository(tx as PrismaClient).append({
             organizationId: path.organizationId,
             actorId: session.userId,

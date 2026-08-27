@@ -63,6 +63,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Migrated production user identity, membership, student directory, and GPK assignment administration away from browser storage; development fake-data behavior remains available only behind the explicit demo flags.
 - Migrated Sensory Profile authoring, completion, history, detailed reporting, and reference data away from browser persistence; completed records now retain their exact server-pinned definition and authoritative scores.
 - Migrated IEP plan authoring and plan-backed dashboard, analytics, status, and weekly-report reads away from browser persistence; leadership readers are read-only, assigned special-education authors are server-scoped, and explicit workflow transitions remain deferred to P5-009.
+- Replaced weekly-report-to-IEP mutation with transactionally recalculated goal projections from weekly progress and append-only achievement events, including correction-safe provenance, per-goal concurrency locking, historical-plan targeting, migration backfill, timestamp-preserving importer parity, explicit client-side IEP selection, bounded list summaries, and detail-only addressed/achievement history hydration.
 - Restricted broad student responses from exposing addresses or guardian contacts, and limited sensitive student detail to documented leadership and Special Education Coordinator scope.
 - Updated the application and workspace package version to `0.2.0`, the first end-to-end feature migration release.
 

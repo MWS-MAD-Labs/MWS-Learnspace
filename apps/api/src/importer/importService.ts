@@ -9,6 +9,10 @@ import {
   type WorkflowState,
 } from '@prisma/client';
 import type { LearnspaceExportV1 } from '@learnspace/contracts';
+import {
+  appendReportAchievementEvents,
+  projectIepGoals,
+} from '../iepGoalProjection.js';
 import type { ImportManifest } from './importManifest.js';
 import {
   emptyCounts,
@@ -912,6 +916,7 @@ async function persistExport(
     const sourceIepId = requiredString(report, 'iepId');
     const targetIepId = iepIds.get(sourceIepId);
     if (!targetIepId) throw new Error(`Unknown IEP "${sourceIepId}".`);
+    const teacherId = userId(requiredString(report, 'teacherId'));
     await tx.weeklyReport.create({
       data: {
         id,
@@ -922,7 +927,7 @@ async function persistExport(
         weekNumber: Number(report.weekNumber),
         weekStart: dateOnly(report.weekStart, `${report.id}.weekStart`),
         weekEnd: dateOnly(report.weekEnd, `${report.id}.weekEnd`),
-        teacherId: userId(requiredString(report, 'teacherId')),
+        teacherId,
         state: workflowState(report.status),
         descriptiveObservation: requiredString(
           report,
@@ -935,11 +940,25 @@ async function persistExport(
     });
     addCount(collections, 'weeklyReports', 'accepted');
     addCount(collections, 'weeklyReports', 'transformed');
+    const projectionGoalIds: string[] = [];
+    const achievementSources: Array<{
+      goalId: string;
+      markedAchievedThisWeek: boolean;
+      achievedDate?: string;
+      achievedNote?: string;
+    }> = [];
     for (const progress of requiredArray(report, 'goalProgress')) {
       const goalId = goalIds.get(
         `${sourceIepId}:${requiredString(progress, 'goalId')}`,
       );
       if (!goalId) throw new Error(`Unknown IEP goal "${progress.goalId}".`);
+      projectionGoalIds.push(goalId);
+      achievementSources.push({
+        goalId,
+        markedAchievedThisWeek: progress.markedAchievedThisWeek === true,
+        achievedDate: optionalString(progress.achievedDate),
+        achievedNote: optionalString(progress.achievedNote),
+      });
       await tx.weeklyGoalProgress.create({
         data: {
           id: uuidFromSource(
@@ -965,6 +984,16 @@ async function persistExport(
       });
       addCount(collections, 'weeklyGoalProgress', 'accepted');
     }
+    await appendReportAchievementEvents(tx, {
+      organizationId,
+      iepId: targetIepId,
+      weeklyReportId: id,
+      sourceReportVersion: 1,
+      actorId: teacherId,
+      occurredAt: dateTime(report.updatedAt, `${report.id}.updatedAt`),
+      current: achievementSources,
+    });
+    await projectIepGoals(tx, targetIepId, projectionGoalIds);
   }
 }
 

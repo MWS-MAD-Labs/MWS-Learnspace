@@ -200,7 +200,43 @@ const iepSelect = {
       evaluationMethod: true,
       schedule: true,
       targetDate: true,
+      achieved: true,
+      achievedDate: true,
+      achievedNote: true,
+      achievedInReportId: true,
+      achievedEventId: true,
+      lastAddressedDate: true,
+      lastAddressedWeek: true,
+      lastAddressedRating: true,
+      timesAddressed: true,
       position: true,
+      weeklyProgress: {
+        where: { addressedThisWeek: true },
+        orderBy: [
+          { weeklyReport: { weekEnd: 'desc' as const } },
+          { weeklyReportId: 'desc' as const },
+        ],
+        select: {
+          weeklyReportId: true,
+          rating: true,
+          notes: true,
+          markedAchievedThisWeek: true,
+          weeklyReport: { select: { weekNumber: true, weekEnd: true } },
+        },
+      },
+      achievementEvents: {
+        orderBy: [{ occurredAt: 'desc' as const }, { id: 'desc' as const }],
+        select: {
+          id: true,
+          weeklyReportId: true,
+          achieved: true,
+          achievedDate: true,
+          note: true,
+          sourceReportVersion: true,
+          occurredAt: true,
+          actor: { select: { id: true, displayName: true } },
+        },
+      },
     },
   },
   services: {
@@ -218,7 +254,39 @@ const iepSelect = {
   },
 } satisfies Prisma.IEPSelect;
 
+const iepListSelect = {
+  ...iepSelect,
+  goals: {
+    orderBy: [{ position: 'asc' as const }, { id: 'asc' as const }],
+    select: {
+      id: true,
+      code: true,
+      performanceArea: true,
+      longTermGoal: true,
+      shortTermGoal: true,
+      measurableGoal: true,
+      strategyActivity: true,
+      learningExpectation: true,
+      learningStrategy: true,
+      evaluationMethod: true,
+      schedule: true,
+      targetDate: true,
+      achieved: true,
+      achievedDate: true,
+      achievedNote: true,
+      achievedInReportId: true,
+      achievedEventId: true,
+      lastAddressedDate: true,
+      lastAddressedWeek: true,
+      lastAddressedRating: true,
+      timesAddressed: true,
+      position: true,
+    },
+  },
+} satisfies Prisma.IEPSelect;
+
 type IepRow = Prisma.IEPGetPayload<{ select: typeof iepSelect }>;
+type IepListRow = Prisma.IEPGetPayload<{ select: typeof iepListSelect }>;
 
 type IepWorkflowEvent = {
   id: string;
@@ -249,9 +317,14 @@ function stringArray(value: Prisma.JsonValue): string[] {
   return value;
 }
 
-function mapIep(row: IepRow, workflowEvents: readonly IepWorkflowEvent[] = []) {
+function mapIepCommon(
+  row: IepRow | IepListRow,
+  goals: unknown[],
+  workflowEvents: readonly IepWorkflowEvent[] = [],
+) {
   return {
     ...row,
+    goals,
     progressMeasurementMethods: stringArray(row.progressMeasurementMethods),
     parentCommunicationMethods: stringArray(row.parentCommunicationMethods),
     parentApprovalDate: row.parentApprovalDate
@@ -275,10 +348,6 @@ function mapIep(row: IepRow, workflowEvents: readonly IepWorkflowEvent[] = []) {
       ...area,
       assessmentDate: area.assessmentDate ? isoDate(area.assessmentDate) : null,
     })),
-    goals: row.goals.map((goal) => ({
-      ...goal,
-      targetDate: goal.targetDate ? isoDate(goal.targetDate) : null,
-    })),
     workflowEvents: workflowEvents.map((event) => ({
       id: event.id,
       fromState: event.fromState,
@@ -296,6 +365,55 @@ function mapIep(row: IepRow, workflowEvents: readonly IepWorkflowEvent[] = []) {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+function mapIepList(
+  row: IepListRow,
+  workflowEvents: readonly IepWorkflowEvent[] = [],
+) {
+  return mapIepCommon(
+    row,
+    row.goals.map((goal) => ({
+      ...goal,
+      targetDate: goal.targetDate ? isoDate(goal.targetDate) : null,
+      achievedDate: goal.achievedDate ? isoDate(goal.achievedDate) : null,
+      lastAddressedDate: goal.lastAddressedDate
+        ? isoDate(goal.lastAddressedDate)
+        : null,
+    })),
+    workflowEvents,
+  );
+}
+
+function mapIep(row: IepRow, workflowEvents: readonly IepWorkflowEvent[] = []) {
+  return mapIepCommon(
+    row,
+    row.goals.map((goal) => {
+      const { weeklyProgress, ...summary } = goal;
+      return {
+        ...summary,
+        targetDate: goal.targetDate ? isoDate(goal.targetDate) : null,
+        achievedDate: goal.achievedDate ? isoDate(goal.achievedDate) : null,
+        lastAddressedDate: goal.lastAddressedDate
+          ? isoDate(goal.lastAddressedDate)
+          : null,
+        addressedHistory: weeklyProgress.map((progress) => ({
+          reportId: progress.weeklyReportId,
+          weekNumber: progress.weeklyReport.weekNumber,
+          date: isoDate(progress.weeklyReport.weekEnd),
+          rating: progress.rating,
+          notes: progress.notes,
+          markedAchieved: progress.markedAchievedThisWeek,
+        })),
+        achievementEvents: goal.achievementEvents.map((event) => ({
+          ...event,
+          achievedDate: event.achievedDate ? isoDate(event.achievedDate) : null,
+          occurredAt: event.occurredAt.toISOString(),
+        })),
+      };
+    }),
+    workflowEvents,
+  );
 }
 
 async function validateReferences(
@@ -705,7 +823,7 @@ export function createIepRouter(
             ...(query.state ? { state: query.state } : {}),
           },
           orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
-          select: iepSelect,
+          select: iepListSelect,
         });
         const events = await iepWorkflowEvents(
           prisma,
@@ -719,7 +837,7 @@ export function createIepRouter(
           eventsByIep.set(event.aggregateId, aggregateEvents);
         }
         const data = rows.map((row) =>
-          mapIep(row, eventsByIep.get(row.id) ?? []),
+          mapIepList(row, eventsByIep.get(row.id) ?? []),
         );
         response.json(
           iepsResponseSchema.parse({ data, meta: { count: data.length } }),

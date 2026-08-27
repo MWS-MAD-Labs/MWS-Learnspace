@@ -798,24 +798,35 @@ model IEPAccommodation {
 }
 
 model IEPGoal {
-  id                  String                 @id @default(uuid()) @db.Uuid
-  iepId               String                 @db.Uuid
-  code                String
-  performanceArea     String
-  longTermGoal        String?
-  shortTermGoal       String?
-  measurableGoal      String
-  strategyActivity    String?
-  learningExpectation String?
-  learningStrategy    String?
-  evaluationMethod    String
-  schedule            String
-  targetDate          DateTime?              @db.Date
-  active              Boolean                @default(true)
-  position            Int                    @default(0)
-  iep                 IEP                    @relation(fields: [iepId], references: [id], onDelete: Cascade)
-  weeklyProgress      WeeklyGoalProgress[]
-  achievementEvents   GoalAchievementEvent[]
+  id                         String                 @id @default(uuid()) @db.Uuid
+  iepId                      String                 @db.Uuid
+  code                       String
+  performanceArea            String
+  longTermGoal               String?
+  shortTermGoal              String?
+  measurableGoal             String
+  strategyActivity           String?
+  learningExpectation        String?
+  learningStrategy           String?
+  evaluationMethod           String
+  schedule                   String
+  targetDate                 DateTime?              @db.Date
+  active                     Boolean                @default(true)
+  achieved                   Boolean                @default(false)
+  achievedDate               DateTime?              @db.Date
+  achievedNote               String?
+  achievedInReportId         String?                @db.Uuid
+  achievedEventId            String?                @unique @db.Uuid
+  lastAddressedDate          DateTime?              @db.Date
+  lastAddressedWeek          Int?
+  lastAddressedRating        Int?
+  timesAddressed             Int                    @default(0)
+  position                   Int                    @default(0)
+  iep                        IEP                    @relation(fields: [iepId], references: [id], onDelete: Cascade)
+  weeklyProgress             WeeklyGoalProgress[]
+  achievementEvents          GoalAchievementEvent[] @relation("GoalAchievementEvents")
+  projectedAchievement       GoalAchievementEvent?  @relation("GoalProjectedAchievement", fields: [achievedEventId], references: [id], onDelete: Restrict)
+  projectedAchievementReport WeeklyReport?          @relation("GoalProjectedReport", fields: [achievedInReportId, iepId], references: [id, iepId], onDelete: Restrict)
 
   @@unique([iepId, code])
   @@unique([iepId, position])
@@ -859,6 +870,7 @@ model WeeklyReport {
   teacher                User                   @relation("WeeklyReportTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
   goalProgress           WeeklyGoalProgress[]
   achievementEvents      GoalAchievementEvent[]
+  projectedGoals         IEPGoal[]              @relation("GoalProjectedReport")
 
   @@unique([organizationId, studentId, year, weekNumber])
   @@unique([id, iepId])
@@ -884,20 +896,24 @@ model WeeklyGoalProgress {
 }
 
 model GoalAchievementEvent {
-  id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
-  iepId          String        @db.Uuid
-  goalId         String        @db.Uuid
-  weeklyReportId String?       @db.Uuid
-  actorId        String        @db.Uuid
-  achieved       Boolean
-  note           String?
-  occurredAt     DateTime      @default(now())
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  goal           IEPGoal       @relation(fields: [goalId, iepId], references: [id, iepId], onDelete: Restrict)
-  weeklyReport   WeeklyReport? @relation(fields: [weeklyReportId, iepId], references: [id, iepId], onDelete: Restrict)
-  actor          User          @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  id                  String        @id @default(uuid()) @db.Uuid
+  organizationId      String        @db.Uuid
+  iepId               String        @db.Uuid
+  goalId              String        @db.Uuid
+  weeklyReportId      String?       @db.Uuid
+  actorId             String        @db.Uuid
+  achieved            Boolean
+  note                String?
+  achievedDate        DateTime?     @db.Date
+  sourceReportVersion Int?
+  occurredAt          DateTime      @default(now())
+  organization        Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  goal                IEPGoal       @relation("GoalAchievementEvents", fields: [goalId, iepId], references: [id, iepId], onDelete: Restrict)
+  projectedByGoal     IEPGoal?      @relation("GoalProjectedAchievement")
+  weeklyReport        WeeklyReport? @relation(fields: [weeklyReportId, iepId], references: [id, iepId], onDelete: Restrict)
+  actor               User          @relation(fields: [actorId], references: [id], onDelete: Restrict)
 
+  @@unique([weeklyReportId, goalId, sourceReportVersion])
   @@index([organizationId, goalId, occurredAt])
 }
 

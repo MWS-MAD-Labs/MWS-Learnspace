@@ -5,6 +5,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/app.js';
 import type { AppConfig } from '../../src/config.js';
+import { projectIepGoals } from '../../src/iepGoalProjection.js';
 import { SessionService } from '../../src/sessionService.js';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -488,6 +489,270 @@ integration('Weekly report management', () => {
         },
       }),
     ).toBe(0);
+  });
+
+  it('recalculates goal projections idempotently without duplicating achievement events', async () => {
+    const created = await postReport(
+      command({
+        weekNumber: 43,
+        weekStart: '2026-10-19',
+        weekEnd: '2026-10-23',
+        goalProgress: [
+          {
+            goalId,
+            addressedThisWeek: true,
+            rating: 5,
+            notes: 'Mastery demonstrated independently.',
+            markedAchievedThisWeek: true,
+            achievedDate: '2026-10-23',
+            achievedNote: 'Met the stated mastery criterion.',
+          },
+        ],
+      }),
+      teacherCookie,
+    );
+    expect(created.status).toBe(201);
+    const reportId = created.body.data.id as string;
+    const before = await prisma.iEPGoal.findUniqueOrThrow({
+      where: { id: goalId },
+      select: {
+        achieved: true,
+        achievedDate: true,
+        achievedNote: true,
+        achievedInReportId: true,
+        achievedEventId: true,
+        lastAddressedDate: true,
+        lastAddressedWeek: true,
+        lastAddressedRating: true,
+        timesAddressed: true,
+      },
+    });
+
+    await prisma.$transaction((tx) => projectIepGoals(tx, iepId, [goalId]));
+    await prisma.$transaction((tx) => projectIepGoals(tx, iepId, [goalId]));
+
+    expect(
+      await prisma.iEPGoal.findUniqueOrThrow({
+        where: { id: goalId },
+        select: {
+          achieved: true,
+          achievedDate: true,
+          achievedNote: true,
+          achievedInReportId: true,
+          achievedEventId: true,
+          lastAddressedDate: true,
+          lastAddressedWeek: true,
+          lastAddressedRating: true,
+          timesAddressed: true,
+        },
+      }),
+    ).toEqual(before);
+    expect(before).toMatchObject({
+      achieved: true,
+      achievedNote: 'Met the stated mastery criterion.',
+      achievedInReportId: reportId,
+      lastAddressedWeek: 43,
+      lastAddressedRating: 5,
+    });
+    expect(
+      await prisma.goalAchievementEvent.count({
+        where: { weeklyReportId: reportId, goalId },
+      }),
+    ).toBe(1);
+  });
+
+  it('corrects and retries report projections without double counting while preserving provenance', async () => {
+    const baseline = await prisma.iEPGoal.findUniqueOrThrow({
+      where: { id: goalId },
+      select: { timesAddressed: true },
+    });
+    const created = await postReport(
+      command({
+        weekNumber: 44,
+        weekStart: '2026-10-26',
+        weekEnd: '2026-10-30',
+        goalProgress: [
+          {
+            goalId,
+            addressedThisWeek: true,
+            rating: 3,
+            notes: 'Initial entry.',
+            markedAchievedThisWeek: true,
+            achievedDate: '2026-10-30',
+            achievedNote: 'Entered prematurely.',
+          },
+        ],
+      }),
+      teacherCookie,
+    );
+    const reportId = created.body.data.id as string;
+    const firstEvent = await prisma.goalAchievementEvent.findFirstOrThrow({
+      where: { weeklyReportId: reportId, goalId, sourceReportVersion: 1 },
+    });
+
+    const corrected = await putReport(
+      reportId,
+      {
+        expectedVersion: 1,
+        ...command({
+          weekNumber: 44,
+          weekStart: '2026-10-26',
+          weekEnd: '2026-10-30',
+          goalProgress: [
+            {
+              goalId,
+              addressedThisWeek: false,
+              rating: null,
+              notes: 'Correction: this goal was not addressed.',
+              markedAchievedThisWeek: false,
+            },
+          ],
+        }),
+      },
+      teacherCookie,
+    );
+    expect(corrected.status).toBe(200);
+    const retry = await putReport(
+      reportId,
+      {
+        expectedVersion: 1,
+        ...command({
+          weekNumber: 44,
+          weekStart: '2026-10-26',
+          weekEnd: '2026-10-30',
+        }),
+      },
+      teacherCookie,
+    );
+    expect(retry.status).toBe(409);
+
+    const events = await prisma.goalAchievementEvent.findMany({
+      where: { weeklyReportId: reportId, goalId },
+      orderBy: { sourceReportVersion: 'asc' },
+    });
+    expect(
+      events.map((event) => [event.sourceReportVersion, event.achieved]),
+    ).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+    expect(events[0]!.id).toBe(firstEvent.id);
+    expect(
+      await prisma.weeklyGoalProgress.count({
+        where: { weeklyReportId: reportId, goalId },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.iEPGoal.findUniqueOrThrow({
+        where: { id: goalId },
+        select: { timesAddressed: true },
+      }),
+    ).toEqual(baseline);
+    await expect(
+      prisma.goalAchievementEvent.update({
+        where: { id: firstEvent.id },
+        data: { note: 'Rewritten provenance' },
+      }),
+    ).rejects.toThrow(/append-only/);
+  });
+
+  it('serializes concurrent projection runs and retains the committed report correction', async () => {
+    const created = await postReport(
+      command({
+        weekNumber: 45,
+        weekStart: '2026-11-02',
+        weekEnd: '2026-11-06',
+      }),
+      teacherCookie,
+    );
+    const reportId = created.body.data.id as string;
+    const [update, projection] = await Promise.all([
+      putReport(
+        reportId,
+        {
+          expectedVersion: 1,
+          ...command({
+            weekNumber: 45,
+            weekStart: '2026-11-02',
+            weekEnd: '2026-11-06',
+            goalProgress: [
+              {
+                goalId,
+                addressedThisWeek: true,
+                rating: 2,
+                notes: 'Concurrent corrected rating.',
+                markedAchievedThisWeek: false,
+              },
+            ],
+          }),
+        },
+        teacherCookie,
+      ),
+      prisma.$transaction((tx) => projectIepGoals(tx, iepId, [goalId])),
+    ]);
+    expect(update.status).toBe(200);
+    await prisma.$transaction((tx) => projectIepGoals(tx, iepId, [goalId]));
+    expect(
+      await prisma.iEPGoal.findUniqueOrThrow({ where: { id: goalId } }),
+    ).toMatchObject({ lastAddressedWeek: 45, lastAddressedRating: 2 });
+    expect(projection).toBeUndefined();
+  });
+
+  it('projects the explicitly selected historical IEP instead of the first IEP for the student', async () => {
+    await prisma.iEP.update({
+      where: { id: otherIepId },
+      data: { state: 'ACTIVE' },
+    });
+    const firstBefore = await prisma.iEPGoal.findUniqueOrThrow({
+      where: { id: goalId },
+      select: { timesAddressed: true, lastAddressedWeek: true },
+    });
+    const created = await postReport(
+      command({
+        iepId: otherIepId,
+        weekNumber: 46,
+        weekStart: '2026-11-09',
+        weekEnd: '2026-11-13',
+        goalProgress: [
+          {
+            goalId: otherGoalId,
+            addressedThisWeek: true,
+            rating: 4,
+            notes: 'Progress belongs to the explicitly selected plan.',
+            markedAchievedThisWeek: false,
+          },
+        ],
+      }),
+      teacherCookie,
+    );
+    expect(created.status).toBe(201);
+    expect(
+      await prisma.iEPGoal.findUniqueOrThrow({ where: { id: otherGoalId } }),
+    ).toMatchObject({ lastAddressedWeek: 46, lastAddressedRating: 4 });
+    expect(
+      await prisma.iEPGoal.findUniqueOrThrow({
+        where: { id: goalId },
+        select: { timesAddressed: true, lastAddressedWeek: true },
+      }),
+    ).toEqual(firstBefore);
+  });
+
+  it('returns achievement provenance from the IEP projection', async () => {
+    const response = await request(app)
+      .get(`/api/v1/organizations/${organizationId}/ieps/${iepId}`)
+      .set('cookie', teacherCookie);
+    expect(response.status).toBe(200);
+    const goal = response.body.data.goals.find(
+      (item: { id: string }) => item.id === goalId,
+    );
+    expect(goal.achievementEvents.length).toBeGreaterThan(0);
+    expect(goal.achievementEvents[0]).toMatchObject({
+      weeklyReportId: expect.any(String),
+      sourceReportVersion: expect.any(Number),
+      actor: { id: teacherId, displayName: 'Teacher' },
+    });
+    expect(goal.achievedEventId).toEqual(expect.any(String));
+    expect(goal.addressedHistory.length).toBe(goal.timesAddressed);
   });
 
   it('derives workflow actors and enforces immutable historical report, workflow, and audit records', async () => {

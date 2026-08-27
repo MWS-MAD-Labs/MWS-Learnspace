@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useIEPs } from '../../hooks/useIEPs';
+import { isRequestCancelled } from '../../services/apiClient';
 import { iepService } from '../../services/iepService';
 import { IEPRecord, IEPGoal, Student } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
@@ -269,12 +270,51 @@ export const IEPPlanView: React.FC = () => {
     ),
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [detailStatus, setDetailStatus] = useState<
+    'idle' | 'loading' | 'ready' | 'error'
+  >('idle');
+  const [detailError, setDetailError] = useState<string>();
+  const [detailRetryToken, setDetailRetryToken] = useState(0);
 
   useEffect(() => {
     if (!currentStudent || iepData.status !== 'ready') return;
-    setIep(iepData.ieps[0] || loadDefaultIEP(currentStudent));
+    const selected = iepData.ieps[0];
     setEditingGoal(null);
-  }, [currentStudent?.id, iepData.status, iepData.ieps]);
+    setExpandedHistoryGoalId(null);
+    if (!selected) {
+      setIep(loadDefaultIEP(currentStudent));
+      setDetailStatus('ready');
+      setDetailError(undefined);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIep(selected);
+    setDetailStatus('loading');
+    setDetailError(undefined);
+    void iepService
+      .getIEP(organizationId, selected.id, controller.signal)
+      .then((detail) => {
+        setIep(detail);
+        setDetailStatus('ready');
+      })
+      .catch((caught: unknown) => {
+        if (isRequestCancelled(caught)) return;
+        setDetailStatus('error');
+        setDetailError(
+          caught instanceof Error
+            ? caught.message
+            : 'IEP detail could not be loaded.',
+        );
+      });
+    return () => controller.abort();
+  }, [
+    currentStudent?.id,
+    iepData.status,
+    iepData.ieps,
+    organizationId,
+    detailRetryToken,
+  ]);
 
   const isDraft = (iep.state || 'DRAFT') === 'DRAFT';
   const isPersisted = iepData.ieps.some((record) => record.id === iep.id);
@@ -468,7 +508,10 @@ export const IEPPlanView: React.FC = () => {
     );
   }
 
-  if (iepViewMode === 'DOCUMENT' && iepData.status === 'loading') {
+  if (
+    iepViewMode === 'DOCUMENT' &&
+    (iepData.status === 'loading' || detailStatus === 'loading')
+  ) {
     return (
       <div className="max-w-3xl mx-auto my-12 bg-white border border-[#EFE7DC] rounded-3xl p-8 text-center text-sm text-stone-600 shadow-xs">
         Loading IEP plan…
@@ -476,16 +519,22 @@ export const IEPPlanView: React.FC = () => {
     );
   }
 
-  if (iepViewMode === 'DOCUMENT' && iepData.status === 'error') {
+  if (
+    iepViewMode === 'DOCUMENT' &&
+    (iepData.status === 'error' || detailStatus === 'error')
+  ) {
     return (
       <div className="max-w-3xl mx-auto my-12 bg-white border border-rose-200 rounded-3xl p-8 text-center space-y-4 shadow-xs">
         <p className="text-sm font-bold text-rose-900">
           IEP plan could not be loaded.
         </p>
-        <p className="text-xs text-stone-600">{iepData.error}</p>
+        <p className="text-xs text-stone-600">{iepData.error || detailError}</p>
         <button
           type="button"
-          onClick={iepData.retry}
+          onClick={() => {
+            if (iepData.status === 'error') iepData.retry();
+            else setDetailRetryToken((value) => value + 1);
+          }}
           className="px-4 py-2 bg-[#6E161E] text-white text-xs font-bold rounded-xl"
         >
           Retry
@@ -1095,12 +1144,12 @@ export const IEPPlanView: React.FC = () => {
                                       Week {log.weekNumber}
                                     </span>
                                     <span className="font-semibold text-stone-800">
-                                      Date: {log.addressedDate}
+                                      Date: {log.date}
                                     </span>
                                     <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-bold">
                                       Rating: {log.rating}/5
                                     </span>
-                                    {log.achieved && (
+                                    {log.markedAchieved && (
                                       <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                                         🎯 Mastered
                                       </span>

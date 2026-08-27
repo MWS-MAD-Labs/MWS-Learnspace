@@ -371,6 +371,14 @@ integration('IEP aggregate management', () => {
           iep.student.id === assignedStudentId,
       ),
     ).toBe(true);
+    expect(
+      list.body.data.every((iep: { goals: Array<Record<string, unknown>> }) =>
+        iep.goals.every(
+          (goal) =>
+            !('addressedHistory' in goal) && !('achievementEvents' in goal),
+        ),
+      ),
+    ).toBe(true);
     const deniedDetail = await request(app)
       .get(
         `/api/v1/organizations/${organizationId}/ieps/${unassigned.body.data.id}`,

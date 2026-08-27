@@ -605,6 +605,18 @@ export const iepService = {
     return response.data.map(mapIEPToLegacy);
   },
 
+  async getIEP(
+    organizationId: string,
+    iepId: string,
+    signal?: AbortSignal,
+  ): Promise<IEPRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/ieps/${encodeURIComponent(iepId)}`,
+      { schema: iepResponseSchema, signal },
+    );
+    return mapIEPToLegacy(response.data);
+  },
+
   async createIEP(
     organizationId: string,
     iep: IEPRecord,
