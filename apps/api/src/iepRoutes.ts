@@ -1,4 +1,10 @@
-import { Prisma, type PrismaClient } from '@prisma/client';
+import {
+  Prisma,
+  type MembershipRole,
+  type PrismaClient,
+  type WorkflowAction,
+  type WorkflowState,
+} from '@prisma/client';
 import type { Request } from 'express';
 import { Router as createRouter } from 'express';
 import { z } from 'zod';
@@ -7,7 +13,9 @@ import {
   iepDetailResponseSchema,
   iepListQuerySchema,
   iepMutationResponseSchema,
+  iepReviewCommandSchema,
   iepUpdateCommandSchema,
+  iepWorkflowCommandSchema,
   iepsResponseSchema,
   uuidSchema,
   type IepCreateCommand,
@@ -72,7 +80,7 @@ function membershipFor(request: Request, organizationId: string) {
 
 function requireIepPermission(
   membership: MembershipScope,
-  permission: 'special-ed:read' | 'special-ed:write',
+  permission: 'special-ed:read' | 'special-ed:write' | 'special-ed:review',
 ) {
   try {
     requirePermission(membership, permission);
@@ -212,6 +220,21 @@ const iepSelect = {
 
 type IepRow = Prisma.IEPGetPayload<{ select: typeof iepSelect }>;
 
+type IepWorkflowEvent = {
+  id: string;
+  aggregateId: string;
+  fromState: WorkflowState;
+  toState: WorkflowState;
+  action: WorkflowAction;
+  comment: string | null;
+  occurredAt: Date;
+  actor: {
+    id: string;
+    displayName: string;
+    memberships: Array<{ role: MembershipRole; roleTitle: string | null }>;
+  };
+};
+
 function stringArray(value: Prisma.JsonValue): string[] {
   if (
     !Array.isArray(value) ||
@@ -226,7 +249,7 @@ function stringArray(value: Prisma.JsonValue): string[] {
   return value;
 }
 
-function mapIep(row: IepRow) {
+function mapIep(row: IepRow, workflowEvents: readonly IepWorkflowEvent[] = []) {
   return {
     ...row,
     progressMeasurementMethods: stringArray(row.progressMeasurementMethods),
@@ -255,6 +278,20 @@ function mapIep(row: IepRow) {
     goals: row.goals.map((goal) => ({
       ...goal,
       targetDate: goal.targetDate ? isoDate(goal.targetDate) : null,
+    })),
+    workflowEvents: workflowEvents.map((event) => ({
+      id: event.id,
+      fromState: event.fromState,
+      toState: event.toState,
+      action: event.action,
+      comment: event.comment,
+      occurredAt: event.occurredAt.toISOString(),
+      actor: {
+        id: event.actor.id,
+        displayName: event.actor.displayName,
+        role: event.actor.memberships[0]?.role ?? null,
+        roleTitle: event.actor.memberships[0]?.roleTitle ?? null,
+      },
     })),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -312,6 +349,50 @@ async function validateReferences(
       'IEP dates must fall within the selected semester.',
     );
   }
+}
+
+async function iepWorkflowEvents(
+  prisma: Prisma.TransactionClient | PrismaClient,
+  organizationId: string,
+  iepIds: readonly string[],
+): Promise<IepWorkflowEvent[]> {
+  if (!iepIds.length) return [];
+  return prisma.workflowEvent.findMany({
+    where: {
+      organizationId,
+      aggregateType: 'IEP',
+      aggregateId: { in: [...iepIds] },
+    },
+    orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+    select: {
+      id: true,
+      aggregateId: true,
+      fromState: true,
+      toState: true,
+      action: true,
+      comment: true,
+      occurredAt: true,
+      actor: {
+        select: {
+          id: true,
+          displayName: true,
+          memberships: {
+            where: { organizationId },
+            take: 1,
+            select: { role: true, roleTitle: true },
+          },
+        },
+      },
+    },
+  });
+}
+
+async function mappedIep(
+  prisma: Prisma.TransactionClient | PrismaClient,
+  row: IepRow,
+) {
+  const events = await iepWorkflowEvents(prisma, row.organizationId, [row.id]);
+  return mapIep(row, events);
 }
 
 function nestedData(command: IepCreateCommand) {
@@ -402,6 +483,189 @@ function versionConflict() {
   );
 }
 
+function invalidTransition() {
+  return new HttpError(
+    409,
+    'IEP_INVALID_TRANSITION',
+    'The IEP is not in a valid state for this action.',
+  );
+}
+
+function activePlanConflict() {
+  return new HttpError(
+    409,
+    'IEP_ACTIVE_PLAN_CONFLICT',
+    'The student already has another active IEP.',
+  );
+}
+
+export type IepWorkflowCommandName =
+  | 'SUBMIT'
+  | 'COORDINATOR_APPROVE'
+  | 'COORDINATOR_RETURN'
+  | 'DIRECTOR_APPROVE'
+  | 'DIRECTOR_RETURN'
+  | 'ACTIVATE'
+  | 'ARCHIVE';
+
+export const iepWorkflowRoles: Record<
+  IepWorkflowCommandName,
+  readonly MembershipRole[]
+> = {
+  SUBMIT: ['SPECIAL_ED_COORDINATOR', 'SPECIAL_ED_TEACHER', 'SPECIALIST'],
+  COORDINATOR_APPROVE: ['SPECIAL_ED_COORDINATOR'],
+  COORDINATOR_RETURN: ['SPECIAL_ED_COORDINATOR'],
+  DIRECTOR_APPROVE: ['DIRECTOR'],
+  DIRECTOR_RETURN: ['DIRECTOR'],
+  ACTIVATE: ['DIRECTOR'],
+  ARCHIVE: ['DIRECTOR'],
+};
+
+export function canRoleRunIepWorkflowCommand(
+  role: MembershipRole,
+  command: IepWorkflowCommandName,
+): boolean {
+  return iepWorkflowRoles[command].includes(role);
+}
+
+function requireIepRole(
+  membership: MembershipScope,
+  command: IepWorkflowCommandName,
+) {
+  if (!canRoleRunIepWorkflowCommand(membership.role, command)) deny();
+}
+
+export type IepTransition = {
+  fromState: WorkflowState;
+  toState: WorkflowState;
+  action: WorkflowAction;
+  auditAction: string;
+  comment?: string;
+  archivePriorActive?: boolean;
+};
+
+export async function transitionIep(input: {
+  transaction: Prisma.TransactionClient;
+  organizationId: string;
+  iepId: string;
+  expectedVersion: number;
+  actorId: string;
+  membership: MembershipScope;
+  requestId: string;
+  transition: IepTransition;
+}): Promise<IepRow> {
+  const scopedStudentIds = activeAssignedStudentIds(input.membership);
+  const existing = await input.transaction.iEP.findFirst({
+    where: {
+      id: input.iepId,
+      organizationId: input.organizationId,
+      ...(scopedStudentIds ? { studentId: { in: scopedStudentIds } } : {}),
+    },
+    select: { studentId: true, state: true, version: true },
+  });
+  if (!existing) deny();
+  if (existing.version !== input.expectedVersion) throw versionConflict();
+  if (existing.state !== input.transition.fromState) throw invalidTransition();
+
+  if (input.transition.archivePriorActive) {
+    await input.transaction.$executeRaw`
+      SELECT pg_advisory_xact_lock(hashtextextended(${`${input.organizationId}:${existing.studentId}:active-iep`}, 0))
+    `;
+    const priorActive = await input.transaction.iEP.findFirst({
+      where: {
+        organizationId: input.organizationId,
+        studentId: existing.studentId,
+        state: 'ACTIVE',
+        id: { not: input.iepId },
+      },
+      select: { id: true, version: true },
+    });
+    if (priorActive) {
+      const archived = await input.transaction.iEP.updateMany({
+        where: {
+          id: priorActive.id,
+          organizationId: input.organizationId,
+          state: 'ACTIVE',
+          version: priorActive.version,
+        },
+        data: {
+          state: 'ARCHIVED',
+          updatedById: input.actorId,
+          version: { increment: 1 },
+        },
+      });
+      if (archived.count !== 1) throw versionConflict();
+      await input.transaction.workflowEvent.create({
+        data: {
+          organizationId: input.organizationId,
+          aggregateType: 'IEP',
+          aggregateId: priorActive.id,
+          fromState: 'ACTIVE',
+          toState: 'ARCHIVED',
+          action: 'ARCHIVED',
+          actorId: input.actorId,
+          comment: `Archived when replacement IEP ${input.iepId} was activated.`,
+        },
+      });
+      await createAuditRepository(input.transaction as PrismaClient).append({
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+        action: 'iep.archive-replaced',
+        targetType: 'IEP',
+        targetId: priorActive.id,
+        requestId: input.requestId,
+        result: 'SUCCEEDED',
+        metadata: {
+          replacementIepId: input.iepId,
+          changedFields: ['state', 'version', 'updatedById'],
+        },
+      });
+    }
+  }
+
+  const updated = await input.transaction.iEP.updateMany({
+    where: {
+      id: input.iepId,
+      organizationId: input.organizationId,
+      state: input.transition.fromState,
+      version: input.expectedVersion,
+    },
+    data: {
+      state: input.transition.toState,
+      updatedById: input.actorId,
+      version: { increment: 1 },
+    },
+  });
+  if (updated.count !== 1) throw versionConflict();
+
+  await input.transaction.workflowEvent.create({
+    data: {
+      organizationId: input.organizationId,
+      aggregateType: 'IEP',
+      aggregateId: input.iepId,
+      fromState: input.transition.fromState,
+      toState: input.transition.toState,
+      action: input.transition.action,
+      actorId: input.actorId,
+      comment: input.transition.comment ?? null,
+    },
+  });
+  await createAuditRepository(input.transaction as PrismaClient).append({
+    organizationId: input.organizationId,
+    actorId: input.actorId,
+    action: input.transition.auditAction,
+    targetType: 'IEP',
+    targetId: input.iepId,
+    requestId: input.requestId,
+    result: 'SUCCEEDED',
+    metadata: { changedFields: ['state', 'version', 'updatedById'] },
+  });
+  return input.transaction.iEP.findFirstOrThrow({
+    where: { id: input.iepId, organizationId: input.organizationId },
+    select: iepSelect,
+  });
+}
+
 export function createIepRouter(
   prisma: PrismaClient,
   sessions: SessionService,
@@ -443,7 +707,20 @@ export function createIepRouter(
           orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
           select: iepSelect,
         });
-        const data = rows.map(mapIep);
+        const events = await iepWorkflowEvents(
+          prisma,
+          path.organizationId,
+          rows.map((row) => row.id),
+        );
+        const eventsByIep = new Map<string, IepWorkflowEvent[]>();
+        for (const event of events) {
+          const aggregateEvents = eventsByIep.get(event.aggregateId) ?? [];
+          aggregateEvents.push(event);
+          eventsByIep.set(event.aggregateId, aggregateEvents);
+        }
+        const data = rows.map((row) =>
+          mapIep(row, eventsByIep.get(row.id) ?? []),
+        );
         response.json(
           iepsResponseSchema.parse({ data, meta: { count: data.length } }),
         );
@@ -475,7 +752,9 @@ export function createIepRouter(
           select: iepSelect,
         });
         if (!row) deny();
-        response.json(iepDetailResponseSchema.parse({ data: mapIep(row) }));
+        response.json(
+          iepDetailResponseSchema.parse({ data: await mappedIep(prisma, row) }),
+        );
       } catch (error) {
         next(error);
       }
@@ -524,9 +803,11 @@ export function createIepRouter(
             select: iepSelect,
           });
         });
-        response
-          .status(201)
-          .json(iepMutationResponseSchema.parse({ data: mapIep(row) }));
+        response.status(201).json(
+          iepMutationResponseSchema.parse({
+            data: await mappedIep(prisma, row),
+          }),
+        );
       } catch (error) {
         next(
           isUniqueConflict(error)
@@ -537,6 +818,231 @@ export function createIepRouter(
               )
             : error,
         );
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/ieps/:iepId/submit',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const path = parseRequest(
+          z.object({ organizationId: uuidSchema, iepId: uuidSchema }).strict(),
+          request.params,
+        );
+        const command = parseRequest(iepWorkflowCommandSchema, request.body);
+        const auth = requireAuth(request);
+        const membership = membershipFor(request, path.organizationId);
+        requireIepPermission(membership, 'special-ed:write');
+        requireIepRole(membership, 'SUBMIT');
+        const row = await prisma.$transaction((transaction) =>
+          transitionIep({
+            transaction,
+            organizationId: path.organizationId,
+            iepId: path.iepId,
+            expectedVersion: command.expectedVersion,
+            actorId: auth.userId,
+            membership,
+            requestId: String(response.locals.requestId),
+            transition: {
+              fromState: 'DRAFT',
+              toState: 'COORDINATOR_REVIEW',
+              action: 'SUBMITTED',
+              auditAction: 'iep.submit',
+            },
+          }),
+        );
+        response.json(
+          iepMutationResponseSchema.parse({
+            data: await mappedIep(prisma, row),
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/ieps/:iepId/coordinator-review',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const path = parseRequest(
+          z.object({ organizationId: uuidSchema, iepId: uuidSchema }).strict(),
+          request.params,
+        );
+        const command = parseRequest(iepReviewCommandSchema, request.body);
+        const auth = requireAuth(request);
+        const membership = membershipFor(request, path.organizationId);
+        requireIepPermission(membership, 'special-ed:review');
+        const approved = command.decision === 'APPROVE';
+        requireIepRole(
+          membership,
+          approved ? 'COORDINATOR_APPROVE' : 'COORDINATOR_RETURN',
+        );
+        const row = await prisma.$transaction((transaction) =>
+          transitionIep({
+            transaction,
+            organizationId: path.organizationId,
+            iepId: path.iepId,
+            expectedVersion: command.expectedVersion,
+            actorId: auth.userId,
+            membership,
+            requestId: String(response.locals.requestId),
+            transition: {
+              fromState: 'COORDINATOR_REVIEW',
+              toState: approved ? 'DIRECTOR_APPROVAL' : 'DRAFT',
+              action: approved ? 'APPROVED' : 'RETURNED',
+              auditAction: approved
+                ? 'iep.coordinator-approve'
+                : 'iep.coordinator-return',
+              comment: command.comment,
+            },
+          }),
+        );
+        response.json(
+          iepMutationResponseSchema.parse({
+            data: await mappedIep(prisma, row),
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/ieps/:iepId/director-review',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const path = parseRequest(
+          z.object({ organizationId: uuidSchema, iepId: uuidSchema }).strict(),
+          request.params,
+        );
+        const command = parseRequest(iepReviewCommandSchema, request.body);
+        const auth = requireAuth(request);
+        const membership = membershipFor(request, path.organizationId);
+        requireIepPermission(membership, 'special-ed:review');
+        const approved = command.decision === 'APPROVE';
+        requireIepRole(
+          membership,
+          approved ? 'DIRECTOR_APPROVE' : 'DIRECTOR_RETURN',
+        );
+        const row = await prisma.$transaction((transaction) =>
+          transitionIep({
+            transaction,
+            organizationId: path.organizationId,
+            iepId: path.iepId,
+            expectedVersion: command.expectedVersion,
+            actorId: auth.userId,
+            membership,
+            requestId: String(response.locals.requestId),
+            transition: {
+              fromState: 'DIRECTOR_APPROVAL',
+              toState: approved ? 'APPROVED' : 'COORDINATOR_REVIEW',
+              action: approved ? 'APPROVED' : 'RETURNED',
+              auditAction: approved
+                ? 'iep.director-approve'
+                : 'iep.director-return',
+              comment: command.comment,
+            },
+          }),
+        );
+        response.json(
+          iepMutationResponseSchema.parse({
+            data: await mappedIep(prisma, row),
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/ieps/:iepId/activate',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const path = parseRequest(
+          z.object({ organizationId: uuidSchema, iepId: uuidSchema }).strict(),
+          request.params,
+        );
+        const command = parseRequest(iepWorkflowCommandSchema, request.body);
+        const auth = requireAuth(request);
+        const membership = membershipFor(request, path.organizationId);
+        requireIepPermission(membership, 'special-ed:review');
+        requireIepRole(membership, 'ACTIVATE');
+        const row = await prisma.$transaction((transaction) =>
+          transitionIep({
+            transaction,
+            organizationId: path.organizationId,
+            iepId: path.iepId,
+            expectedVersion: command.expectedVersion,
+            actorId: auth.userId,
+            membership,
+            requestId: String(response.locals.requestId),
+            transition: {
+              fromState: 'APPROVED',
+              toState: 'ACTIVE',
+              action: 'ACTIVATED',
+              auditAction: 'iep.activate',
+              archivePriorActive: true,
+            },
+          }),
+        );
+        response.json(
+          iepMutationResponseSchema.parse({
+            data: await mappedIep(prisma, row),
+          }),
+        );
+      } catch (error) {
+        next(isUniqueConflict(error) ? activePlanConflict() : error);
+      }
+    },
+  );
+
+  router.post(
+    '/organizations/:organizationId/ieps/:iepId/archive',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const path = parseRequest(
+          z.object({ organizationId: uuidSchema, iepId: uuidSchema }).strict(),
+          request.params,
+        );
+        const command = parseRequest(iepWorkflowCommandSchema, request.body);
+        const auth = requireAuth(request);
+        const membership = membershipFor(request, path.organizationId);
+        requireIepPermission(membership, 'special-ed:review');
+        requireIepRole(membership, 'ARCHIVE');
+        const row = await prisma.$transaction((transaction) =>
+          transitionIep({
+            transaction,
+            organizationId: path.organizationId,
+            iepId: path.iepId,
+            expectedVersion: command.expectedVersion,
+            actorId: auth.userId,
+            membership,
+            requestId: String(response.locals.requestId),
+            transition: {
+              fromState: 'ACTIVE',
+              toState: 'ARCHIVED',
+              action: 'ARCHIVED',
+              auditAction: 'iep.archive',
+            },
+          }),
+        );
+        response.json(
+          iepMutationResponseSchema.parse({
+            data: await mappedIep(prisma, row),
+          }),
+        );
+      } catch (error) {
+        next(error);
       }
     },
   );
@@ -639,7 +1145,11 @@ export function createIepRouter(
             select: iepSelect,
           });
         });
-        response.json(iepMutationResponseSchema.parse({ data: mapIep(row) }));
+        response.json(
+          iepMutationResponseSchema.parse({
+            data: await mappedIep(prisma, row),
+          }),
+        );
       } catch (error) {
         next(
           isUniqueConflict(error)

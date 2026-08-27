@@ -3,6 +3,7 @@ import {
   academicYearSchema,
   collectionMetaSchema,
   schoolDateSchema,
+  staffMembershipRoleSchema,
   semesterSchema,
   uuidSchema,
   workflowStateSchema,
@@ -222,6 +223,29 @@ export const iepUpdateCommandSchema = z
   .strict()
   .superRefine(validateIepWrite);
 
+export const iepWorkflowCommandSchema = z
+  .object({ expectedVersion: z.number().int().positive() })
+  .strict();
+
+const iepReviewFields = {
+  expectedVersion: z.number().int().positive(),
+  decision: z.enum(['APPROVE', 'RETURN']),
+  comment: requiredText(4_000).optional(),
+};
+
+export const iepReviewCommandSchema = z
+  .object(iepReviewFields)
+  .strict()
+  .superRefine((value, context) => {
+    if (value.decision === 'RETURN' && !value.comment) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['comment'],
+        message: 'A comment is required when returning an IEP.',
+      });
+    }
+  });
+
 const withId = <T extends z.ZodRawShape>(shape: T) =>
   z.object({ id: uuidSchema, ...shape }).strict();
 
@@ -241,6 +265,32 @@ const studentSchema = z
     id: uuidSchema,
     studentNumber: requiredText(128),
     fullName: requiredText(256),
+  })
+  .strict();
+
+export const iepWorkflowEventSchema = z
+  .object({
+    id: uuidSchema,
+    fromState: workflowStateSchema,
+    toState: workflowStateSchema,
+    action: z.enum([
+      'SUBMITTED',
+      'APPROVED',
+      'RETURNED',
+      'UPDATED',
+      'ACTIVATED',
+      'ARCHIVED',
+    ]),
+    comment: z.string().nullable(),
+    occurredAt: z.string().datetime(),
+    actor: z
+      .object({
+        id: uuidSchema,
+        displayName: requiredText(256),
+        role: staffMembershipRoleSchema.nullable(),
+        roleTitle: z.string().nullable(),
+      })
+      .strict(),
   })
   .strict();
 
@@ -270,6 +320,7 @@ export const iepSchema = z
     accommodations: z.array(iepAccommodationSchema),
     goals: z.array(iepGoalSchema),
     services: z.array(iepServiceSchema),
+    workflowEvents: z.array(iepWorkflowEventSchema),
     createdBy: actorSchema,
     updatedBy: actorSchema,
     createdAt: z.string().datetime(),
@@ -294,4 +345,6 @@ export const iepListQuerySchema = z
 
 export type IepCreateCommand = z.infer<typeof iepCreateCommandSchema>;
 export type IepUpdateCommand = z.infer<typeof iepUpdateCommandSchema>;
+export type IepWorkflowCommand = z.infer<typeof iepWorkflowCommandSchema>;
+export type IepReviewCommand = z.infer<typeof iepReviewCommandSchema>;
 export type Iep = z.infer<typeof iepSchema>;

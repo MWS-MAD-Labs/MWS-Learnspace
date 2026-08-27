@@ -1,4 +1,10 @@
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type BrowserContext,
+  type Page,
+} from '@playwright/test';
 
 const fixture = {
   organizationId: '10000000-0000-4000-8000-000000000001',
@@ -6,6 +12,8 @@ const fixture = {
   authorEmail: 'p5.iep.author@example.test',
   unassignedEmail: 'p5.iep.unassigned@example.test',
   leadershipEmail: 'p5.principal@example.test',
+  coordinatorEmail: 'p5.observation.coordinator@example.test',
+  directorEmail: 'p5.director@example.test',
   assignedStudentName: 'River IEP Student',
   inaccessibleStudentName: 'Skyler Inaccessible Student',
   seededGoal:
@@ -21,6 +29,132 @@ async function authenticate(context: BrowserContext, email: string) {
     },
   });
   expect(response.status()).toBe(204);
+}
+
+async function csrfHeaders(request: APIRequestContext) {
+  const state = await request.storageState();
+  const token = state.cookies.find(
+    (cookie) => cookie.name === 'learnspace_csrf',
+  )?.value;
+  expect(token).toBeTruthy();
+  return { 'x-csrf-token': token as string };
+}
+
+function createCommandFromIep(iep: Record<string, any>) {
+  return {
+    studentId: iep.student.id,
+    academicYearId: iep.academicYear.id,
+    semesterId: iep.semester?.id ?? null,
+    consideration: iep.consideration,
+    primaryClassification: iep.primaryClassification,
+    currentPlacement: iep.currentPlacement,
+    homePartnershipSupport: iep.homePartnershipSupport,
+    homePartnershipRecommendations: iep.homePartnershipRecommendations,
+    progressMeasurementMethods: iep.progressMeasurementMethods,
+    parentCommunicationMethods: iep.parentCommunicationMethods,
+    parentApproved: iep.parentApproved,
+    parentName: iep.parentName,
+    parentApprovalDate: iep.parentApprovalDate,
+    startsOn: iep.startsOn,
+    endsOn: iep.endsOn,
+    teamMembers: iep.teamMembers.map(
+      ({ role, name, initials, confirmed, position }: Record<string, any>) => ({
+        role,
+        name,
+        initials,
+        confirmed,
+        position,
+      }),
+    ),
+    performanceAreas: iep.performanceAreas.map(
+      ({
+        name,
+        category,
+        strengths,
+        needs,
+        impactOfNeed,
+        informationSource,
+        assessmentProcess,
+        assessmentDate,
+        summaryOfResults,
+        position,
+      }: Record<string, any>) => ({
+        name,
+        category,
+        strengths,
+        needs,
+        impactOfNeed,
+        informationSource,
+        assessmentProcess,
+        assessmentDate,
+        summaryOfResults,
+        position,
+      }),
+    ),
+    accommodations: iep.accommodations.map(
+      ({
+        category,
+        subject,
+        code,
+        description,
+        position,
+      }: Record<string, any>) => ({
+        category,
+        subject,
+        code,
+        description,
+        position,
+      }),
+    ),
+    goals: iep.goals.map(
+      ({
+        code,
+        performanceArea,
+        longTermGoal,
+        shortTermGoal,
+        measurableGoal,
+        strategyActivity,
+        learningExpectation,
+        learningStrategy,
+        evaluationMethod,
+        schedule,
+        targetDate,
+        position,
+      }: Record<string, any>) => ({
+        code,
+        performanceArea,
+        longTermGoal,
+        shortTermGoal,
+        measurableGoal,
+        strategyActivity,
+        learningExpectation,
+        learningStrategy,
+        evaluationMethod,
+        schedule,
+        targetDate,
+        position,
+      }),
+    ),
+    services: iep.services.map(
+      ({
+        serviceName,
+        type,
+        duration,
+        frequency,
+        location,
+        days,
+        position,
+      }: Record<string, any>) => ({
+        serviceName,
+        type,
+        duration,
+        frequency,
+        location,
+        days,
+        position,
+      }),
+    ),
+  };
 }
 
 async function expectNoLegacyIepStorage(page: Page) {
@@ -147,6 +281,129 @@ test('P5-008 unassigned special-ed teacher is denied and cannot discover the IEP
   await expectNoLegacyIepStorage(page);
 
   await context.close();
+});
+
+test('P5-009 compose-backed IEP submission, review, return, approval, activation, and archival flow', async ({
+  browser,
+}) => {
+  const author = await browser.newContext();
+  const coordinator = await browser.newContext();
+  const director = await browser.newContext();
+  await Promise.all([
+    authenticate(author, fixture.authorEmail),
+    authenticate(coordinator, fixture.coordinatorEmail),
+    authenticate(director, fixture.directorEmail),
+  ]);
+  const [authorHeaders, coordinatorHeaders, directorHeaders] =
+    await Promise.all([
+      csrfHeaders(author.request),
+      csrfHeaders(coordinator.request),
+      csrfHeaders(director.request),
+    ]);
+  const base = `/api/v1/organizations/${fixture.organizationId}/ieps`;
+  const sourceResponse = await author.request.get(`${base}/${fixture.iepId}`);
+  expect(sourceResponse.status()).toBe(200);
+  const source = (await sourceResponse.json()).data;
+  const created = await author.request.post(base, {
+    headers: authorHeaders,
+    data: createCommandFromIep(source),
+  });
+  expect(created.status()).toBe(201);
+  const iepId = (await created.json()).data.id as string;
+  const path = `${base}/${iepId}`;
+
+  const submit = await author.request.post(`${path}/submit`, {
+    headers: authorHeaders,
+    data: { expectedVersion: 1 },
+  });
+  expect(await submit.json()).toMatchObject({
+    data: { state: 'COORDINATOR_REVIEW', version: 2 },
+  });
+
+  const coordinatorReturn = await coordinator.request.post(
+    `${path}/coordinator-review`,
+    {
+      headers: coordinatorHeaders,
+      data: {
+        expectedVersion: 2,
+        decision: 'RETURN',
+        comment: 'Clarify the service frequency before approval.',
+      },
+    },
+  );
+  expect(await coordinatorReturn.json()).toMatchObject({
+    data: { state: 'DRAFT', version: 3 },
+  });
+
+  await author.request.post(`${path}/submit`, {
+    headers: authorHeaders,
+    data: { expectedVersion: 3 },
+  });
+  const coordinatorApproval = await coordinator.request.post(
+    `${path}/coordinator-review`,
+    {
+      headers: coordinatorHeaders,
+      data: { expectedVersion: 4, decision: 'APPROVE' },
+    },
+  );
+  expect(await coordinatorApproval.json()).toMatchObject({
+    data: { state: 'DIRECTOR_APPROVAL', version: 5 },
+  });
+
+  const directorReturn = await director.request.post(
+    `${path}/director-review`,
+    {
+      headers: directorHeaders,
+      data: {
+        expectedVersion: 5,
+        decision: 'RETURN',
+        comment: 'Confirm the final parent communication method.',
+      },
+    },
+  );
+  expect(await directorReturn.json()).toMatchObject({
+    data: { state: 'COORDINATOR_REVIEW', version: 6 },
+  });
+
+  await coordinator.request.post(`${path}/coordinator-review`, {
+    headers: coordinatorHeaders,
+    data: { expectedVersion: 6, decision: 'APPROVE' },
+  });
+  const approved = await director.request.post(`${path}/director-review`, {
+    headers: directorHeaders,
+    data: { expectedVersion: 7, decision: 'APPROVE' },
+  });
+  expect(await approved.json()).toMatchObject({
+    data: { state: 'APPROVED', version: 8 },
+  });
+
+  const activated = await director.request.post(`${path}/activate`, {
+    headers: directorHeaders,
+    data: { expectedVersion: 8 },
+  });
+  expect(await activated.json()).toMatchObject({
+    data: { state: 'ACTIVE', version: 9 },
+  });
+  const archived = await director.request.post(`${path}/archive`, {
+    headers: directorHeaders,
+    data: { expectedVersion: 9 },
+  });
+  const archivedPayload = await archived.json();
+  expect(archivedPayload).toMatchObject({
+    data: {
+      state: 'ARCHIVED',
+      version: 10,
+      workflowEvents: expect.arrayContaining([
+        expect.objectContaining({ action: 'SUBMITTED' }),
+        expect.objectContaining({ action: 'RETURNED' }),
+        expect.objectContaining({ action: 'APPROVED' }),
+        expect.objectContaining({ action: 'ACTIVATED' }),
+        expect.objectContaining({ action: 'ARCHIVED' }),
+      ]),
+    },
+  });
+
+  await Promise.all([author.close(), coordinator.close(), director.close()]);
 });
 
 test('P5-008 leadership can read the complete draft without authoring controls', async ({

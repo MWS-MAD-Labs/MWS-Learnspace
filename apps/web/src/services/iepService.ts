@@ -31,6 +31,12 @@ type ContractSchemas = typeof contracts & {
   iepPlanCreateCommandSchema?: z.ZodType<IEPCommand>;
   iepUpdateCommandSchema?: z.ZodType<IEPCommand>;
   iepPlanUpdateCommandSchema?: z.ZodType<IEPCommand>;
+  iepWorkflowCommandSchema?: z.ZodType<{ expectedVersion: number }>;
+  iepReviewCommandSchema?: z.ZodType<{
+    expectedVersion: number;
+    decision: 'APPROVE' | 'RETURN';
+    comment?: string;
+  }>;
 };
 
 const iepContracts = contracts as ContractSchemas;
@@ -51,6 +57,18 @@ const iepUpdateCommandSchema =
   iepContracts.iepUpdateCommandSchema ??
   iepContracts.iepPlanUpdateCommandSchema ??
   fallbackIEPCommandSchema;
+const iepWorkflowCommandSchema =
+  iepContracts.iepWorkflowCommandSchema ??
+  z.object({ expectedVersion: z.number().int().positive() }).strict();
+const iepReviewCommandSchema =
+  iepContracts.iepReviewCommandSchema ??
+  z
+    .object({
+      expectedVersion: z.number().int().positive(),
+      decision: z.enum(['APPROVE', 'RETURN']),
+      comment: z.string().trim().min(1).optional(),
+    })
+    .strict();
 
 function organizationPath(organizationId: string): string {
   return `/api/v1/organizations/${encodeURIComponent(organizationId)}`;
@@ -553,6 +571,25 @@ async function commandFor(
   };
 }
 
+async function workflowCommand(
+  organizationId: string,
+  iepId: string,
+  commandName: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<IEPRecord> {
+  const response = await apiClient.request(
+    `${organizationPath(organizationId)}/ieps/${encodeURIComponent(iepId)}/${commandName}`,
+    {
+      method: 'POST',
+      body,
+      schema: iepResponseSchema,
+      signal,
+    },
+  );
+  return mapIEPToLegacy(response.data);
+}
+
 export const iepService = {
   async getIEPs(
     organizationId: string,
@@ -602,5 +639,88 @@ export const iepService = {
       },
     );
     return mapIEPToLegacy(response.data);
+  },
+
+  async submitIEP(
+    organizationId: string,
+    iepId: string,
+    expectedVersion: number,
+    signal?: AbortSignal,
+  ): Promise<IEPRecord> {
+    return workflowCommand(
+      organizationId,
+      iepId,
+      'submit',
+      iepWorkflowCommandSchema.parse({ expectedVersion }),
+      signal,
+    );
+  },
+
+  async reviewIEPAsCoordinator(
+    organizationId: string,
+    iepId: string,
+    command: {
+      expectedVersion: number;
+      decision: 'APPROVE' | 'RETURN';
+      comment?: string;
+    },
+    signal?: AbortSignal,
+  ): Promise<IEPRecord> {
+    return workflowCommand(
+      organizationId,
+      iepId,
+      'coordinator-review',
+      iepReviewCommandSchema.parse(command),
+      signal,
+    );
+  },
+
+  async reviewIEPAsDirector(
+    organizationId: string,
+    iepId: string,
+    command: {
+      expectedVersion: number;
+      decision: 'APPROVE' | 'RETURN';
+      comment?: string;
+    },
+    signal?: AbortSignal,
+  ): Promise<IEPRecord> {
+    return workflowCommand(
+      organizationId,
+      iepId,
+      'director-review',
+      iepReviewCommandSchema.parse(command),
+      signal,
+    );
+  },
+
+  async activateIEP(
+    organizationId: string,
+    iepId: string,
+    expectedVersion: number,
+    signal?: AbortSignal,
+  ): Promise<IEPRecord> {
+    return workflowCommand(
+      organizationId,
+      iepId,
+      'activate',
+      iepWorkflowCommandSchema.parse({ expectedVersion }),
+      signal,
+    );
+  },
+
+  async archiveIEP(
+    organizationId: string,
+    iepId: string,
+    expectedVersion: number,
+    signal?: AbortSignal,
+  ): Promise<IEPRecord> {
+    return workflowCommand(
+      organizationId,
+      iepId,
+      'archive',
+      iepWorkflowCommandSchema.parse({ expectedVersion }),
+      signal,
+    );
   },
 };

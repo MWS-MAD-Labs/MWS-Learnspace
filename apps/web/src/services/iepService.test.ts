@@ -62,6 +62,7 @@ const apiIEP = {
     },
   ],
   services: [],
+  workflowEvents: [],
   createdBy: {
     id: '77777777-7777-4777-8777-777777777777',
     displayName: 'Coordinator One',
@@ -150,6 +151,52 @@ describe('iepService', () => {
       endsOn: '2027-06-30',
     });
     expect(body).not.toHaveProperty('expectedVersion');
+  });
+
+  it('sends strict workflow commands to explicit API endpoints', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: {
+            ...apiIEP,
+            state: 'COORDINATOR_REVIEW',
+            version: 4,
+            workflowEvents: [
+              {
+                id: '88888888-8888-4888-8888-888888888888',
+                fromState: 'DRAFT',
+                toState: 'COORDINATOR_REVIEW',
+                action: 'SUBMITTED',
+                comment: null,
+                occurredAt: '2026-08-22T10:00:00.000Z',
+                actor: {
+                  id: '77777777-7777-4777-8777-777777777777',
+                  displayName: 'Coordinator One',
+                  role: 'SPECIAL_ED_COORDINATOR',
+                  roleTitle: null,
+                },
+              },
+            ],
+          },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await iepService.submitIEP(organizationId, iepId, 3);
+
+    const [url, request] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      `/api/v1/organizations/${organizationId}/ieps/${iepId}/submit`,
+    );
+    expect(request.method).toBe('POST');
+    expect(JSON.parse(String(request.body))).toEqual({ expectedVersion: 3 });
+    expect(result).toMatchObject({
+      state: 'COORDINATOR_REVIEW',
+      version: 4,
+      workflowHistory: [expect.objectContaining({ action: 'SUBMITTED' })],
+    });
   });
 
   it('preserves server goal IDs and excludes derived achievement fields from updates', async () => {

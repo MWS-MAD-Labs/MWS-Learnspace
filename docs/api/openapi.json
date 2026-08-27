@@ -4382,6 +4382,556 @@
         }
       }
     },
+    "/organizations/{organizationId}/ieps/{iepId}/submit": {
+      "post": {
+        "tags": [
+          "IEPs"
+        ],
+        "operationId": "submitIep",
+        "description": "Submit a DRAFT IEP for coordinator review.",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "iepId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IepWorkflowCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IepMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "IEP workflow or version conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/ieps/{iepId}/coordinator-review": {
+      "post": {
+        "tags": [
+          "IEPs"
+        ],
+        "operationId": "reviewIepAsCoordinator",
+        "description": "Approve an IEP for director approval or return it to draft.",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "iepId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IepReviewCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IepMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "IEP workflow or version conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/ieps/{iepId}/director-review": {
+      "post": {
+        "tags": [
+          "IEPs"
+        ],
+        "operationId": "reviewIepAsDirector",
+        "description": "Approve an IEP or return it to coordinator review.",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "iepId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IepReviewCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IepMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "IEP workflow or version conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/ieps/{iepId}/activate": {
+      "post": {
+        "tags": [
+          "IEPs"
+        ],
+        "operationId": "activateIep",
+        "description": "Activate an approved IEP and archive any prior active replacement.",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "iepId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IepWorkflowCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IepMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "IEP workflow or version conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/ieps/{iepId}/archive": {
+      "post": {
+        "tags": [
+          "IEPs"
+        ],
+        "operationId": "archiveIep",
+        "description": "Archive an active IEP.",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "iepId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IepWorkflowCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IepMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "IEP workflow or version conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/organizations/{organizationId}/classes/{classId}/attendance": {
       "get": {
         "tags": [
@@ -5690,6 +6240,127 @@
                     "additionalProperties": false
                   }
                 },
+                "workflowEvents": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "fromState": {
+                        "type": "string",
+                        "enum": [
+                          "DRAFT",
+                          "PRINCIPAL_REVIEW",
+                          "COORDINATOR_REVIEW",
+                          "DIRECTOR_APPROVAL",
+                          "APPROVED",
+                          "ACTIVE",
+                          "ARCHIVED"
+                        ]
+                      },
+                      "toState": {
+                        "type": "string",
+                        "enum": [
+                          "DRAFT",
+                          "PRINCIPAL_REVIEW",
+                          "COORDINATOR_REVIEW",
+                          "DIRECTOR_APPROVAL",
+                          "APPROVED",
+                          "ACTIVE",
+                          "ARCHIVED"
+                        ]
+                      },
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "SUBMITTED",
+                          "APPROVED",
+                          "RETURNED",
+                          "UPDATED",
+                          "ACTIVATED",
+                          "ARCHIVED"
+                        ]
+                      },
+                      "comment": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "occurredAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "actor": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                          },
+                          "role": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "PRINCIPAL",
+                                  "DIRECTOR",
+                                  "GRADE_TEACHER",
+                                  "SUBJECT_TEACHER",
+                                  "SPECIAL_ED_COORDINATOR",
+                                  "SPECIAL_ED_TEACHER",
+                                  "SPECIALIST"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "roleTitle": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "displayName",
+                          "role",
+                          "roleTitle"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "fromState",
+                      "toState",
+                      "action",
+                      "comment",
+                      "occurredAt",
+                      "actor"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
                 "createdBy": {
                   "type": "object",
                   "properties": {
@@ -5762,6 +6433,7 @@
                 "accommodations",
                 "goals",
                 "services",
+                "workflowEvents",
                 "createdBy",
                 "updatedBy",
                 "createdAt",
@@ -6414,6 +7086,127 @@
                   "additionalProperties": false
                 }
               },
+              "workflowEvents": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "fromState": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "PRINCIPAL_REVIEW",
+                        "COORDINATOR_REVIEW",
+                        "DIRECTOR_APPROVAL",
+                        "APPROVED",
+                        "ACTIVE",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "toState": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "PRINCIPAL_REVIEW",
+                        "COORDINATOR_REVIEW",
+                        "DIRECTOR_APPROVAL",
+                        "APPROVED",
+                        "ACTIVE",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "SUBMITTED",
+                        "APPROVED",
+                        "RETURNED",
+                        "UPDATED",
+                        "ACTIVATED",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "comment": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "occurredAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "actor": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "role": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "PRINCIPAL",
+                                "DIRECTOR",
+                                "GRADE_TEACHER",
+                                "SUBJECT_TEACHER",
+                                "SPECIAL_ED_COORDINATOR",
+                                "SPECIAL_ED_TEACHER",
+                                "SPECIALIST"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "roleTitle": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName",
+                        "role",
+                        "roleTitle"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "fromState",
+                    "toState",
+                    "action",
+                    "comment",
+                    "occurredAt",
+                    "actor"
+                  ],
+                  "additionalProperties": false
+                }
+              },
               "createdBy": {
                 "type": "object",
                 "properties": {
@@ -6486,6 +7279,7 @@
               "accommodations",
               "goals",
               "services",
+              "workflowEvents",
               "createdBy",
               "updatedBy",
               "createdAt",
@@ -7550,6 +8344,45 @@
         ],
         "additionalProperties": false
       },
+      "IepWorkflowCommand": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "IepReviewCommand": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APPROVE",
+              "RETURN"
+            ]
+          },
+          "comment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "decision"
+        ],
+        "additionalProperties": false
+      },
       "IepMutationResponse": {
         "type": "object",
         "properties": {
@@ -8174,6 +9007,127 @@
                   "additionalProperties": false
                 }
               },
+              "workflowEvents": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "fromState": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "PRINCIPAL_REVIEW",
+                        "COORDINATOR_REVIEW",
+                        "DIRECTOR_APPROVAL",
+                        "APPROVED",
+                        "ACTIVE",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "toState": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "PRINCIPAL_REVIEW",
+                        "COORDINATOR_REVIEW",
+                        "DIRECTOR_APPROVAL",
+                        "APPROVED",
+                        "ACTIVE",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "SUBMITTED",
+                        "APPROVED",
+                        "RETURNED",
+                        "UPDATED",
+                        "ACTIVATED",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "comment": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "occurredAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "actor": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "role": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "PRINCIPAL",
+                                "DIRECTOR",
+                                "GRADE_TEACHER",
+                                "SUBJECT_TEACHER",
+                                "SPECIAL_ED_COORDINATOR",
+                                "SPECIAL_ED_TEACHER",
+                                "SPECIALIST"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "roleTitle": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName",
+                        "role",
+                        "roleTitle"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "fromState",
+                    "toState",
+                    "action",
+                    "comment",
+                    "occurredAt",
+                    "actor"
+                  ],
+                  "additionalProperties": false
+                }
+              },
               "createdBy": {
                 "type": "object",
                 "properties": {
@@ -8246,6 +9200,7 @@
               "accommodations",
               "goals",
               "services",
+              "workflowEvents",
               "createdBy",
               "updatedBy",
               "createdAt",

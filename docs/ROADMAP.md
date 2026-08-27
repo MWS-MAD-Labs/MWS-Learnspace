@@ -814,10 +814,11 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-009 — Migrate IEP workflow transitions
 
-- [ ] **Dependencies:** P5-008
+- [x] **Dependencies:** P5-008
 - **Change:** implement draft submission, coordinator review/return, director approval/return, archival, and immutable events as API commands.
 - **Acceptance:** the API is the only authority allowed to change workflow state or approver identity.
 - **Validate:** transition table, actor spoofing, stale-version, and audit tests.
+- **Completed (2026-08-27):** Added strict IEP submit, coordinator decision, director decision, activation, and archival API commands with session-derived actors and server-owned source/target states; complete role and assigned-student enforcement; conditional state plus `expectedVersion` updates; append-only `WorkflowEvent` history in IEP responses; transactional audit events and rollback behavior; director returns to coordinator review; transactional replacement activation that archives the prior active plan without rewriting its history; and a database partial unique index preventing overlapping active IEPs per organization/student. Shared contracts, generated OpenAPI, web service commands, exhaustive role/source-state unit tests, spoofing and concurrency tests, focused PostgreSQL lifecycle/rollback/immutability/cross-tenant coverage, and a Compose-backed multi-actor Playwright flow validate submission, return, approval, activation, and archival.
 
 ## P5-010 — Migrate weekly IEP reports
 

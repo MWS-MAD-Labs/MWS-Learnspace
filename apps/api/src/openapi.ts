@@ -23,7 +23,9 @@ import {
   iepCreateCommandSchema,
   iepDetailResponseSchema,
   iepMutationResponseSchema,
+  iepReviewCommandSchema,
   iepUpdateCommandSchema,
+  iepWorkflowCommandSchema,
   iepsResponseSchema,
   organizationAccountCreateCommandSchema,
   organizationAccountMutationResponseSchema,
@@ -81,6 +83,8 @@ const components: Record<string, ZodTypeAny> = {
   IepDetailResponse: iepDetailResponseSchema,
   IepCreateCommand: iepCreateCommandSchema,
   IepUpdateCommand: iepUpdateCommandSchema,
+  IepWorkflowCommand: iepWorkflowCommandSchema,
+  IepReviewCommand: iepReviewCommandSchema,
   IepMutationResponse: iepMutationResponseSchema,
   SubjectsResponse: subjectsResponseSchema,
   StaffDirectoryResponse: staffDirectoryResponseSchema,
@@ -342,6 +346,43 @@ const schoolDateParameter = {
   required: true,
   schema: { type: 'string', format: 'date', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
 };
+
+function iepWorkflowPath(
+  operationId: string,
+  commandSchema: string,
+  description: string,
+) {
+  return {
+    post: {
+      tags: ['IEPs'],
+      operationId,
+      description,
+      parameters: [
+        organizationParameter,
+        {
+          name: 'iepId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+        csrfParameter,
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: `#/components/schemas/${commandSchema}` },
+          },
+        },
+      },
+      responses: {
+        '200': jsonResponse('IepMutationResponse'),
+        ...errorResponses,
+        '409': jsonResponse('ApiError', 'IEP workflow or version conflict'),
+      },
+    },
+  };
+}
 
 function collectionOperation(
   tag: string,
@@ -1259,6 +1300,33 @@ export function generateOpenApiDocument() {
           },
         },
       },
+      '/organizations/{organizationId}/ieps/{iepId}/submit': iepWorkflowPath(
+        'submitIep',
+        'IepWorkflowCommand',
+        'Submit a DRAFT IEP for coordinator review.',
+      ),
+      '/organizations/{organizationId}/ieps/{iepId}/coordinator-review':
+        iepWorkflowPath(
+          'reviewIepAsCoordinator',
+          'IepReviewCommand',
+          'Approve an IEP for director approval or return it to draft.',
+        ),
+      '/organizations/{organizationId}/ieps/{iepId}/director-review':
+        iepWorkflowPath(
+          'reviewIepAsDirector',
+          'IepReviewCommand',
+          'Approve an IEP or return it to coordinator review.',
+        ),
+      '/organizations/{organizationId}/ieps/{iepId}/activate': iepWorkflowPath(
+        'activateIep',
+        'IepWorkflowCommand',
+        'Activate an approved IEP and archive any prior active replacement.',
+      ),
+      '/organizations/{organizationId}/ieps/{iepId}/archive': iepWorkflowPath(
+        'archiveIep',
+        'IepWorkflowCommand',
+        'Archive an active IEP.',
+      ),
       '/organizations/{organizationId}/classes/{classId}/attendance': {
         get: {
           tags: ['Attendance'],

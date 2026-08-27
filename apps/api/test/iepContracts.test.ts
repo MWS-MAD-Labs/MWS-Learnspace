@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   iepCreateCommandSchema,
+  iepReviewCommandSchema,
   iepUpdateCommandSchema,
+  iepWorkflowCommandSchema,
 } from '@learnspace/contracts';
 
 const ids = {
@@ -116,6 +118,48 @@ describe('IEP contracts', () => {
       expect(iepCreateCommandSchema.safeParse(value).success).toBe(false);
     },
   );
+
+  it('accepts only server-safe workflow command fields', () => {
+    expect(
+      iepWorkflowCommandSchema.safeParse({ expectedVersion: 1 }).success,
+    ).toBe(true);
+    expect(
+      iepReviewCommandSchema.safeParse({
+        expectedVersion: 2,
+        decision: 'RETURN',
+        comment: 'Revise the plan.',
+      }).success,
+    ).toBe(true);
+    expect(
+      iepReviewCommandSchema.safeParse({
+        expectedVersion: 2,
+        decision: 'RETURN',
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['actorId', ids.actor],
+    ['organizationId', ids.year],
+    ['studentId', ids.student],
+    ['fromState', 'DRAFT'],
+    ['state', 'ACTIVE'],
+    ['toState', 'APPROVED'],
+    ['updatedById', ids.actor],
+    ['approvedById', ids.actor],
+  ])('rejects spoofed workflow field %s', (field, value) => {
+    expect(
+      iepWorkflowCommandSchema.safeParse({ expectedVersion: 1, [field]: value })
+        .success,
+    ).toBe(false);
+    expect(
+      iepReviewCommandSchema.safeParse({
+        expectedVersion: 1,
+        decision: 'APPROVE',
+        [field]: value,
+      }).success,
+    ).toBe(false);
+  });
 
   it('reports duplicate accommodation positions at the original array index', () => {
     const value = command();
