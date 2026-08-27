@@ -578,3 +578,194 @@ test('P5-006 assigned specialist saves, reloads, and completes a server-scored S
   await specialistContext.close();
   await coordinatorContext.close();
 });
+
+test('P5-007 assigned specialist saves, reloads, and completes a server-scored SFA', async ({
+  browser,
+}, testInfo) => {
+  const coordinatorContext = await browser.newContext();
+  await authenticate(coordinatorContext, fixture.coordinatorEmail);
+  const coordinatorHeaders = await csrfHeaders(coordinatorContext.request);
+  const definitionsPath = `/api/v1/organizations/${fixture.organizationId}/observation-definitions`;
+  const assignmentsPath = `/api/v1/organizations/${fixture.organizationId}/observation-assignments`;
+  const definitionKey = `p5-007-e2e-${testInfo.retry}-${Date.now()}`;
+  const definitionBody = {
+    participationItems: [
+      { id: 'classroom', label: 'Classroom participation' },
+      { id: 'transitions', label: 'Transition participation' },
+    ],
+    taskSupportItems: [{ id: 'prompting', label: 'Adult prompting' }],
+    activityPerformanceItems: [
+      { id: 'travel', label: 'Travel between activities' },
+    ],
+    adaptationOptions: [],
+  };
+
+  const createdDefinition = await coordinatorContext.request.post(
+    definitionsPath,
+    {
+      headers: coordinatorHeaders,
+      data: {
+        definitionKey,
+        type: 'SFA',
+        title: 'P5-007 Trusted SFA',
+        framework: 'Deterministic E2E scoring fixture',
+        body: definitionBody,
+      },
+    },
+  );
+  expect(createdDefinition.status()).toBe(201);
+  const definition = (await createdDefinition.json()).data;
+
+  const createdAssignment = await coordinatorContext.request.post(
+    assignmentsPath,
+    {
+      headers: coordinatorHeaders,
+      data: {
+        definitionId: definition.id,
+        assignedToMembershipId: fixture.specialistMembershipId,
+        studentId: fixture.studentId,
+        academicYear: fixture.academicYear,
+        dueDate: fixture.dueDate,
+        priority: 'HIGH',
+        notes: 'P5-007 browser lifecycle fixture.',
+      },
+    },
+  );
+  expect(createdAssignment.status()).toBe(201);
+  const assignment = (await createdAssignment.json()).data;
+
+  const specialistContext = await browser.newContext();
+  await authenticate(specialistContext, fixture.specialistEmail);
+  const specialistHeaders = await csrfHeaders(specialistContext.request);
+  const observationPath = `/api/v1/organizations/${fixture.organizationId}/observation-assignments/${assignment.id}/sfa-observation`;
+  const page = await specialistContext.newPage();
+  await openObservationWorkspace(page);
+  await page.locator(`#assigned-task-open-sfa-${assignment.id}`).click();
+  await expect(page.locator('#sfa-observation-view')).toBeVisible();
+  await expect(
+    page.getByText('Provisional Preview', { exact: true }),
+  ).toBeVisible();
+
+  await page
+    .getByRole('button', { name: 'Rate Classroom participation as 2' })
+    .click();
+  const draftResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes(observationPath) &&
+      response.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Save Draft' }).click();
+  expect((await draftResponse).status()).toBe(201);
+  await expect(
+    page.getByText('Server Participation Total', { exact: true }),
+  ).toBeVisible();
+
+  await page.reload();
+  await openObservationWorkspace(page);
+  await page.locator(`#assigned-task-open-sfa-${assignment.id}`).click();
+  await expect(
+    page.getByRole('button', { name: 'Rate Classroom participation as 2' }),
+  ).toHaveClass(/text-white/);
+  await expect(
+    page.getByText('Average 2.00 / 6', { exact: true }),
+  ).toBeVisible();
+
+  const incompleteCompletion = await specialistContext.request.post(
+    `${observationPath}/complete`,
+    {
+      headers: specialistHeaders,
+      data: {
+        assessmentDate: '2026-08-26',
+        programRecommendation: 'Regular',
+        respondents: [],
+        participationScores: { classroom: 2 },
+        taskSupports: {},
+        activityPerformance: {},
+        adaptations: [],
+      },
+    },
+  );
+  expect(incompleteCompletion.status()).toBe(400);
+  expect(await incompleteCompletion.json()).toMatchObject({
+    error: { code: 'SFA_RESPONSES_INCOMPLETE' },
+  });
+
+  await page
+    .getByRole('button', { name: 'Rate Transition participation as 4' })
+    .click();
+  await page
+    .getByRole('button', { name: 'Task Supports', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Rate Adult prompting as 3' }).click();
+  await page
+    .getByRole('button', { name: 'Activity Performance', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Rate Travel between activities as 4' })
+    .click();
+  await page.getByRole('button', { name: 'Metadata', exact: true }).click();
+  await page.getByRole('button', { name: 'Add respondent' }).click();
+  await page.getByLabel('name', { exact: true }).fill('Sam Specialist');
+  await page.getByLabel('role', { exact: true }).fill('OT');
+  await page.getByLabel('initials', { exact: true }).fill('SS');
+
+  const completeResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes(`${observationPath}/complete`) &&
+      response.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Complete SFA Assessment' }).click();
+  expect((await completeResponse).status()).toBe(200);
+  await expect(
+    page.getByText(
+      'This SFA is completed and locked. Totals shown are server-derived.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Server Participation Total', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Average 3.00 / 6', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Complete SFA Assessment' }),
+  ).toBeDisabled();
+  await expect(page.getByLabel('name', { exact: true })).toBeDisabled();
+
+  const history = await specialistContext.request.get(
+    `/api/v1/organizations/${fixture.organizationId}/students/${fixture.studentId}/sfa-observations`,
+  );
+  expect(history.status()).toBe(200);
+  const completed = (await history.json()).data.find(
+    (record: { assignmentId: string }) => record.assignmentId === assignment.id,
+  );
+  expect(completed).toMatchObject({
+    status: 'COMPLETED',
+    definitionId: definition.id,
+    respondents: [{ name: 'Sam Specialist', role: 'OT', initials: 'SS' }],
+    participationScores: { classroom: 2, transitions: 4 },
+    taskSupports: { prompting: 3 },
+    activityPerformance: { travel: 4 },
+    totalParticipationRawScore: 6,
+    participationAverage: 3,
+    definition: { id: definition.id, version: 1, body: definitionBody },
+  });
+
+  const reference = await coordinatorContext.request.get(
+    `/api/v1/organizations/${fixture.organizationId}/students/${fixture.studentId}/sfa-observations/reference`,
+  );
+  expect(reference.status()).toBe(200);
+  expect(await reference.json()).toMatchObject({
+    data: {
+      assignmentId: assignment.id,
+      status: 'COMPLETED',
+      totalParticipationRawScore: 6,
+      participationAverage: 3,
+      definition: { id: definition.id, version: 1, body: definitionBody },
+    },
+  });
+
+  await specialistContext.close();
+  await coordinatorContext.close();
+});

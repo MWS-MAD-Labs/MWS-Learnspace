@@ -40,6 +40,12 @@ import {
   sensoryProfileObservationReferenceResponseSchema,
   sensoryProfileObservationResponseSchema,
   sensoryProfileObservationSaveDraftCommandSchema,
+  sfaObservationCompleteCommandSchema,
+  sfaObservationCreateDraftCommandSchema,
+  sfaObservationHistoryResponseSchema,
+  sfaObservationReferenceResponseSchema,
+  sfaObservationResponseSchema,
+  sfaObservationSaveDraftCommandSchema,
   staffDirectoryResponseSchema,
   studentCreateCommandSchema,
   studentDetailResponseSchema,
@@ -114,6 +120,12 @@ const components: Record<string, ZodTypeAny> = {
     sensoryProfileObservationHistoryResponseSchema,
   SensoryProfileObservationReferenceResponse:
     sensoryProfileObservationReferenceResponseSchema,
+  SfaObservationCreateDraftCommand: sfaObservationCreateDraftCommandSchema,
+  SfaObservationSaveDraftCommand: sfaObservationSaveDraftCommandSchema,
+  SfaObservationCompleteCommand: sfaObservationCompleteCommandSchema,
+  SfaObservationResponse: sfaObservationResponseSchema,
+  SfaObservationHistoryResponse: sfaObservationHistoryResponseSchema,
+  SfaObservationReferenceResponse: sfaObservationReferenceResponseSchema,
 };
 
 function zodDefinition(schema: ZodTypeAny): SchemaDefinition {
@@ -1019,6 +1031,119 @@ export function generateOpenApiDocument() {
             parameters: [organizationParameter, studentParameter],
             responses: {
               '200': jsonResponse('SensoryProfileObservationReferenceResponse'),
+              ...errorResponses,
+            },
+          },
+        },
+      '/organizations/{organizationId}/observation-assignments/{assignmentId}/sfa-observation':
+        {
+          get: {
+            tags: ['Observations'],
+            operationId: 'getSfaObservationByAssignment',
+            parameters: [organizationParameter, assignmentParameter],
+            responses: {
+              '200': jsonResponse('SfaObservationResponse'),
+              ...errorResponses,
+            },
+          },
+          post: {
+            tags: ['Observations'],
+            operationId: 'createSfaObservationDraft',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/SfaObservationCreateDraftCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '201': jsonResponse(
+                'SfaObservationResponse',
+                'SFA draft created',
+              ),
+              ...errorResponses,
+              '409': jsonResponse('ApiError', 'SFA lifecycle conflict'),
+            },
+          },
+          put: {
+            tags: ['Observations'],
+            operationId: 'saveSfaObservationDraft',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/SfaObservationSaveDraftCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '200': jsonResponse('SfaObservationResponse'),
+              ...errorResponses,
+              '409': jsonResponse('ApiError', 'SFA lifecycle conflict'),
+            },
+          },
+        },
+      '/organizations/{organizationId}/observation-assignments/{assignmentId}/sfa-observation/complete':
+        {
+          post: {
+            tags: ['Observations'],
+            operationId: 'completeSfaObservation',
+            parameters: [
+              organizationParameter,
+              assignmentParameter,
+              csrfParameter,
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/SfaObservationCompleteCommand',
+                  },
+                },
+              },
+            },
+            responses: {
+              '200': jsonResponse('SfaObservationResponse'),
+              ...errorResponses,
+              '409': jsonResponse('ApiError', 'SFA lifecycle conflict'),
+            },
+          },
+        },
+      '/organizations/{organizationId}/students/{studentId}/sfa-observations': {
+        get: {
+          tags: ['Observations'],
+          operationId: 'listStudentSfaObservations',
+          parameters: [organizationParameter, studentParameter],
+          responses: {
+            '200': jsonResponse('SfaObservationHistoryResponse'),
+            ...errorResponses,
+          },
+        },
+      },
+      '/organizations/{organizationId}/students/{studentId}/sfa-observations/reference':
+        {
+          get: {
+            tags: ['Observations'],
+            operationId: 'getStudentSfaReference',
+            parameters: [organizationParameter, studentParameter],
+            responses: {
+              '200': jsonResponse('SfaObservationReferenceResponse'),
               ...errorResponses,
             },
           },

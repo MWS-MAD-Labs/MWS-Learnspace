@@ -2205,6 +2205,58 @@ export const SEED_SFA_OBSERVATION: SFAObservationRecord = {
   updatedAt: '2026-10-18T12:00:00Z',
 };
 
+export const SEED_SFA_DEFINITION_BODY: Record<string, unknown> = {
+  participationItems: [
+    { id: 'regularClassroom', label: 'Regular classroom' },
+    { id: 'specialEdClassroom', label: 'Special education classroom' },
+    { id: 'playgroundRecess', label: 'Playground and recess' },
+    { id: 'transportation', label: 'Transportation' },
+    { id: 'bathroomToilet', label: 'Bathroom and toileting' },
+    { id: 'transitions', label: 'Transitions' },
+    { id: 'mealSnackTime', label: 'Meal and snack time' },
+  ],
+  taskSupportItems: [
+    { id: 'physicalAssistance', label: 'Physical assistance' },
+    { id: 'physicalAdaptation', label: 'Physical adaptation' },
+    { id: 'cognitiveAssistance', label: 'Cognitive/behavioral assistance' },
+    { id: 'cognitiveAdaptation', label: 'Cognitive/behavioral adaptation' },
+  ],
+  activityPerformanceItems: [
+    { id: 'travel', label: 'Travel' },
+    { id: 'maintaining_posture', label: 'Maintaining and changing position' },
+    { id: 'manipulation', label: 'Recreational movement and manipulation' },
+    { id: 'eating_drinking', label: 'Eating and drinking' },
+    { id: 'hygiene', label: 'Hygiene' },
+    { id: 'clothing_management', label: 'Clothing management' },
+    { id: 'functional_communication', label: 'Functional communication' },
+    { id: 'memory_understanding', label: 'Memory and understanding' },
+    {
+      id: 'following_social_conventions',
+      label: 'Following social conventions',
+    },
+    { id: 'task_behavior_completion', label: 'Task behavior and completion' },
+  ],
+  adaptationOptions: [
+    { id: 'slantBoard', label: 'Slant board for paper positioning' },
+    { id: 'pencilGrip', label: 'Chunky ergonomic pencil grips' },
+    { id: 'visualSchedule', label: 'Visual daily schedule strip at desk' },
+    { id: 'sensoryCorner', label: 'Quiet sensory corner retreat access' },
+    {
+      id: 'noiseReduction',
+      label: 'Noise-reduction headphones for loud environments',
+    },
+    {
+      id: 'weightedVest',
+      label: 'Weighted sensory vest during floor circle time',
+    },
+    { id: 'firstThenBoard', label: 'First-then visual task board' },
+    {
+      id: 'transitionTime',
+      label: 'Additional transition time with countdown prompts',
+    },
+  ],
+};
+
 // Observation Assignments (Created & Managed by Special Ed Coordinator)
 export const SEED_OBSERVATION_ASSIGNMENTS: ObservationAssignment[] = [
   {
@@ -2288,6 +2340,7 @@ export const SEED_OBSERVATION_ASSIGNMENTS: ObservationAssignment[] = [
     definitionVersion: 1,
     instrumentType: 'SFA',
     instrumentTitle: 'School Function Assessment (SFA)',
+    definitionBody: SEED_SFA_DEFINITION_BODY,
     academicYear: '2026-2027',
     assignedToUserId: 'usr-gpk-2',
     assignedToUserName: 'Siti Rahma, S.Pd.',
@@ -2367,10 +2420,11 @@ export const SEED_OBSERVATION_FORMS: ObservationFormDefinition[] = [
     targetAges: 'Kindergarten through Grade 6',
     defaultFrequency: 'Annual / Triennial Review',
     version: '1.8',
-    itemCount: 32,
+    itemCount: 29,
     lastUpdated: '2026-07-25',
     updatedBy: 'Ms. Elena Johnson',
     isActive: true,
+    body: SEED_SFA_DEFINITION_BODY,
   },
 ];
 

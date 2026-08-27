@@ -64,11 +64,11 @@ These decisions reduce ambiguity for implementation agents. Change them only thr
 The current application has a useful React UI and domain inventory, but its educator workflows remain a prototype:
 
 - the npm workspace contains `apps/web`, `apps/api`, and `packages/contracts`;
-- remaining observation, IEP, weekly-report, and related prototype domains are initialized from `apps/web/src/data/seedData.ts` and persisted by `apps/web/src/services/storageService.ts` in browser `localStorage`; Learning Journey authoring and approval workflows are API/PostgreSQL-backed;
+- FEDC, Sensory Profile, and SFA observation workflows are API/PostgreSQL-backed; IEP, weekly-report, and related remaining prototype domains are still initialized from `apps/web/src/data/seedData.ts` and persisted by `apps/web/src/services/storageService.ts` in browser `localStorage`; Learning Journey authoring and approval workflows are also API/PostgreSQL-backed;
 - authenticated identity, memberships, permissions, and record scopes come from Google OAuth and PostgreSQL-backed server sessions; the role switcher is isolated to explicit development fake-data builds;
 - authorization is enforced by the API for implemented protected resources; remaining prototype domains still contain presentation-only frontend role checks until they migrate;
 - the Express API, shared response contracts, PostgreSQL Compose service, Prisma lifecycle, production-oriented images, OAuth, sessions, and authorization foundation are implemented;
-- PostgreSQL is authoritative for attendance and complete Learning Journey authoring and approval workflows, while observations, IEPs, and weekly reports remain browser-backed until their Milestone 5 slices;
+- PostgreSQL is authoritative for attendance, complete Learning Journey authoring and approval workflows, observation definitions and assignments, and FEDC, Sensory Profile, and SFA records; IEPs and weekly reports remain browser-backed until their Milestone 5 slices;
 - `apps/web/src/types.ts` still contains overlapping status representations for remaining prototype domains that must be normalized;
 - no active Gemini integration exists; Google AI Studio provenance remains only in `metadata.json`;
 - Milestone 0 provides a dependency lockfile, CI pipeline, formatting and linting, type checking, and frontend smoke tests.
@@ -798,10 +798,11 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-007 — Migrate SFA observations
 
-- [ ] **Dependencies:** P5-004
+- [x] **Dependencies:** P5-004
 - **Change:** migrate respondents, participation, task supports, activity performance, adaptations, completion, and history.
 - **Acceptance:** server validates all rating ranges and required completed-record fields.
 - **Validate:** validation, authorization, and E2E tests.
+- **Completed (2026-08-27):** Added strict shared SFA definition, respondent, rating, draft, completion, history, and reference contracts; assignment-bound create, save, complete, detail, history, and reference APIs; exact-assignee mutations with coordinator, permanent student-scope, and active-assignment reads; pinned-definition key validation; integer participation `1` through `6` and task-support/activity-performance `1` through `4` enforcement; partial drafts and mandatory completed-record respondents and ratings; server-only participation raw-score and average calculation with identity, status, definition, assignment, actor, and total spoof rejection; transactional assignment and record completion with session-derived audits; API-backed authoring, draft reload, locked completion, history, detailed reporting, and reference data; and removal of production SFA browser persistence. Scoring, schema, component, service, OpenAPI, PostgreSQL lifecycle, and Compose-backed browser coverage validate boundaries, trusted totals, completion requirements, authorization, pinned versions, history, and reference behavior.
 
 ## P5-008 — Migrate IEP plans
 
@@ -861,7 +862,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 **Milestone exit gate:** any approved prototype data can be imported through a validated, versioned, auditable, and rehearsed process with rollback.
 
-> **Implementation status (updated 2026-08-26):** P6-001 through P6-004 are implemented and validated against a disposable local Docker database, including migration drift, concurrent apply, backup, restore, and rollback checks. Learning Journey reads and draft editing completed in P5-002, but the `0.9.0-beta.1` release gate remains blocked by the declared `P5-013` dependency: Learning Journey workflow transitions, observations, IEPs, weekly reports, remaining cross-domain dashboards/search/notifications, and related browser persistence must become authorized API/PostgreSQL resources before sensitive browser persistence can be removed. Repeat the rehearsal in staging after P5-013 passes.
+> **Implementation status (updated 2026-08-27):** P6-001 through P6-004 are implemented and validated against a disposable local Docker database, including migration drift, concurrent apply, backup, restore, and rollback checks. Learning Journey workflows and the FEDC, Sensory Profile, and SFA observation slices are now API/PostgreSQL-backed, but the `0.9.0-beta.1` release gate remains blocked by the declared `P5-013` dependency: IEPs, weekly reports, remaining cross-domain dashboards/search/notifications, and related browser persistence must become authorized API/PostgreSQL resources before sensitive browser persistence can be removed. Repeat the rehearsal in staging after P5-013 passes.
 
 ## P6-001 — Define a versioned export format
 

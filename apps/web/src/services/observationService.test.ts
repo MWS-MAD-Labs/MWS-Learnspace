@@ -191,6 +191,92 @@ const sensoryCommand = {
   notes: 'Observed in class.',
 };
 
+const sfaObservation = {
+  id: observationId,
+  organizationId,
+  assignmentId,
+  studentId,
+  student: fedcObservation.student,
+  definitionId,
+  observerId: userId,
+  definition: {
+    ...fedcObservation.definition,
+    definitionKey: 'sfa',
+    type: 'SFA',
+    title: 'School Function Assessment',
+    body: {
+      participationItems: [
+        { id: 'regularClassroom', label: 'Regular classroom' },
+      ],
+      taskSupportItems: [
+        { id: 'physicalAssistance', label: 'Physical assistance' },
+      ],
+      activityPerformanceItems: [{ id: 'travel', label: 'Travel' }],
+      adaptationOptions: [{ id: 'visualSchedule', label: 'Visual schedule' }],
+    },
+  },
+  observer: fedcObservation.observer,
+  assessmentDate: '2026-08-26',
+  observationDate: '2026-08-25',
+  status: 'IN_PROGRESS',
+  programRecommendation: 'Regular',
+  respondents: [
+    {
+      name: 'Teacher One',
+      role: 'Homeroom Teacher',
+      initials: 'TO',
+    },
+  ],
+  primaryLanguage: 'English',
+  writingMethod: 'Pencil',
+  mobilityMethod: 'Independent',
+  conditionsAffectingPerformance: 'Busy settings',
+  participationScores: { regularClassroom: 4 },
+  totalParticipationRawScore: 4,
+  participationAverage: 4,
+  taskSupports: { physicalAssistance: 2 },
+  activityPerformance: { travel: 3 },
+  adaptations: ['visualSchedule'],
+  notes: 'Observed across settings.',
+  completedAt: null,
+  createdAt: '2026-08-26T00:00:00.000Z',
+  updatedAt: '2026-08-26T00:00:00.000Z',
+};
+
+const sfaCommand = {
+  assessmentDate: '2026-08-26',
+  observationDate: '2026-08-25',
+  programRecommendation: 'Regular',
+  respondents: [
+    {
+      id: 'client-respondent-id',
+      name: 'Teacher One',
+      role: 'Homeroom Teacher',
+      initials: 'TO',
+    },
+  ],
+  primaryLanguage: 'English',
+  writingMethod: 'Pencil',
+  mobilityMethod: 'Independent',
+  conditionsAffectingPerformance: 'Busy settings',
+  participationScores: { regularClassroom: 4 },
+  settings: { regularClassroom: { rating: 4, notes: 'Small group' } },
+  participationNotes: 'Benefits from structure.',
+  taskSupports: { physicalAssistance: 2 },
+  taskSupportNotes: 'Prompt as needed.',
+  activityPerformance: { travel: 3 },
+  adaptations: ['visualSchedule'],
+  adaptationsNotes: 'Review monthly.',
+  notes: 'Observed across settings.',
+  status: 'COMPLETED',
+  id: observationId,
+  studentId,
+  observerId: userId,
+  assignmentId,
+  participationAverage: 4,
+  totalParticipationRawScore: 4,
+};
+
 function response(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -395,6 +481,108 @@ describe('observationService', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       3,
       `/api/v1/organizations/${organizationId}/students/${studentId}/sensory-profile-observations/reference`,
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
+  it('uses assignment-bound SFA mutation routes without client status, identity, or totals', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () => response({ data: sfaObservation }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await observationService.createSFAObservation(
+      organizationId,
+      assignmentId,
+      sfaCommand,
+    );
+    await observationService.saveSFAObservationDraft(
+      organizationId,
+      assignmentId,
+      sfaCommand,
+    );
+    await observationService.completeSFAObservation(
+      organizationId,
+      assignmentId,
+      sfaCommand,
+    );
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `/api/v1/organizations/${organizationId}/observation-assignments/${assignmentId}/sfa-observation`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `/api/v1/organizations/${organizationId}/observation-assignments/${assignmentId}/sfa-observation`,
+      expect.objectContaining({ method: 'PUT' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      `/api/v1/organizations/${organizationId}/observation-assignments/${assignmentId}/sfa-observation/complete`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+
+    fetchMock.mock.calls.forEach((call) => {
+      const init = call[1] as RequestInit;
+      const body = JSON.parse(init.body as string) as Record<string, unknown>;
+      expect(body).not.toHaveProperty('status');
+      expect(body).not.toHaveProperty('id');
+      expect(body).not.toHaveProperty('studentId');
+      expect(body).not.toHaveProperty('observerId');
+      expect(body).not.toHaveProperty('assignmentId');
+      expect(body).not.toHaveProperty('participationAverage');
+      expect(body).not.toHaveProperty('totalParticipationRawScore');
+      expect(body.respondents).toEqual([
+        {
+          name: 'Teacher One',
+          role: 'Homeroom Teacher',
+          initials: 'TO',
+        },
+      ]);
+    });
+  });
+
+  it('loads SFA detail, student history, and reference routes', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response({ data: sfaObservation }))
+      .mockResolvedValueOnce(
+        response({ data: [sfaObservation], meta: { count: 1 } }),
+      )
+      .mockResolvedValueOnce(response({ data: sfaObservation }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const detail = await observationService.getSFAObservation(
+      organizationId,
+      assignmentId,
+    );
+    const history = await observationService.getStudentSFAObservations(
+      organizationId,
+      studentId,
+    );
+    const reference = await observationService.getStudentSFAReference(
+      organizationId,
+      studentId,
+    );
+
+    expect(detail.participationAverage).toBe(4);
+    expect(detail.definition?.body).toEqual(sfaObservation.definition.body);
+    expect(history).toHaveLength(1);
+    expect(reference.latestObservation?.id).toBe(observationId);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `/api/v1/organizations/${organizationId}/observation-assignments/${assignmentId}/sfa-observation`,
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `/api/v1/organizations/${organizationId}/students/${studentId}/sfa-observations`,
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      `/api/v1/organizations/${organizationId}/students/${studentId}/sfa-observations/reference`,
       expect.objectContaining({ method: 'GET' }),
     );
   });

@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { fedcDefinitionBodySchema } from '@learnspace/contracts';
+import {
+  fedcDefinitionBodySchema,
+  sfaDefinitionBodySchema,
+} from '@learnspace/contracts';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
+import { useSFAObservationReference } from '../../hooks/useSFAObservations';
 import { useFEDCObservationReference } from '../../hooks/useFEDCObservations';
 import { useSensoryProfileObservationReference } from '../../hooks/useSensoryProfileObservations';
 
@@ -40,6 +43,9 @@ export const ObservationReferenceDrawer: React.FC<
     studentId,
     { enabled: isOpen },
   );
+  const sfaReference = useSFAObservationReference(organizationId, studentId, {
+    enabled: isOpen,
+  });
 
   const student = students.find((candidate) => candidate.id === studentId);
   const latestFedc = fedcReference.reference?.latestObservation || undefined;
@@ -53,8 +59,18 @@ export const ObservationReferenceDrawer: React.FC<
   const latestSensory =
     sensoryReference.reference?.latestObservation || undefined;
 
-  const sfaRecords = storageService.getSFAObservations(studentId);
-  const latestSfa = sfaRecords[0];
+  const latestSfa =
+    sfaReference.reference?.latestObservation?.status.toUpperCase() ===
+    'COMPLETED'
+      ? sfaReference.reference.latestObservation
+      : undefined;
+  const parsedSfaDefinition = sfaDefinitionBodySchema.safeParse(
+    latestSfa?.definition?.body,
+  );
+  const sfaDefinition = parsedSfaDefinition.success
+    ? parsedSfaDefinition.data
+    : undefined;
+  const sfaMax = (sfaDefinition?.participationItems.length ?? 0) * 6;
 
   if (!isOpen) return null;
 
@@ -153,7 +169,7 @@ export const ObservationReferenceDrawer: React.FC<
               SFA Assessment
               {latestSfa && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-stone-100 text-stone-700 font-semibold">
-                  Avg {latestSfa.participationAverage.toFixed(1)}/6
+                  {latestSfa.totalParticipationRawScore ?? 0}/{sfaMax}
                 </span>
               )}
             </button>
@@ -402,57 +418,109 @@ export const ObservationReferenceDrawer: React.FC<
 
             {activeTab === 'SFA' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between bg-purple-50/70 p-3 rounded-lg border border-purple-200">
-                  <div>
-                    <span className="text-xs font-bold text-purple-900">
-                      SFA Assessment Completed
-                    </span>
-                    <p className="text-xs text-purple-700 mt-0.5">
-                      Observer:{' '}
-                      {latestSfa?.observerName || 'Special Ed Coordinator'} ·
-                      Date: {latestSfa?.assessmentDate || 'N/A'}
-                    </p>
+                {sfaReference.status === 'loading' && (
+                  <div className="p-4 rounded-lg border border-stone-200 bg-white text-xs text-stone-500 text-center">
+                    Loading SFA reference…
                   </div>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onNavigateToFull('SFA');
-                    }}
-                    className="flex items-center gap-1 text-xs font-semibold text-[#6E161E] hover:underline"
-                  >
-                    Open Full Form <ExternalLink className="w-3 h-3" />
-                  </button>
-                </div>
+                )}
+                {sfaReference.status === 'error' && (
+                  <div className="p-4 rounded-lg border border-rose-200 bg-rose-50 text-xs text-rose-800 flex items-center justify-between gap-3">
+                    <span>{sfaReference.error}</span>
+                    <button
+                      type="button"
+                      onClick={sfaReference.retry}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-rose-200 font-bold flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Retry
+                    </button>
+                  </div>
+                )}
+                {sfaReference.status === 'ready' && !latestSfa && (
+                  <div className="p-4 rounded-lg border border-dashed border-stone-300 bg-white text-xs text-stone-500 text-center">
+                    No completed SFA observation is available for this student.
+                  </div>
+                )}
+                {latestSfa && (
+                  <div className="flex items-center justify-between bg-purple-50/70 p-3 rounded-lg border border-purple-200">
+                    <div>
+                      <span className="text-xs font-bold text-purple-900">
+                        SFA Assessment Completed
+                      </span>
+                      <p className="text-xs text-purple-700 mt-0.5">
+                        Observer:{' '}
+                        {latestSfa?.observerName || 'Special Ed Coordinator'} ·
+                        Date: {latestSfa?.assessmentDate || 'N/A'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onNavigateToFull('SFA');
+                      }}
+                      className="flex items-center gap-1 text-xs font-semibold text-[#6E161E] hover:underline"
+                    >
+                      Open Full Form <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
 
                 {/* SFA Key Metrics */}
-                <div className="p-4 bg-white border border-stone-200 rounded-lg space-y-3">
-                  <div className="flex justify-between items-center pb-2 border-b border-stone-100">
-                    <span className="text-xs text-stone-600 font-medium">
-                      Part 1 Participation Average
-                    </span>
-                    <span className="text-sm font-bold text-stone-900">
-                      {latestSfa?.participationAverage.toFixed(1)} / 6.0
-                    </span>
+                {latestSfa && (
+                  <div className="p-4 bg-white border border-stone-200 rounded-lg space-y-3">
+                    <div className="flex justify-between items-center pb-2 border-b border-stone-100">
+                      <span className="text-xs text-stone-600 font-medium">
+                        Part 1 Participation Average
+                      </span>
+                      <span className="text-sm font-bold text-stone-900">
+                        {latestSfa.participationAverage.toFixed(1)} / 6.0
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-stone-100">
+                      <span className="text-xs text-stone-600 font-medium">
+                        Participation Raw Score
+                      </span>
+                      <span className="text-xs font-semibold text-stone-800">
+                        {latestSfa.totalParticipationRawScore ?? 0} / {sfaMax}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-stone-600 font-medium">
+                        Respondents
+                      </span>
+                      <span className="text-xs font-semibold text-stone-800">
+                        {latestSfa.respondents.length}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center pb-2 border-b border-stone-100">
-                    <span className="text-xs text-stone-600 font-medium">
-                      Physical Assistance Level
+                )}
+
+                {latestSfa && sfaDefinition && (
+                  <div className="space-y-3">
+                    <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
+                      Participation Settings
                     </span>
-                    <span className="text-xs font-semibold text-stone-800">
-                      {latestSfa?.taskSupports.physicalAssistance} / 4
-                      (Moderate)
-                    </span>
+                    {sfaDefinition.participationItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-start justify-between gap-3 rounded-lg border border-stone-200 bg-white p-3 text-xs"
+                      >
+                        <div>
+                          <strong className="text-stone-800">
+                            {item.label}
+                          </strong>
+                          {item.description && (
+                            <p className="mt-0.5 text-[11px] text-stone-500">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                        <span className="font-bold text-blue-800 shrink-0">
+                          {latestSfa.participationScores[item.id] ?? '—'} / 6
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-stone-600 font-medium">
-                      Cognitive Adaptation Level
-                    </span>
-                    <span className="text-xs font-semibold text-stone-800">
-                      {latestSfa?.taskSupports.cognitiveAdaptation} / 4
-                      (Substantial)
-                    </span>
-                  </div>
-                </div>
+                )}
 
                 {latestSfa?.adaptations && latestSfa.adaptations.length > 0 && (
                   <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
@@ -466,7 +534,11 @@ export const ObservationReferenceDrawer: React.FC<
                           className="text-xs text-stone-600 flex items-start gap-2"
                         >
                           <span className="text-emerald-600 font-bold">✓</span>
-                          <span>{adapt}</span>
+                          <span>
+                            {sfaDefinition?.adaptationOptions.find(
+                              (option) => option.id === adapt,
+                            )?.label || adapt}
+                          </span>
                         </li>
                       ))}
                     </ul>

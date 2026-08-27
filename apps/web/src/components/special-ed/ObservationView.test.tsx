@@ -36,7 +36,11 @@ vi.mock('./SensoryProfileView', () => ({
   ),
 }));
 vi.mock('./SFAObservationView', () => ({
-  SFAObservationView: () => <div>SFA form</div>,
+  SFAObservationView: ({
+    assignment,
+  }: {
+    assignment: ObservationAssignment;
+  }) => <div data-testid="sfa-form">SFA form for {assignment.studentName}</div>,
 }));
 
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -64,6 +68,19 @@ const sensoryAssignmentA: ObservationAssignment = {
   definitionBody: { sections: [] },
   instrumentType: 'SENSORY_PROFILE',
   instrumentTitle: 'Sensory Profile Instrument',
+};
+const sfaAssignmentA: ObservationAssignment = {
+  ...assignmentA,
+  id: '99999999-9999-4999-8999-999999999999',
+  definitionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  definitionBody: {
+    participationItems: [{ id: 'participation', label: 'Participation' }],
+    taskSupportItems: [{ id: 'support', label: 'Support' }],
+    activityPerformanceItems: [{ id: 'activity', label: 'Activity' }],
+    adaptationOptions: [],
+  },
+  instrumentType: 'SFA',
+  instrumentTitle: 'School Function Assessment',
 };
 
 const mockedUseApp = vi.mocked(useApp);
@@ -109,7 +126,7 @@ beforeEach(() => {
   );
   mockedUseObservationData.mockReturnValue({
     definitions: [],
-    assignments: [assignmentA, sensoryAssignmentA],
+    assignments: [assignmentA, sensoryAssignmentA, sfaAssignmentA],
     status: 'ready',
     error: undefined,
     retry: vi.fn(),
@@ -156,6 +173,26 @@ describe('ObservationView', () => {
     expect(screen.queryByTestId('sensory-form')).not.toBeInTheDocument();
     expect(
       screen.getByText('No active Sensory Profile assignment for this student'),
+    ).toBeVisible();
+  });
+
+  it('opens the assignment-bound SFA form and clears it after switching students', () => {
+    render(<ObservationView />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open assigned SFA form' }),
+    );
+    expect(screen.getByTestId('sfa-form')).toHaveTextContent(
+      'SFA form for Student A',
+    );
+
+    fireEvent.click(
+      document.querySelector(`#gpk-switch-student-${studentBId}`)!,
+    );
+
+    expect(screen.queryByTestId('sfa-form')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('No active SFA assignment for this student'),
     ).toBeVisible();
   });
 });

@@ -2,7 +2,6 @@ import {
   User,
   Student,
   LearningJourney,
-  SFAObservationRecord,
   IEPRecord,
   IEPReport,
   WorkflowHistoryEntry,
@@ -12,7 +11,6 @@ import {
   SEED_USERS,
   SEED_STUDENTS,
   SEED_LEARNING_JOURNEYS,
-  SEED_SFA_OBSERVATION,
   SEED_IEP_RECORDS,
   SEED_WEEKLY_REPORTS,
 } from '../data/seedData';
@@ -27,7 +25,6 @@ const STORAGE_KEYS = {
   CURRENT_USER_ID: 'mws_current_user_id_v2',
   STUDENTS: 'mws_students_v2',
   LEARNING_JOURNEYS: 'mws_learning_journeys_v2',
-  SFA_OBSERVATIONS: 'mws_sfa_observations_v2',
   IEP_RECORDS: 'mws_iep_records_v2',
   IEP_REPORTS: 'mws_iep_reports_v2',
 };
@@ -64,12 +61,6 @@ class StorageService {
       );
     }
 
-    if (forceReset || !localStorage.getItem(STORAGE_KEYS.SFA_OBSERVATIONS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.SFA_OBSERVATIONS,
-        JSON.stringify([SEED_SFA_OBSERVATION]),
-      );
-    }
     if (forceReset || !localStorage.getItem(STORAGE_KEYS.IEP_RECORDS)) {
       localStorage.setItem(
         STORAGE_KEYS.IEP_RECORDS,
@@ -254,40 +245,6 @@ class StorageService {
       JSON.stringify(journeys),
     );
     return true;
-  }
-
-  // SFA Observations
-  public getSFAObservations(studentId?: string): SFAObservationRecord[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.SFA_OBSERVATIONS);
-      let records: SFAObservationRecord[] = data
-        ? JSON.parse(data)
-        : [SEED_SFA_OBSERVATION];
-      if (studentId) {
-        records = records.filter((r) => r.studentId === studentId);
-      }
-      return records;
-    } catch {
-      return [SEED_SFA_OBSERVATION];
-    }
-  }
-
-  public saveSFAObservation(
-    record: SFAObservationRecord,
-  ): SFAObservationRecord {
-    const list = this.getSFAObservations();
-    const idx = list.findIndex((r) => r.id === record.id);
-    if (idx >= 0) {
-      list[idx] = { ...record, updatedAt: new Date().toISOString() };
-    } else {
-      list.unshift({
-        ...record,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-    }
-    localStorage.setItem(STORAGE_KEYS.SFA_OBSERVATIONS, JSON.stringify(list));
-    return record;
   }
 
   // IEP Records

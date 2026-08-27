@@ -23,6 +23,8 @@ import type {
   FEDCItemResponse,
   SensoryProfileRecord,
   SensoryRating,
+  SFAObservationRecord,
+  SFARespondent,
   User,
   Student,
 } from '../types';
@@ -84,6 +86,36 @@ const fallbackSensoryCommandSchema = z
     notes: z.string().nullable().optional(),
   })
   .strict();
+const fallbackSfaResponseSchema = z.object({ data: z.unknown() });
+const fallbackSfaObservationsResponseSchema = z.object({
+  data: z.array(z.unknown()),
+  meta: z.object({ count: z.number().int().nonnegative() }).optional(),
+});
+const fallbackSfaCommandSchema = z
+  .object({
+    assessmentDate: z.string(),
+    observationDate: z.string().optional(),
+    programRecommendation: z.string().optional(),
+    respondents: z.array(
+      z
+        .object({
+          name: z.string().min(1),
+          role: z.string().min(1),
+          initials: z.string().min(1).max(8),
+        })
+        .strict(),
+    ),
+    primaryLanguage: z.string().optional(),
+    writingMethod: z.string().optional(),
+    mobilityMethod: z.string().optional(),
+    conditionsAffectingPerformance: z.string().optional(),
+    participationScores: z.record(z.string(), z.number().min(1).max(6)),
+    taskSupports: z.record(z.string(), z.number().min(1).max(4)),
+    activityPerformance: z.record(z.string(), z.number().min(1).max(4)),
+    adaptations: z.array(z.string().min(1)),
+    notes: z.string().nullable().optional(),
+  })
+  .strict();
 
 type ContractSchemas = typeof contracts & {
   fedcObservationSchema?: z.ZodType<unknown>;
@@ -139,6 +171,22 @@ type ContractSchemas = typeof contracts & {
   sensoryObservationSaveDraftCommandSchema?: z.ZodType<SensoryObservationCommand>;
   sensoryProfileObservationCompleteCommandSchema?: z.ZodType<SensoryObservationCommand>;
   sensoryObservationCompleteCommandSchema?: z.ZodType<SensoryObservationCommand>;
+  sfaObservationMutationResponseSchema?: z.ZodType<{ data: unknown }>;
+  sfaObservationResponseSchema?: z.ZodType<{ data: unknown }>;
+  sfaObservationsResponseSchema?: z.ZodType<{
+    data: unknown[];
+    meta?: { count: number };
+  }>;
+  sfaObservationHistoryResponseSchema?: z.ZodType<{
+    data: unknown[];
+    meta?: { count: number };
+  }>;
+  sfaObservationReferenceResponseSchema?: z.ZodType<{ data: unknown }>;
+  sfaObservationCreateCommandSchema?: z.ZodType<SFAObservationCommand>;
+  sfaObservationCreateDraftCommandSchema?: z.ZodType<SFAObservationCommand>;
+  sfaObservationDraftCommandSchema?: z.ZodType<SFAObservationCommand>;
+  sfaObservationSaveDraftCommandSchema?: z.ZodType<SFAObservationCommand>;
+  sfaObservationCompleteCommandSchema?: z.ZodType<SFAObservationCommand>;
 };
 
 const fedcContracts = contracts as ContractSchemas;
@@ -196,6 +244,27 @@ const sensoryObservationCompleteCommandSchema =
   fedcContracts.sensoryProfileObservationCompleteCommandSchema ??
   fedcContracts.sensoryObservationCompleteCommandSchema ??
   fallbackSensoryCommandSchema;
+const sfaObservationMutationResponseSchema =
+  fedcContracts.sfaObservationMutationResponseSchema ??
+  fedcContracts.sfaObservationResponseSchema ??
+  fallbackSfaResponseSchema;
+const sfaObservationsResponseSchema =
+  fedcContracts.sfaObservationsResponseSchema ??
+  fedcContracts.sfaObservationHistoryResponseSchema ??
+  fallbackSfaObservationsResponseSchema;
+const sfaObservationReferenceResponseSchema =
+  fedcContracts.sfaObservationReferenceResponseSchema ??
+  fallbackSfaResponseSchema;
+const sfaObservationCreateCommandSchema =
+  fedcContracts.sfaObservationCreateCommandSchema ??
+  fedcContracts.sfaObservationCreateDraftCommandSchema ??
+  fallbackSfaCommandSchema;
+const sfaObservationDraftCommandSchema =
+  fedcContracts.sfaObservationDraftCommandSchema ??
+  fedcContracts.sfaObservationSaveDraftCommandSchema ??
+  fallbackSfaCommandSchema;
+const sfaObservationCompleteCommandSchema =
+  fedcContracts.sfaObservationCompleteCommandSchema ?? fallbackSfaCommandSchema;
 
 export interface FEDCObservationCommand {
   observationDate: string;
@@ -224,6 +293,65 @@ export interface SensoryObservationCommand {
 
 export interface SensoryObservationReference {
   latestObservation: SensoryProfileRecord | null;
+}
+
+export interface SFAObservationCommand {
+  assessmentDate: string;
+  observationDate?: string;
+  programRecommendation?: string;
+  respondents: Array<Pick<SFARespondent, 'name' | 'role' | 'initials'>>;
+  primaryLanguage?: string;
+  writingMethod?: string;
+  mobilityMethod?: string;
+  conditionsAffectingPerformance?: string;
+  participationScores: Record<string, number>;
+  taskSupports: Record<string, number>;
+  activityPerformance: Record<string, number>;
+  adaptations: string[];
+  notes?: string | null;
+}
+
+export interface SFAObservationReference {
+  latestObservation: SFAObservationRecord | null;
+}
+
+function sfaObservationCommandPayload(
+  command: SFAObservationCommand,
+): SFAObservationCommand {
+  return {
+    assessmentDate: command.assessmentDate,
+    ...(command.observationDate === undefined
+      ? {}
+      : { observationDate: command.observationDate }),
+    ...(command.programRecommendation === undefined
+      ? {}
+      : { programRecommendation: command.programRecommendation }),
+    respondents: command.respondents.map(({ name, role, initials }) => ({
+      name,
+      role,
+      initials,
+    })),
+    ...(command.primaryLanguage === undefined
+      ? {}
+      : { primaryLanguage: command.primaryLanguage }),
+    ...(command.writingMethod === undefined
+      ? {}
+      : { writingMethod: command.writingMethod }),
+    ...(command.mobilityMethod === undefined
+      ? {}
+      : { mobilityMethod: command.mobilityMethod }),
+    ...(command.conditionsAffectingPerformance === undefined
+      ? {}
+      : {
+          conditionsAffectingPerformance:
+            command.conditionsAffectingPerformance,
+        }),
+    participationScores: command.participationScores,
+    taskSupports: command.taskSupports,
+    activityPerformance: command.activityPerformance,
+    adaptations: command.adaptations,
+    ...(command.notes === undefined ? {} : { notes: command.notes }),
+  };
 }
 
 type ApiDefinition = ObservationDefinitionsResponse['data'][number];
@@ -314,6 +442,42 @@ function mapSensorySectionScores(
     mapped[sectionId] = {
       raw: numberValue(score.raw),
       max: numberValue(score.max),
+    };
+  });
+  return mapped;
+}
+
+function mapNumberRecord(value: unknown): Record<string, number> {
+  const mapped: Record<string, number> = {};
+  Object.entries(asRecord(value)).forEach(([key, score]) => {
+    if (typeof score === 'number' && Number.isFinite(score))
+      mapped[key] = score;
+  });
+  return mapped;
+}
+
+function mapSfaRespondents(value: unknown): SFARespondent[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    const respondent = asRecord(entry);
+    const name = text(respondent.name);
+    const role = text(respondent.role);
+    const initials = text(respondent.initials);
+    if (!name || !role || !initials) return [];
+    return [{ id: nullableText(respondent.id), name, role, initials }];
+  });
+}
+
+function mapSfaSettings(
+  value: unknown,
+): Record<string, { rating: number; notes?: string }> {
+  const mapped: Record<string, { rating: number; notes?: string }> = {};
+  Object.entries(asRecord(value)).forEach(([settingId, settingValue]) => {
+    const setting = asRecord(settingValue);
+    if (typeof setting.rating !== 'number') return;
+    mapped[settingId] = {
+      rating: setting.rating,
+      notes: nullableText(setting.notes),
     };
   });
   return mapped;
@@ -479,6 +643,109 @@ export function mapSensoryObservationReference(
     payload.latestSensoryProfileObservation ??
     value;
   return { latestObservation: mapSensoryObservation(latest) };
+}
+
+export function mapSFAObservation(value: unknown): SFAObservationRecord {
+  const record = asRecord(value);
+  const student = asRecord(record.student);
+  const definition = asRecord(record.definition);
+  const observer = asRecord(record.observer);
+  const assessmentDate = dateOnly(record.assessmentDate);
+  const definitionKey = text(
+    definition.key,
+    text(definition.definitionKey, text(record.definitionKey)),
+  );
+  return {
+    id: text(record.id),
+    organizationId: nullableText(record.organizationId),
+    assignmentId: nullableText(record.assignmentId),
+    studentId: text(record.studentId, text(student.id)),
+    student: text(student.id)
+      ? {
+          id: text(student.id),
+          fullName: text(
+            student.fullName,
+            text(student.displayName, 'Student'),
+          ),
+          studentNumber: nullableText(student.studentNumber),
+          avatarUrl: nullableText(student.avatarUrl),
+        }
+      : undefined,
+    definition: text(definition.id)
+      ? {
+          id: text(definition.id),
+          key: definitionKey,
+          version: numberValue(definition.version, 1),
+          title: text(definition.title, 'School Function Assessment'),
+          body: asRecord(definition.body),
+        }
+      : undefined,
+    observationType: 'SFA',
+    recordYear: assessmentDate.slice(0, 4),
+    assessmentDate,
+    observationDate: dateOnly(record.observationDate) || undefined,
+    observerId: text(
+      observer.userId,
+      text(observer.id, text(record.observerId)),
+    ),
+    observerName: text(
+      observer.displayName,
+      text(record.observerName, 'Staff observer'),
+    ),
+    observer: text(observer.displayName)
+      ? {
+          id: nullableText(observer.id),
+          userId: nullableText(observer.userId),
+          displayName: text(observer.displayName),
+        }
+      : undefined,
+    coordinatorName: text(record.coordinatorName),
+    status: text(
+      record.status,
+      'IN_PROGRESS',
+    ) as SFAObservationRecord['status'],
+    programRecommendation: text(record.programRecommendation),
+    respondents: mapSfaRespondents(record.respondents),
+    primaryLanguage: text(record.primaryLanguage),
+    writingMethod: text(record.writingMethod),
+    mobilityMethod: text(record.mobilityMethod),
+    conditionsAffectingPerformance: text(record.conditionsAffectingPerformance),
+    participationScores: mapNumberRecord(record.participationScores),
+    totalParticipationRawScore:
+      typeof record.totalParticipationRawScore === 'number'
+        ? record.totalParticipationRawScore
+        : undefined,
+    settings: mapSfaSettings(record.settings),
+    participationNotes: nullableText(record.participationNotes),
+    participationAverage: numberValue(record.participationAverage),
+    taskSupports: mapNumberRecord(record.taskSupports),
+    taskSupportNotes: nullableText(record.taskSupportNotes),
+    activityPerformance: mapNumberRecord(record.activityPerformance),
+    adaptations: Array.isArray(record.adaptations)
+      ? record.adaptations.filter(
+          (adaptation): adaptation is string => typeof adaptation === 'string',
+        )
+      : [],
+    adaptationsNotes: nullableText(record.adaptationsNotes),
+    notes: nullableText(record.notes),
+    completedAt: nullableText(record.completedAt) ?? null,
+    createdAt: text(record.createdAt),
+    updatedAt: text(record.updatedAt),
+  };
+}
+
+export function mapSFAObservationReference(
+  value: unknown,
+): SFAObservationReference {
+  if (!value) return { latestObservation: null };
+  const payload = asRecord(value);
+  const latest =
+    payload.latestObservation ??
+    payload.observation ??
+    payload.latestSfaObservation ??
+    payload.latestSFAObservation ??
+    value;
+  return { latestObservation: mapSFAObservation(latest) };
 }
 
 export function mapObservationDefinition(
@@ -906,12 +1173,118 @@ export const observationService = {
     );
     return mapSensoryObservationReference(response.data);
   },
+
+  async createSFAObservation(
+    organizationId: string,
+    assignmentId: string,
+    command: SFAObservationCommand,
+    signal?: AbortSignal,
+  ): Promise<SFAObservationRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/sfa-observation`,
+      {
+        method: 'POST',
+        body: sfaObservationCreateCommandSchema.parse(
+          sfaObservationCommandPayload(command),
+        ),
+        schema: sfaObservationMutationResponseSchema,
+        signal,
+      },
+    );
+    return mapSFAObservation(response.data);
+  },
+
+  async saveSFAObservationDraft(
+    organizationId: string,
+    assignmentId: string,
+    command: SFAObservationCommand,
+    signal?: AbortSignal,
+  ): Promise<SFAObservationRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/sfa-observation`,
+      {
+        method: 'PUT',
+        body: sfaObservationDraftCommandSchema.parse(
+          sfaObservationCommandPayload(command),
+        ),
+        schema: sfaObservationMutationResponseSchema,
+        signal,
+      },
+    );
+    return mapSFAObservation(response.data);
+  },
+
+  async completeSFAObservation(
+    organizationId: string,
+    assignmentId: string,
+    command: SFAObservationCommand,
+    signal?: AbortSignal,
+  ): Promise<SFAObservationRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/sfa-observation/complete`,
+      {
+        method: 'POST',
+        body: sfaObservationCompleteCommandSchema.parse(
+          sfaObservationCommandPayload(command),
+        ),
+        schema: sfaObservationMutationResponseSchema,
+        signal,
+      },
+    );
+    return mapSFAObservation(response.data);
+  },
+
+  async getSFAObservation(
+    organizationId: string,
+    assignmentId: string,
+    signal?: AbortSignal,
+  ): Promise<SFAObservationRecord> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/observation-assignments/${encodeURIComponent(assignmentId)}/sfa-observation`,
+      { schema: sfaObservationMutationResponseSchema, signal },
+    );
+    return mapSFAObservation(response.data);
+  },
+
+  async getStudentSFAObservations(
+    organizationId: string,
+    studentId: string,
+    signal?: AbortSignal,
+  ): Promise<SFAObservationRecord[]> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/students/${encodeURIComponent(studentId)}/sfa-observations`,
+      { schema: sfaObservationsResponseSchema, signal },
+    );
+    return response.data.map(mapSFAObservation);
+  },
+
+  async getStudentSFAReference(
+    organizationId: string,
+    studentId: string,
+    signal?: AbortSignal,
+  ): Promise<SFAObservationReference> {
+    const response = await apiClient.request(
+      `${organizationPath(organizationId)}/students/${encodeURIComponent(studentId)}/sfa-observations/reference`,
+      { schema: sfaObservationReferenceResponseSchema, signal },
+    );
+    return mapSFAObservationReference(response.data);
+  },
 };
 
 function demoDefinition(
   form: ObservationFormDefinition,
 ): ObservationDefinition {
   const version = Number.parseInt(form.version, 10) || 1;
+  const body = form.body ?? { itemCount: form.itemCount };
+  const sfaSections =
+    form.type === 'SFA'
+      ? [
+          'participationItems',
+          'taskSupportItems',
+          'activityPerformanceItems',
+          'adaptationOptions',
+        ].filter((key) => Array.isArray(body[key])).length
+      : 0;
   return {
     id: form.id,
     definitionKey: form.id,
@@ -922,13 +1295,13 @@ function demoDefinition(
     targetAges: form.targetAges,
     defaultFrequency: form.defaultFrequency,
     version,
-    itemCount: form.itemCount,
-    sectionsCount: 0,
-    maxScore: 0,
+    itemCount: numberValue(body.itemCount, form.itemCount),
+    sectionsCount: numberValue(body.sectionsCount, sfaSections),
+    maxScore: numberValue(body.maxScore, form.type === 'SFA' ? 98 : 0),
     lastUpdated: form.lastUpdated,
     updatedBy: form.updatedBy,
     isActive: form.isActive,
-    body: { itemCount: form.itemCount },
+    body,
   };
 }
 

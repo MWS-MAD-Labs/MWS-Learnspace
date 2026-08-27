@@ -1,6 +1,68 @@
 import { PrismaClient } from '@prisma/client';
 import { assertSeedAllowed } from '../apps/api/src/seedGuard.js';
 
+const sfaDefinitionBody = {
+  participationItems: [
+    { id: 'regularClassroom', label: 'Regular Classroom' },
+    { id: 'specialEdClassroom', label: 'Special Education Resource Room' },
+    { id: 'playgroundRecess', label: 'Playground and Recess' },
+    { id: 'transportation', label: 'Transportation and Hallway' },
+    { id: 'bathroomToilet', label: 'Bathroom and Hygiene' },
+    { id: 'transitions', label: 'Transitions and Movement' },
+    { id: 'mealSnackTime', label: 'Mealtime and Cafeteria' },
+  ],
+  taskSupportItems: [
+    { id: 'physicalAssistance', label: 'Physical Assistance' },
+    { id: 'physicalAdaptation', label: 'Physical Adaptation' },
+    { id: 'cognitiveAssistance', label: 'Cognitive/Behavioral Assistance' },
+    { id: 'cognitiveAdaptation', label: 'Cognitive/Behavioral Adaptation' },
+  ],
+  activityPerformanceItems: [
+    { id: 'travel', label: 'Travel' },
+    { id: 'maintaining_posture', label: 'Maintaining Posture' },
+    { id: 'manipulation', label: 'Manipulation with Movement' },
+    { id: 'eating_drinking', label: 'Eating and Drinking' },
+    { id: 'hygiene', label: 'Hygiene' },
+    { id: 'clothing_management', label: 'Clothing Management' },
+    { id: 'functional_communication', label: 'Functional Communication' },
+    { id: 'memory_understanding', label: 'Memory and Understanding' },
+    {
+      id: 'following_social_conventions',
+      label: 'Following Social Conventions',
+    },
+    { id: 'task_behavior_completion', label: 'Task Behavior and Completion' },
+  ],
+  adaptationOptions: [
+    { id: 'slant-board', label: 'Slant board for paper positioning' },
+    { id: 'pencil-grips', label: 'Chunky ergonomic pencil grips' },
+    {
+      id: 'visual-schedule',
+      label: 'Visual daily schedule strip at desk',
+    },
+    {
+      id: 'sensory-corner',
+      label: 'Quiet sensory corner retreat access',
+    },
+    {
+      id: 'noise-reduction-headphones',
+      label: 'Noise-reduction headphones for fire drills and loud assemblies',
+    },
+    {
+      id: 'weighted-vest',
+      label:
+        'Weighted sensory vest during floor circle time (15 min intervals)',
+    },
+    {
+      id: 'first-then-card',
+      label: 'Individual visual first-then transition card',
+    },
+    {
+      id: 'raised-line-worksheets',
+      label: 'Raised-line handwriting worksheets',
+    },
+  ],
+};
+
 export async function seedDatabase(prisma: PrismaClient) {
   const organization = await prisma.organization.upsert({
     where: { slug: 'learnspace-demo' },
@@ -8,6 +70,43 @@ export async function seedDatabase(prisma: PrismaClient) {
     create: {
       slug: 'learnspace-demo',
       name: 'Learnspace Demonstration School',
+    },
+  });
+
+  await prisma.observationDefinition.upsert({
+    where: {
+      organizationId_definitionKey_version: {
+        organizationId: organization.id,
+        definitionKey: 'school-function-assessment',
+        version: 1,
+      },
+    },
+    update: {
+      type: 'SFA',
+      title: 'School Function Assessment (SFA)',
+      framework: 'Coster, DeBaun, Haltiwanger & Mancini',
+      description:
+        'School participation, task support, activity performance, and adaptations.',
+      targetAges: 'Kindergarten through Grade 6',
+      defaultFrequency: 'Annual / Triennial Review',
+      body: sfaDefinitionBody,
+      isActive: true,
+      publishedAt: new Date('2026-07-25T00:00:00.000Z'),
+    },
+    create: {
+      organizationId: organization.id,
+      definitionKey: 'school-function-assessment',
+      version: 1,
+      type: 'SFA',
+      title: 'School Function Assessment (SFA)',
+      framework: 'Coster, DeBaun, Haltiwanger & Mancini',
+      description:
+        'School participation, task support, activity performance, and adaptations.',
+      targetAges: 'Kindergarten through Grade 6',
+      defaultFrequency: 'Annual / Triennial Review',
+      body: sfaDefinitionBody,
+      isActive: true,
+      publishedAt: new Date('2026-07-25T00:00:00.000Z'),
     },
   });
 

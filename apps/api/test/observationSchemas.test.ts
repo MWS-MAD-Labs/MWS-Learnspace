@@ -6,7 +6,10 @@ import {
   sensoryProfileCompletePayloadSchema,
   sensoryProfileCreateDraftPayloadSchema,
   sensoryProfileSaveDraftPayloadSchema,
+  sfaCompletePayloadSchema,
+  sfaCreateDraftPayloadSchema,
   sfaPayloadSchema,
+  sfaSaveDraftPayloadSchema,
 } from '../src/observationSchemas.js';
 
 const studentId = '33333333-3333-4333-8333-333333333333';
@@ -119,17 +122,90 @@ describe('observation payload schemas', () => {
     ).toBe(false);
   });
 
-  it('validates bounded SFA scales', () => {
+  it('accepts strict SFA create drafts and partial save/completion maps', () => {
     expect(
-      sfaPayloadSchema.parse({
-        status: 'COMPLETED',
-        respondents: [{ name: 'Demo', role: 'Teacher', initials: 'DT' }],
+      sfaCreateDraftPayloadSchema.safeParse({
+        assessmentDate: '2026-08-26',
+        programRecommendation: 'Continue the current program',
+      }).success,
+    ).toBe(true);
+    expect(
+      sfaSaveDraftPayloadSchema.safeParse({
+        assessmentDate: '2026-08-26',
+        programRecommendation: 'Continue the current program',
+        respondents: [],
         participationScores: { classroom: 4 },
-        taskSupports: { physicalAssistance: 2 },
-        activityPerformance: { mobility: 3 },
-        adaptations: ['Visual schedule'],
-        participationAverage: 4,
-      }).participationAverage,
-    ).toBe(4);
+        taskSupports: {},
+        activityPerformance: {},
+        adaptations: [],
+      }).success,
+    ).toBe(true);
+    expect(
+      sfaCompletePayloadSchema.safeParse({
+        assessmentDate: '2026-08-26',
+        observationDate: '2026-08-25',
+        programRecommendation: 'Continue the current program',
+        respondents: [{ name: 'Demo', role: 'Teacher', initials: 'DT' }],
+        participationScores: {},
+        taskSupports: {},
+        activityPerformance: {},
+        adaptations: [],
+      }).success,
+    ).toBe(true);
+    expect(
+      sfaSaveDraftPayloadSchema.safeParse({
+        assessmentDate: '2026-08-26',
+        programRecommendation: 'Continue the current program',
+        respondents: [],
+      }).success,
+    ).toBe(false);
+    expect(sfaPayloadSchema).toBe(sfaSaveDraftPayloadSchema);
+  });
+
+  it.each([
+    'id',
+    'status',
+    'settings',
+    'participationAverage',
+    'totalParticipationRawScore',
+    'observerId',
+    'actorId',
+    'organizationId',
+    'studentId',
+    'definitionId',
+    'assignmentId',
+  ])('rejects client-controlled SFA field %s', (field) => {
+    expect(
+      sfaSaveDraftPayloadSchema.safeParse({
+        assessmentDate: '2026-08-26',
+        programRecommendation: 'Continue the current program',
+        respondents: [],
+        participationScores: {},
+        taskSupports: {},
+        activityPerformance: {},
+        adaptations: [],
+        [field]: field.includes('Score') ? 1 : studentId,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    { participationScores: { classroom: 0 } },
+    { participationScores: { classroom: 6.5 } },
+    { taskSupports: { physical: 5 } },
+    { activityPerformance: { mobility: 1.5 } },
+  ])('rejects invalid SFA rating scales', (overrides) => {
+    expect(
+      sfaSaveDraftPayloadSchema.safeParse({
+        assessmentDate: '2026-08-26',
+        programRecommendation: 'Continue the current program',
+        respondents: [],
+        participationScores: {},
+        taskSupports: {},
+        activityPerformance: {},
+        adaptations: [],
+        ...overrides,
+      }).success,
+    ).toBe(false);
   });
 });

@@ -5,10 +5,7 @@ import {
   attendanceBulkSaveCommandSchema,
   attendanceRosterResponseSchema,
 } from '@learnspace/contracts';
-import {
-  generateOpenApiDocument,
-  serializedOpenApiDocument,
-} from '../src/openapi.js';
+import { generateOpenApiDocument } from '../src/openapi.js';
 
 const ids = {
   organization: '11111111-1111-4111-8111-111111111111',
@@ -25,8 +22,9 @@ describe('OpenAPI contract', () => {
       resolve(process.cwd(), '../../docs/api/openapi.json'),
       'utf8',
     );
-    expect(committed).toBe(serializedOpenApiDocument());
-    expect(generateOpenApiDocument().openapi).toBe('3.1.0');
+    const document = generateOpenApiDocument();
+    expect(committed).toBe(`${JSON.stringify(document, null, 2)}\n`);
+    expect(document.openapi).toBe('3.1.0');
   });
 
   it('registers the observation definition and assignment contracts and routes', () => {
@@ -50,6 +48,12 @@ describe('OpenAPI contract', () => {
       SensoryProfileObservationResponse: expect.any(Object),
       SensoryProfileObservationHistoryResponse: expect.any(Object),
       SensoryProfileObservationReferenceResponse: expect.any(Object),
+      SfaObservationCreateDraftCommand: expect.any(Object),
+      SfaObservationSaveDraftCommand: expect.any(Object),
+      SfaObservationCompleteCommand: expect.any(Object),
+      SfaObservationResponse: expect.any(Object),
+      SfaObservationHistoryResponse: expect.any(Object),
+      SfaObservationReferenceResponse: expect.any(Object),
     });
     expect(
       paths['/organizations/{organizationId}/observation-definitions'],
@@ -94,6 +98,30 @@ describe('OpenAPI contract', () => {
     expect(
       paths[
         '/organizations/{organizationId}/students/{studentId}/sensory-profile-observations/reference'
+      ],
+    ).toMatchObject({ get: expect.any(Object) });
+    expect(
+      paths[
+        '/organizations/{organizationId}/observation-assignments/{assignmentId}/sfa-observation'
+      ],
+    ).toMatchObject({
+      get: expect.any(Object),
+      post: expect.any(Object),
+      put: expect.any(Object),
+    });
+    expect(
+      paths[
+        '/organizations/{organizationId}/observation-assignments/{assignmentId}/sfa-observation/complete'
+      ],
+    ).toMatchObject({ post: expect.any(Object) });
+    expect(
+      paths[
+        '/organizations/{organizationId}/students/{studentId}/sfa-observations'
+      ],
+    ).toMatchObject({ get: expect.any(Object) });
+    expect(
+      paths[
+        '/organizations/{organizationId}/students/{studentId}/sfa-observations/reference'
       ],
     ).toMatchObject({ get: expect.any(Object) });
   });

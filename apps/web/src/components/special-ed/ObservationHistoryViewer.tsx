@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { fedcDefinitionBodySchema } from '@learnspace/contracts';
+import {
+  fedcDefinitionBodySchema,
+  sfaDefinitionBodySchema,
+} from '@learnspace/contracts';
 import { Student, User } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { useFEDCObservations } from '../../hooks/useFEDCObservations';
 import { useSensoryProfileObservations } from '../../hooks/useSensoryProfileObservations';
-import { storageService } from '../../services/storageService';
+import { useSFAObservations } from '../../hooks/useSFAObservations';
 import {
   Brain,
   Activity,
@@ -22,7 +25,6 @@ import {
   Info,
   RefreshCw,
 } from 'lucide-react';
-import { SFA_SETTINGS } from '../../data/seedData';
 
 function recordFedcMilestones(record: unknown) {
   const candidate = record as {
@@ -30,6 +32,12 @@ function recordFedcMilestones(record: unknown) {
   };
   const parsed = fedcDefinitionBodySchema.safeParse(candidate.definition?.body);
   return parsed.success ? parsed.data.milestones : [];
+}
+
+function recordSfaDefinition(record: unknown) {
+  const candidate = record as { definition?: { body?: unknown } };
+  const parsed = sfaDefinitionBodySchema.safeParse(candidate.definition?.body);
+  return parsed.success ? parsed.data : null;
 }
 
 function recordSensorySections(record: unknown) {
@@ -126,6 +134,7 @@ export const ObservationHistoryViewer: React.FC<
     organizationId,
     student.id,
   );
+  const sfaHistory = useSFAObservations(organizationId, student.id);
   const [selectedInstrument, setSelectedInstrument] = useState<
     'ALL' | 'FEDC' | 'SENSORY' | 'SFA'
   >('ALL');
@@ -152,7 +161,9 @@ export const ObservationHistoryViewer: React.FC<
   const sensoryRecords = sensoryHistory.observations.filter(
     (record) => record.status.toUpperCase() === 'COMPLETED',
   );
-  const sfaRecords = storageService.getSFAObservations(student.id);
+  const sfaRecords = sfaHistory.observations.filter(
+    (record) => record.status.toUpperCase() === 'COMPLETED',
+  );
 
   // Available observation years
   const availableYears = Array.from(
@@ -381,6 +392,32 @@ export const ObservationHistoryViewer: React.FC<
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Retry
               </button>
+            </div>
+          )}
+        {(selectedInstrument === 'ALL' || selectedInstrument === 'SFA') &&
+          sfaHistory.status === 'loading' && (
+            <div className="bg-white border border-[#EFE7DC] rounded-2xl p-6 text-sm text-stone-500 text-center">
+              Loading SFA observation history…
+            </div>
+          )}
+        {(selectedInstrument === 'ALL' || selectedInstrument === 'SFA') &&
+          sfaHistory.status === 'error' && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-rose-800">
+              <span>{sfaHistory.error}</span>
+              <button
+                type="button"
+                onClick={sfaHistory.retry}
+                className="px-3 py-1.5 bg-white border border-rose-200 rounded-lg font-bold flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Retry
+              </button>
+            </div>
+          )}
+        {selectedInstrument === 'SFA' &&
+          sfaHistory.status === 'ready' &&
+          filteredSfa.length === 0 && (
+            <div className="bg-white border border-dashed border-[#E8DFC8] rounded-2xl p-6 text-sm text-stone-500 text-center">
+              No completed SFA observations are available for this student.
             </div>
           )}
         {/* FEDC Records Section */}
@@ -692,24 +729,18 @@ export const ObservationHistoryViewer: React.FC<
                             Participation Raw Score:
                           </span>
                           <span className="text-base font-black text-blue-800">
-                            {rec.totalParticipationRawScore ??
-                              (rec.participationAverage
-                                ? Math.round(rec.participationAverage * 6)
-                                : 27)}{' '}
+                            {rec.totalParticipationRawScore ?? 0}{' '}
                             <span className="text-xs text-stone-400 font-normal">
-                              / 36
+                              /{' '}
+                              {(recordSfaDefinition(rec)?.participationItems
+                                .length ?? 0) * 6}
                             </span>
                           </span>
                         </div>
                         <div className="text-[11px] text-stone-600 bg-white/80 p-2 rounded-lg border border-stone-200">
                           Average Rating:{' '}
                           <strong>
-                            {rec.participationAverage
-                              ? rec.participationAverage.toFixed(1)
-                              : (
-                                  (rec.totalParticipationRawScore || 27) / 6
-                                ).toFixed(1)}{' '}
-                            / 6.0
+                            {rec.participationAverage.toFixed(1)} / 6.0
                           </strong>{' '}
                           (Participation with modifications)
                         </div>
@@ -724,7 +755,9 @@ export const ObservationHistoryViewer: React.FC<
                           <strong className="text-stone-800">
                             Settings Evaluated:
                           </strong>{' '}
-                          Classroom, Recess & Cafeteria
+                          {recordSfaDefinition(rec)
+                            ?.participationItems.map((item) => item.label)
+                            .join(', ') || 'Pinned SFA settings'}
                         </p>
                       </div>
                     </div>
@@ -745,7 +778,13 @@ export const ObservationHistoryViewer: React.FC<
                       {onOpenAssessmentForm && (
                         <button
                           id={`edit-sfa-form-btn-${rec.id}`}
-                          onClick={() => onOpenAssessmentForm('SFA', rec.id)}
+                          onClick={() =>
+                            onOpenAssessmentForm(
+                              'SFA',
+                              rec.id,
+                              rec.assignmentId,
+                            )
+                          }
                           className="w-full py-1.5 text-xs font-bold text-stone-700 hover:text-blue-800 bg-white hover:bg-stone-50 rounded-xl border border-[#E8DFC8] flex items-center justify-center gap-1 transition-all"
                         >
                           <ExternalLink className="w-3 h-3 text-blue-800" />
@@ -840,10 +879,7 @@ export const ObservationHistoryViewer: React.FC<
                       onOpenAssessmentForm(
                         type,
                         activeDetailRecord.data.id,
-                        activeDetailRecord.type === 'FEDC' ||
-                          activeDetailRecord.type === 'SENSORY'
-                          ? activeDetailRecord.data.assignmentId
-                          : undefined,
+                        activeDetailRecord.data.assignmentId,
                       );
                     }}
                     className="px-3 py-1.5 bg-[#6E161E] hover:bg-[#8C1F28] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
@@ -1457,21 +1493,19 @@ export const ObservationHistoryViewer: React.FC<
                       </span>
                       <p className="text-2xl font-black text-blue-950">
                         {activeDetailRecord.data.totalParticipationRawScore ??
-                          (activeDetailRecord.data.participationAverage
-                            ? Math.round(
-                                activeDetailRecord.data.participationAverage *
-                                  6,
-                              )
-                            : 27)}{' '}
+                          0}{' '}
                         <span className="text-sm font-normal text-blue-600">
-                          / 36 Raw Score
+                          /{' '}
+                          {(recordSfaDefinition(activeDetailRecord.data)
+                            ?.participationItems.length ?? 0) * 6}{' '}
+                          Raw Score
                         </span>
                       </p>
                       <p className="text-xs text-blue-800 mt-0.5">
                         School Function Assessment · Average:{' '}
-                        {activeDetailRecord.data.participationAverage?.toFixed(
+                        {activeDetailRecord.data.participationAverage.toFixed(
                           1,
-                        ) || '4.5'}{' '}
+                        )}{' '}
                         / 6.0
                       </p>
                     </div>
@@ -1490,35 +1524,43 @@ export const ObservationHistoryViewer: React.FC<
                   {detailModalTab === 'SUMMARY' && (
                     <div className="space-y-4">
                       <h4 className="font-bold text-stone-900 text-sm">
-                        Participation by School Setting (6 Environments)
+                        Participation by School Setting (
+                        {recordSfaDefinition(activeDetailRecord.data)
+                          ?.participationItems.length ?? 0}{' '}
+                        Environments)
                       </h4>
                       <div className="space-y-3">
-                        {SFA_SETTINGS.map((s) => {
+                        {(
+                          recordSfaDefinition(activeDetailRecord.data)
+                            ?.participationItems ?? []
+                        ).map((item) => {
                           const rating =
-                            activeDetailRecord.data.settings?.[s.id]?.rating ||
                             activeDetailRecord.data.participationScores?.[
-                              s.id as keyof typeof activeDetailRecord.data.participationScores
-                            ] ||
-                            4;
-                          const pct = Math.round((rating / 6) * 100);
+                              item.id
+                            ];
+                          const pct = rating
+                            ? Math.round((rating / 6) * 100)
+                            : 0;
 
                           return (
                             <div
-                              key={s.id}
+                              key={item.id}
                               className="p-4 bg-[#FAF5EF] rounded-2xl border border-[#E8DFC8] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                             >
                               <div className="space-y-1">
                                 <span className="font-bold text-xs text-stone-900">
-                                  {s.title}
+                                  {item.label}
                                 </span>
-                                <p className="text-[11px] text-stone-500">
-                                  {s.description}
-                                </p>
+                                {item.description && (
+                                  <p className="text-[11px] text-stone-500">
+                                    {item.description}
+                                  </p>
+                                )}
                               </div>
                               <div className="flex items-center gap-3 shrink-0">
                                 <div className="text-right">
                                   <span className="font-mono font-bold text-blue-900 text-xs">
-                                    Rating {rating} / 6.0
+                                    Rating {rating ?? '—'} / 6.0
                                   </span>
                                   <div className="w-24 bg-stone-200 rounded-full h-1.5 mt-1">
                                     <div
@@ -1527,13 +1569,6 @@ export const ObservationHistoryViewer: React.FC<
                                     />
                                   </div>
                                 </div>
-                                <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold">
-                                  {rating >= 5
-                                    ? 'Independent'
-                                    : rating === 4
-                                      ? 'With Modifications'
-                                      : 'Supervision Needed'}
-                                </span>
                               </div>
                             </div>
                           );
@@ -1559,38 +1594,25 @@ export const ObservationHistoryViewer: React.FC<
                             Part 2: Task Supports Required
                           </h5>
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl">
-                              <span className="text-xs text-stone-700">
-                                Physical Assistance:
-                              </span>
-                              <span className="font-bold text-xs text-blue-900">
-                                Moderate Assistance (Level 2/4)
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl">
-                              <span className="text-xs text-stone-700">
-                                Physical Adaptations:
-                              </span>
-                              <span className="font-bold text-xs text-blue-900">
-                                Slant board, pencil grips
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl">
-                              <span className="text-xs text-stone-700">
-                                Cognitive Assistance:
-                              </span>
-                              <span className="font-bold text-xs text-blue-900">
-                                Frequent Verbal Cues (Level 3/4)
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl">
-                              <span className="text-xs text-stone-700">
-                                Cognitive Adaptations:
-                              </span>
-                              <span className="font-bold text-xs text-blue-900">
-                                Visual schedule, First/Then board
-                              </span>
-                            </div>
+                            {(
+                              recordSfaDefinition(activeDetailRecord.data)
+                                ?.taskSupportItems ?? []
+                            ).map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between gap-3 p-2.5 bg-stone-50 rounded-xl"
+                              >
+                                <span className="text-xs text-stone-700">
+                                  {item.label}
+                                </span>
+                                <span className="font-bold text-xs text-blue-900">
+                                  {activeDetailRecord.data.taskSupports?.[
+                                    item.id
+                                  ] ?? '—'}{' '}
+                                  / 4
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         </div>
 
@@ -1599,40 +1621,58 @@ export const ObservationHistoryViewer: React.FC<
                             Part 3: Activity Performance Summary
                           </h5>
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl">
-                              <span className="text-xs text-stone-700">
-                                Travel / Hallway Mobility:
-                              </span>
-                              <span className="font-bold text-xs text-emerald-800">
-                                Advanced Function (Rating 4/4)
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl">
-                              <span className="text-xs text-stone-700">
-                                Maintaining Posture:
-                              </span>
-                              <span className="font-bold text-xs text-amber-800">
-                                Developing (Rating 3/4)
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl">
-                              <span className="text-xs text-stone-700">
-                                Recreational Movement:
-                              </span>
-                              <span className="font-bold text-xs text-blue-900">
-                                Proficient with shadow GPK
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl">
-                              <span className="text-xs text-stone-700">
-                                Clothing & Hygiene Management:
-                              </span>
-                              <span className="font-bold text-xs text-amber-800">
-                                Moderate Prompting Needed
-                              </span>
-                            </div>
+                            {(
+                              recordSfaDefinition(activeDetailRecord.data)
+                                ?.activityPerformanceItems ?? []
+                            ).map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between gap-3 p-2.5 bg-stone-50 rounded-xl"
+                              >
+                                <span className="text-xs text-stone-700">
+                                  {item.label}
+                                </span>
+                                <span className="font-bold text-xs text-blue-900">
+                                  {activeDetailRecord.data
+                                    .activityPerformance?.[item.id] ?? '—'}{' '}
+                                  / 4
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         </div>
+                      </div>
+                      <div className="bg-white border border-[#E8DFC8] rounded-2xl p-4 space-y-3">
+                        <h5 className="font-bold text-xs text-stone-900">
+                          Respondents and Active Adaptations
+                        </h5>
+                        <p className="text-xs text-stone-700">
+                          <strong>Respondents:</strong>{' '}
+                          {activeDetailRecord.data.respondents
+                            ?.map(
+                              (respondent: {
+                                name: string;
+                                role: string;
+                                initials: string;
+                              }) =>
+                                `${respondent.name} (${respondent.role}, ${respondent.initials})`,
+                            )
+                            .join(', ') || 'None recorded'}
+                        </p>
+                        <ul className="list-disc list-inside text-xs text-stone-700 space-y-1">
+                          {(
+                            recordSfaDefinition(activeDetailRecord.data)
+                              ?.adaptationOptions ?? []
+                          )
+                            .filter((option) =>
+                              activeDetailRecord.data.adaptations?.includes(
+                                option.id,
+                              ),
+                            )
+                            .map((option) => (
+                              <li key={option.id}>{option.label}</li>
+                            ))}
+                        </ul>
                       </div>
                     </div>
                   )}
@@ -1646,28 +1686,32 @@ export const ObservationHistoryViewer: React.FC<
                         <p className="text-stone-800 leading-relaxed text-xs">
                           {activeDetailRecord.data
                             .conditionsAffectingPerformance ||
-                            'Student demonstrates high motivation to participate in all standard school routines. Function is maximized when tasks are scaffolded with visual time markers and when GPK shadow assistance is available during unstructured recess and cafeteria periods.'}
+                            'No conditions affecting performance were recorded.'}
                         </p>
                       </div>
 
                       <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-2">
                         <span className="text-[10px] font-bold text-blue-900 uppercase tracking-wide">
-                          School Setting Transition Recommendations
+                          Assessment Notes
                         </span>
-                        <ul className="list-disc list-inside space-y-1.5 text-xs text-blue-950">
-                          <li>
-                            Implement structured buddy system during recess to
-                            support reciprocal play.
-                          </li>
-                          <li>
-                            Allow 2-minute early dismissal from class to avoid
-                            crowded hallway transitions.
-                          </li>
-                          <li>
-                            Provide GPK prompting for cafeteria tray management
-                            and utensil grip.
-                          </li>
-                        </ul>
+                        <p className="text-xs text-blue-950 leading-relaxed">
+                          {activeDetailRecord.data.notes ||
+                            'No additional SFA notes were recorded.'}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 text-[11px]">
+                          <span>
+                            <strong>Primary language:</strong>{' '}
+                            {activeDetailRecord.data.primaryLanguage || '—'}
+                          </span>
+                          <span>
+                            <strong>Writing method:</strong>{' '}
+                            {activeDetailRecord.data.writingMethod || '—'}
+                          </span>
+                          <span>
+                            <strong>Mobility method:</strong>{' '}
+                            {activeDetailRecord.data.mobilityMethod || '—'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}

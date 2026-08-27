@@ -133,6 +133,7 @@ export interface ObservationFormDefinition {
   lastUpdated: string;
   updatedBy: string;
   isActive: boolean;
+  body?: Record<string, unknown>;
 }
 
 export interface SpecialNeedsAssignment {
@@ -386,7 +387,7 @@ export interface SensoryProfileRecord {
 
 // Special Education - SFA (School Function Assessment)
 export interface SFARespondent {
-  id: string;
+  id?: string;
   name: string;
   role: string;
   initials: string;
@@ -394,16 +395,36 @@ export interface SFARespondent {
 
 export interface SFAObservationRecord {
   id: string;
+  organizationId?: string;
+  assignmentId?: string;
   studentId: string;
+  student?: {
+    id: string;
+    fullName: string;
+    studentNumber?: string | null;
+    avatarUrl?: string | null;
+  };
+  definition?: {
+    id: string;
+    key: string;
+    version: number;
+    title: string;
+    body: Record<string, unknown>;
+  };
   observationType: 'SFA';
   recordYear: string;
   assessmentDate: string;
   observationDate?: string;
   observerId: string;
   observerName: string;
+  observer?: {
+    id?: string;
+    userId?: string;
+    displayName: string;
+  };
   coordinatorName: string;
-  status: 'Draft' | 'Completed';
-  programRecommendation: 'Regular' | 'Special Education';
+  status: 'Draft' | 'Completed' | 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED';
+  programRecommendation: 'Regular' | 'Special Education' | string;
   respondents: SFARespondent[];
   primaryLanguage: string;
   writingMethod: string;
@@ -411,7 +432,7 @@ export interface SFAObservationRecord {
   conditionsAffectingPerformance: string;
 
   // Part 1: Participation (1-6 scale)
-  participationScores: {
+  participationScores: Record<string, number | undefined> & {
     regularClassroom?: number;
     specialEdClassroom?: number;
     playgroundRecess?: number;
@@ -426,7 +447,7 @@ export interface SFAObservationRecord {
   participationAverage: number;
 
   // Part 2: Task Supports (1-4 scale)
-  taskSupports: {
+  taskSupports: Record<string, number | undefined> & {
     physicalAssistance?: number;
     physicalAdaptation?: number;
     cognitiveAssistance?: number;
@@ -440,6 +461,8 @@ export interface SFAObservationRecord {
   // Adaptations Checklist
   adaptations: string[];
   adaptationsNotes?: string;
+  notes?: string;
+  completedAt?: string | null;
 
   createdAt: string;
   updatedAt: string;

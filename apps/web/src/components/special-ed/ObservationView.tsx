@@ -136,6 +136,20 @@ export const ObservationView: React.FC = () => {
             assignment.instrumentType === 'SENSORY_PROFILE',
         )
       : undefined);
+  const activeSFAAssignment =
+    myAssignments.find(
+      (assignment) =>
+        assignment.id === activeAssignmentId &&
+        assignment.studentId === currentStudent?.id &&
+        assignment.instrumentType === 'SFA',
+    ) ??
+    (!activeAssignmentId
+      ? pendingAssignments.find(
+          (assignment) =>
+            assignment.studentId === currentStudent?.id &&
+            assignment.instrumentType === 'SFA',
+        )
+      : undefined);
 
   return (
     <div
@@ -268,7 +282,8 @@ export const ObservationView: React.FC = () => {
                 </div>
 
                 {assignment.instrumentType === 'FEDC' ||
-                assignment.instrumentType === 'SENSORY_PROFILE' ? (
+                assignment.instrumentType === 'SENSORY_PROFILE' ||
+                assignment.instrumentType === 'SFA' ? (
                   <button
                     id={`assigned-task-open-${assignment.instrumentType.toLowerCase()}-${assignment.id}`}
                     type="button"
@@ -284,7 +299,9 @@ export const ObservationView: React.FC = () => {
                     Open assigned{' '}
                     {assignment.instrumentType === 'FEDC'
                       ? 'FEDC'
-                      : 'Sensory Profile'}{' '}
+                      : assignment.instrumentType === 'SENSORY_PROFILE'
+                        ? 'Sensory Profile'
+                        : 'SFA'}{' '}
                     form
                   </button>
                 ) : (
@@ -430,10 +447,7 @@ export const ObservationView: React.FC = () => {
             currentUser={currentUser}
             onNavigateToIEP={navigateToIEP}
             onOpenAssessmentForm={(type, _recordId, assignmentId) => {
-              if (
-                (type === 'FEDC' || type === 'SENSORY_PROFILE') &&
-                assignmentId
-              ) {
+              if (assignmentId) {
                 const assignment = myAssignments.find(
                   (candidate) => candidate.id === assignmentId,
                 );
@@ -523,7 +537,21 @@ export const ObservationView: React.FC = () => {
                   </p>
                 </div>
               ))}
-            {specialEdSubTab === 'SFA' && <SFAObservationView />}
+            {specialEdSubTab === 'SFA' &&
+              (activeSFAAssignment ? (
+                <SFAObservationView assignment={activeSFAAssignment} />
+              ) : (
+                <div className="bg-white border border-dashed border-[#E8DFC8] rounded-2xl p-8 text-center space-y-2">
+                  <AlertCircle className="w-6 h-6 text-amber-600 mx-auto" />
+                  <h3 className="text-sm font-bold text-stone-900">
+                    No active SFA assignment for this student
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    SFA observations must be started from a pending or
+                    in-progress coordinator assignment.
+                  </p>
+                </div>
+              ))}
           </div>
         </div>
       )}
