@@ -848,6 +848,7 @@ model WeeklyReport {
   weekEnd                DateTime               @db.Date
   teacherId              String                 @db.Uuid
   state                  WorkflowState          @default(DRAFT)
+  version                Int                    @default(1)
   descriptiveObservation String
   homeConnection         String
   createdAt              DateTime               @default(now())

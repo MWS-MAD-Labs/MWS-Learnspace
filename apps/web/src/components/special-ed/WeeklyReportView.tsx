@@ -1,15 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useIEPs } from '../../hooks/useIEPs';
-import { storageService } from '../../services/storageService';
 import {
-  IEPReport,
-  WeeklyGoalProgress,
-  Student,
-  IEPRecord,
-  LJReviewStatus,
-  LJApprovalStatus,
-} from '../../types';
+  weeklyReportService,
+  type WeeklyReport,
+} from '../../services/weeklyReportService';
+import { IEPReport, WeeklyGoalProgress, Student, IEPRecord } from '../../types';
 import { WeeklyReportStatusTracker } from './WeeklyReportStatusTracker';
 import { StatusBadge } from '../common/StatusBadge';
 import {
@@ -91,7 +87,15 @@ export const WeeklyReportView: React.FC = () => {
 
   const [selectedWeek, setSelectedWeek] = useState(8);
 
-  // IEP plans are API-backed; weekly report persistence remains isolated here.
+  const [weeklyReports, setWeeklyReports] = useState<WeeklyReport[]>([]);
+  const [weeklyReportStatus, setWeeklyReportStatus] = useState<
+    'loading' | 'ready' | 'error'
+  >('loading');
+  const [weeklyReportError, setWeeklyReportError] = useState<string>();
+  const [weeklyReportRetry, setWeeklyReportRetry] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // IEP plans and weekly reports are API-backed.
   const iepData = useIEPs(
     organizationId,
     { studentId: currentStudent?.id },
@@ -105,8 +109,7 @@ export const WeeklyReportView: React.FC = () => {
     week: number,
     iep?: IEPRecord,
   ): IEPReport => {
-    const existingReports = storageService.getIEPReports(stud.id);
-    const existing = existingReports.find((r) => r.weekNumber === week);
+    const existing = weeklyReports.find((r) => r.weekNumber === week);
 
     // Week date range calculation
     const weekRanges: Record<
@@ -227,12 +230,45 @@ export const WeeklyReportView: React.FC = () => {
     return buildReportFromIEP(currentStudent, selectedWeek, studentIEP);
   });
 
-  // Sync report on student, week, or IEP change.
+  useEffect(() => {
+    if (!organizationId || !currentStudent) return;
+    const controller = new AbortController();
+    setWeeklyReportStatus('loading');
+    setWeeklyReportError(undefined);
+    weeklyReportService
+      .getWeeklyReports(
+        organizationId,
+        { studentId: currentStudent.id, weekNumber: selectedWeek },
+        controller.signal,
+      )
+      .then((reports) => {
+        setWeeklyReports(reports);
+        setWeeklyReportStatus('ready');
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setWeeklyReportStatus('error');
+        setWeeklyReportError(
+          error instanceof Error
+            ? error.message
+            : 'Weekly reports could not be loaded.',
+        );
+      });
+    return () => controller.abort();
+  }, [organizationId, currentStudent?.id, selectedWeek, weeklyReportRetry]);
+
+  // Sync report on student, week, IEP, or loaded weekly-report change.
   useEffect(() => {
     if (!currentStudent || iepData.status !== 'ready') return;
     const synced = buildReportFromIEP(currentStudent, selectedWeek, studentIEP);
     setReport(synced);
-  }, [currentStudent?.id, selectedWeek, studentIEP?.id, iepData.status]);
+  }, [
+    currentStudent?.id,
+    selectedWeek,
+    studentIEP?.id,
+    iepData.status,
+    weeklyReports,
+  ]);
 
   // Find latest return feedback if returned
   const latestReturnFeedback = useMemo(() => {
@@ -257,13 +293,7 @@ export const WeeklyReportView: React.FC = () => {
 
   // Role-based editing authorization
   const canSETeacherEdit = isSETeacher && (!isDraftSubmitted || isReturned);
-  const canCoordinatorEdit =
-    isCoordinator && isDraftSubmitted && !isCoordinatorVerified;
-  const canDirectorEdit =
-    isDirector && isCoordinatorVerified && !isDirectorApproved;
-
-  const canCurrentUserEdit =
-    canSETeacherEdit || canCoordinatorEdit || canDirectorEdit;
+  const canCurrentUserEdit = canSETeacherEdit;
   const isFormReadOnly = !canCurrentUserEdit;
 
   // Goals statistics
@@ -386,8 +416,25 @@ export const WeeklyReportView: React.FC = () => {
     }));
   };
 
+  const persistReport = async (
+    nextReport: WeeklyReport,
+  ): Promise<WeeklyReport> => {
+    const saved =
+      nextReport.version === undefined
+        ? await weeklyReportService.createWeeklyReport(
+            organizationId,
+            nextReport,
+          )
+        : await weeklyReportService.updateWeeklyReport(
+            organizationId,
+            nextReport,
+          );
+    setWeeklyReports([saved]);
+    return saved;
+  };
+
   // 1. Save Draft (SE Teacher or Reviewer in valid stage)
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (!canCurrentUserEdit) {
       showToast(
         'error',
@@ -419,18 +466,29 @@ export const WeeklyReportView: React.FC = () => {
       draftStatus: isDraftSubmitted ? report.draftStatus : 'On Progress',
       updatedAt: new Date().toISOString(),
     };
-    storageService.saveIEPReport(updated);
-    setReport(updated);
-    showToast(
-      'success',
-      'Weekly Report & IEP Plan Synchronized',
-      `Updated ${addressedGoalsCount} goals for ${currentStudent.fullName}. Addressed dates & achievement status synced with the IEP Plan.`,
-    );
-    refreshData();
+    setIsSaving(true);
+    try {
+      const saved = await persistReport(updated);
+      setReport({ ...updated, ...saved });
+      showToast(
+        'success',
+        'Weekly Report & IEP Plan Synchronized',
+        `Updated ${addressedGoalsCount} goals for ${currentStudent.fullName}. Addressed dates & achievement status synced with the IEP Plan.`,
+      );
+      refreshData();
+    } catch (error) {
+      showToast(
+        'error',
+        'Could Not Save Weekly Report',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // 2. Submit Draft for Coordinator Review (SE Teacher)
-  const handleSubmitToCoordinator = () => {
+  const handleSubmitToCoordinator = async () => {
     if (
       !isCoordinatorOrLeadership &&
       currentStudent.assignedGPKTeacherId !== currentUser.id &&
@@ -453,56 +511,51 @@ export const WeeklyReportView: React.FC = () => {
       return;
     }
 
-    // Save first (which also triggers synchronization with the IEP Plan)
-    const saved = storageService.saveIEPReport({
-      ...report,
-      studentId: currentStudent.id,
-      iepId: studentIEP?.id || report.iepId,
-      teacherId: currentUser.id,
-      teacherName: currentUser.name,
-      updatedAt: new Date().toISOString(),
-    });
-
-    const updated = storageService.updateWeeklyReportWorkflow(
-      saved.id,
-      'draftStatus',
-      'Done',
-      currentUser,
-      `Submitted Week ${report.weekNumber} progress log for Special Education Coordinator verification (${addressedGoalsCount} goals addressed).`,
-    );
-
-    if (updated) {
-      setReport(updated);
+    setIsSaving(true);
+    try {
+      // Persist draft changes before issuing the workflow command.
+      const saved = await persistReport({
+        ...report,
+        studentId: currentStudent.id,
+        iepId: studentIEP?.id || report.iepId,
+        teacherId: currentUser.id,
+        teacherName: currentUser.name,
+        updatedAt: new Date().toISOString(),
+      });
+      const updated = await weeklyReportService.submitWeeklyReport(
+        organizationId,
+        saved,
+      );
+      setWeeklyReports([updated]);
+      setReport({ ...report, ...updated });
+      showToast(
+        'success',
+        'Submitted for Coordinator Review',
+        `Week ${report.weekNumber} IEP report submitted for Coordinator verification. Addressed dates synced to IEP Plan.`,
+      );
+      refreshData();
+    } catch (error) {
+      showToast(
+        'error',
+        'Could Not Submit Weekly Report',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setIsSaving(false);
     }
-    showToast(
-      'success',
-      'Submitted for Coordinator Review',
-      `Week ${report.weekNumber} IEP report submitted to Ms. Elena Johnson (Special Ed Coordinator). Addressed dates synced to IEP Plan.`,
-    );
-    refreshData();
   };
 
   // 3. Re-open Draft for Teacher Editing
   const handleReopenDraft = () => {
-    const updated: IEPReport = {
-      ...report,
-      draftStatus: 'On Progress',
-      coordinatorReviewStatus: 'Not Started',
-      status: 'Draft',
-      updatedAt: new Date().toISOString(),
-    };
-    storageService.saveIEPReport(updated);
-    setReport(updated);
     showToast(
       'info',
       'Draft Re-opened',
-      'You can now edit and re-submit this weekly progress report.',
+      'The report was returned for revision and can now be edited.',
     );
-    refreshData();
   };
 
   // 4. Submit Coordinator or Director Decision
-  const handleConfirmReviewDecision = () => {
+  const handleConfirmReviewDecision = async () => {
     if (reviewAction === 'Return' && !reviewComment.trim()) {
       showToast(
         'error',
@@ -512,65 +565,82 @@ export const WeeklyReportView: React.FC = () => {
       return;
     }
 
-    // Save any pending edits first
-    storageService.saveIEPReport(report);
-
-    if (isCoordinator) {
-      const status: LJReviewStatus =
-        reviewAction === 'Approve' ? 'Done' : 'Returned';
-      const updated = storageService.updateWeeklyReportWorkflow(
-        report.id,
-        'coordinatorReviewStatus',
-        status,
-        currentUser,
+    setIsSaving(true);
+    try {
+      const comment =
         reviewComment.trim() ||
-          (reviewAction === 'Approve'
+        (isCoordinator
+          ? reviewAction === 'Approve'
             ? 'Verified weekly goal ratings and descriptive notes. Forwarded to Director.'
-            : 'Returned to teacher for revisions.'),
-      );
-      if (updated) setReport(updated);
-      showToast(
-        reviewAction === 'Approve' ? 'success' : 'info',
-        reviewAction === 'Approve'
-          ? 'Coordinator Verified'
-          : 'Returned to Teacher with Feedback',
-        reviewAction === 'Approve'
-          ? 'Report forwarded to Director for parent portal release.'
-          : 'Report returned to SE teacher for adjustments.',
-      );
-    } else if (isDirector) {
-      const status: LJApprovalStatus =
-        reviewAction === 'Approve' ? 'Done' : 'Returned';
-      const updated = storageService.updateWeeklyReportWorkflow(
-        report.id,
-        'directorApprovalStatus',
-        status,
-        currentUser,
-        reviewComment.trim() ||
-          (reviewAction === 'Approve'
+            : 'Returned to teacher for revisions.'
+          : reviewAction === 'Approve'
             ? 'Director authorized weekly IEP progress log. Published to Parent Portal.'
-            : 'Returned for revisions.'),
-      );
-      if (updated) setReport(updated);
+            : 'Returned for revisions.');
+      const updated = isCoordinator
+        ? await weeklyReportService.coordinatorDecision(
+            organizationId,
+            report,
+            reviewAction === 'Approve' ? 'APPROVE' : 'RETURN',
+            comment,
+          )
+        : await weeklyReportService.directorDecision(
+            organizationId,
+            report,
+            reviewAction === 'Approve' ? 'APPROVE' : 'RETURN',
+            comment,
+          );
+      setWeeklyReports([updated]);
+      setReport({ ...report, ...updated });
       showToast(
         reviewAction === 'Approve' ? 'success' : 'info',
-        reviewAction === 'Approve'
-          ? 'Approved & Published'
-          : 'Returned by Director',
-        reviewAction === 'Approve'
-          ? 'Weekly IEP progress log is now accessible on the Parent Portal.'
-          : 'Report returned for adjustments.',
+        isCoordinator
+          ? reviewAction === 'Approve'
+            ? 'Coordinator Verified'
+            : 'Returned to Teacher with Feedback'
+          : reviewAction === 'Approve'
+            ? 'Approved & Published'
+            : 'Returned by Director',
+        isCoordinator
+          ? reviewAction === 'Approve'
+            ? 'Report forwarded to Director for parent portal release.'
+            : 'Report returned to SE teacher for adjustments.'
+          : reviewAction === 'Approve'
+            ? 'Weekly IEP progress log is now accessible on the Parent Portal.'
+            : 'Report returned for adjustments.',
       );
+      setShowReviewModal(false);
+      setReviewComment('');
+      refreshData();
+    } catch (error) {
+      showToast(
+        'error',
+        'Could Not Process Decision',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setIsSaving(false);
     }
-
-    setShowReviewModal(false);
-    setReviewComment('');
-    refreshData();
   };
 
   const handlePrint = () => {
     window.print();
   };
+
+  if (weeklyReportStatus === 'error') {
+    return (
+      <div className="max-w-3xl mx-auto my-12 bg-white border border-[#EFE7DC] rounded-3xl p-8 text-center space-y-4 shadow-xs">
+        <AlertTriangle className="w-8 h-8 text-amber-600 mx-auto" />
+        <p className="text-sm text-stone-700">{weeklyReportError}</p>
+        <button
+          type="button"
+          onClick={() => setWeeklyReportRetry((attempt) => attempt + 1)}
+          className="px-4 py-2 bg-[#6E161E] text-white rounded-xl text-xs font-bold"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (accessibleStudents.length === 0) {
     return (
@@ -1455,7 +1525,8 @@ export const WeeklyReportView: React.FC = () => {
                       type="button"
                       id="btn-save-draft-weekly-report"
                       onClick={handleSaveDraft}
-                      className="px-4 py-2 bg-[#FAF5EF] hover:bg-[#F2EAE0] text-stone-800 text-xs font-bold rounded-xl border border-[#E8DFC8] shadow-2xs transition-colors flex items-center gap-1.5"
+                      disabled={isSaving}
+                      className="px-4 py-2 bg-[#FAF5EF] hover:bg-[#F2EAE0] text-stone-800 text-xs font-bold rounded-xl border border-[#E8DFC8] shadow-2xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <Save className="w-3.5 h-3.5" />
                       Save Draft & Sync IEP
@@ -1467,7 +1538,8 @@ export const WeeklyReportView: React.FC = () => {
                       type="button"
                       id="btn-submit-weekly-report-coordinator"
                       onClick={handleSubmitToCoordinator}
-                      className="px-5 py-2 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                      disabled={isSaving}
+                      className="px-5 py-2 bg-[#6E161E] hover:bg-[#581117] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <Send className="w-3.5 h-3.5" />
                       {isReturned

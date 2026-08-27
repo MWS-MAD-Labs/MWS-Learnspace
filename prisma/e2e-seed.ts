@@ -138,38 +138,11 @@ export const e2eFixture = {
 } as const;
 
 export async function seedE2eDatabase(prisma: PrismaClient) {
-  await prisma.auditEvent.deleteMany();
-  await prisma.workflowEvent.deleteMany();
-  await prisma.learningJourney.deleteMany();
-  await prisma.goalAchievementEvent.deleteMany();
-  await prisma.weeklyGoalProgress.deleteMany();
-  await prisma.weeklyReport.deleteMany();
-  await prisma.iEP.deleteMany();
-  await prisma.attendanceRecord.deleteMany();
-  await prisma.fEDCObservation.deleteMany();
-  await prisma.sensoryProfileObservation.deleteMany();
-  await prisma.sFAObservation.deleteMany();
-  await prisma.observationAssignment.deleteMany();
-  await prisma.observationDefinition.deleteMany();
-  await prisma.session.deleteMany();
-  await prisma.oAuthAccount.deleteMany();
-  await prisma.oAuthLoginTransaction.deleteMany();
-  await prisma.enrollment.deleteMany();
-  await prisma.membershipGrade.deleteMany();
-  await prisma.membershipUnit.deleteMany();
-  await prisma.membershipSubject.deleteMany();
-  await prisma.staffStudentAssignment.deleteMany();
-  await prisma.membership.deleteMany();
-  await prisma.student.deleteMany();
-  await prisma.schoolClass.deleteMany();
-  await prisma.grade.deleteMany();
-  await prisma.unit.deleteMany();
-  await prisma.subject.deleteMany();
-  await prisma.semester.deleteMany();
-  await prisma.academicYear.deleteMany();
-  await prisma.userInvitation.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.organization.deleteMany();
+  // Test fixtures must reset append-only audit/workflow tables without weakening
+  // their production triggers. CASCADE is confined to the guarded test seed.
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "public"."Organization" CASCADE',
+  );
 
   await prisma.organization.createMany({
     data: [

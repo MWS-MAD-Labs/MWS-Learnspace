@@ -1,6 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storageService';
+import {
+  weeklyReportService,
+  type WeeklyReport,
+} from '../../services/weeklyReportService';
 import { IEPReport, LJReviewStatus, LJApprovalStatus } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import {
@@ -23,6 +26,7 @@ export const WeeklyReportStatusTracker: React.FC<
   WeeklyReportStatusTrackerProps
 > = ({ onSelectReportForEdit }) => {
   const {
+    organizationId,
     currentUser,
     students,
     setSelectedStudentId,
@@ -46,6 +50,13 @@ export const WeeklyReportStatusTracker: React.FC<
 
   // History modal
   const [historyReport, setHistoryReport] = useState<IEPReport | null>(null);
+  const [allReports, setAllReports] = useState<WeeklyReport[]>([]);
+  const [reportStatus, setReportStatus] = useState<
+    'loading' | 'ready' | 'error'
+  >('loading');
+  const [reportError, setReportError] = useState<string>();
+  const [retry, setRetry] = useState(0);
+  const [isMutating, setIsMutating] = useState(false);
 
   const isCoordinator = currentUser.isSpecialEdCoordinator;
   const isDirector =
@@ -67,7 +78,32 @@ export const WeeklyReportStatusTracker: React.FC<
     );
   }, [students, currentUser, isCoordinator, isDirector]);
 
-  const allReports = storageService.getIEPReports();
+  useEffect(() => {
+    if (!organizationId) return;
+    const controller = new AbortController();
+    setReportStatus('loading');
+    setReportError(undefined);
+    weeklyReportService
+      .getWeeklyReports(
+        organizationId,
+        { weekNumber: selectedWeek },
+        controller.signal,
+      )
+      .then((reports) => {
+        setAllReports(reports);
+        setReportStatus('ready');
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setReportStatus('error');
+        setReportError(
+          error instanceof Error
+            ? error.message
+            : 'Weekly reports could not be loaded.',
+        );
+      });
+    return () => controller.abort();
+  }, [organizationId, selectedWeek, retry]);
 
   // Build rows for the selected week
   const studentReportRows = useMemo(() => {
@@ -152,24 +188,35 @@ export const WeeklyReportStatusTracker: React.FC<
   ).length;
 
   // Handle Submit Draft (Teacher)
-  const handleSubmitDraft = (rep: IEPReport) => {
-    storageService.updateWeeklyReportWorkflow(
-      rep.id,
-      'draftStatus',
-      'Done',
-      currentUser,
-      `Submitted Week ${rep.weekNumber} progress log to Coordinator.`,
-    );
-    refreshData();
-    showToast(
-      'success',
-      'Weekly Report Submitted',
-      `Week ${rep.weekNumber} IEP report submitted for verification.`,
-    );
+  const handleSubmitDraft = async (rep: IEPReport) => {
+    setIsMutating(true);
+    try {
+      const updated = await weeklyReportService.submitWeeklyReport(
+        organizationId,
+        rep,
+      );
+      setAllReports((reports) =>
+        reports.map((report) => (report.id === updated.id ? updated : report)),
+      );
+      refreshData();
+      showToast(
+        'success',
+        'Weekly Report Submitted',
+        `Week ${rep.weekNumber} IEP report submitted for verification.`,
+      );
+    } catch (error) {
+      showToast(
+        'error',
+        'Could Not Submit Weekly Report',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   // Handle Submit Review (Coordinator or Director)
-  const handleSubmitReview = () => {
+  const handleSubmitReview = async () => {
     if (!reviewingReport) return;
 
     if (reviewAction === 'Return' && !reviewComment.trim()) {
@@ -181,53 +228,75 @@ export const WeeklyReportStatusTracker: React.FC<
       return;
     }
 
-    if (isCoordinator) {
-      const status: LJReviewStatus =
-        reviewAction === 'Approve' ? 'Done' : 'Returned';
-      storageService.updateWeeklyReportWorkflow(
-        reviewingReport.id,
-        'coordinatorReviewStatus',
-        status,
-        currentUser,
-        reviewComment || 'Verified weekly goal ratings and descriptive notes.',
+    setIsMutating(true);
+    try {
+      const updated = isCoordinator
+        ? await weeklyReportService.coordinatorDecision(
+            organizationId,
+            reviewingReport,
+            reviewAction === 'Approve' ? 'APPROVE' : 'RETURN',
+            reviewComment ||
+              'Verified weekly goal ratings and descriptive notes.',
+          )
+        : await weeklyReportService.directorDecision(
+            organizationId,
+            reviewingReport,
+            reviewAction === 'Approve' ? 'APPROVE' : 'RETURN',
+            reviewComment ||
+              'Director authorized weekly IEP progress log for parent portal release.',
+          );
+      setAllReports((reports) =>
+        reports.map((report) => (report.id === updated.id ? updated : report)),
       );
       showToast(
         reviewAction === 'Approve' ? 'success' : 'info',
-        reviewAction === 'Approve'
-          ? 'Coordinator Verified'
-          : 'Returned for Adjustments',
-        reviewAction === 'Approve'
-          ? 'Weekly report forwarded to Director.'
-          : 'Weekly report returned to teacher.',
+        isCoordinator
+          ? reviewAction === 'Approve'
+            ? 'Coordinator Verified'
+            : 'Returned for Adjustments'
+          : reviewAction === 'Approve'
+            ? 'Weekly Report Approved'
+            : 'Returned by Director',
+        isCoordinator
+          ? reviewAction === 'Approve'
+            ? 'Weekly report forwarded to Director.'
+            : 'Weekly report returned to teacher.'
+          : reviewAction === 'Approve'
+            ? 'Weekly progress report released to Parent Portal.'
+            : 'Report returned to Coordinator.',
       );
-    } else if (isDirector) {
-      const status: LJApprovalStatus =
-        reviewAction === 'Approve' ? 'Done' : 'Returned';
-      storageService.updateWeeklyReportWorkflow(
-        reviewingReport.id,
-        'directorApprovalStatus',
-        status,
-        currentUser,
-        reviewComment ||
-          'Director authorized weekly IEP progress log for parent portal release.',
-      );
+      setReviewingReport(null);
+      refreshData();
+    } catch (error) {
       showToast(
-        reviewAction === 'Approve' ? 'success' : 'info',
-        reviewAction === 'Approve'
-          ? 'Weekly Report Approved'
-          : 'Returned by Director',
-        reviewAction === 'Approve'
-          ? 'Weekly progress report released to Parent Portal.'
-          : 'Report returned to Coordinator.',
+        'error',
+        'Could Not Process Decision',
+        error instanceof Error ? error.message : 'Please try again.',
       );
+    } finally {
+      setIsMutating(false);
     }
-
-    setReviewingReport(null);
-    refreshData();
   };
 
   return (
     <div id="weekly-report-status-tracker-container" className="space-y-6">
+      {reportStatus === 'loading' && (
+        <div className="rounded-xl border border-[#E8DFC8] bg-[#FAF5EF] px-4 py-3 text-xs font-semibold text-stone-600">
+          Loading weekly report statuses…
+        </div>
+      )}
+      {reportStatus === 'error' && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 flex items-center justify-between gap-3">
+          <span>{reportError}</span>
+          <button
+            type="button"
+            onClick={() => setRetry((attempt) => attempt + 1)}
+            className="font-bold underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
       {/* Week Selector Bar */}
       <div className="bg-white border border-[#EFE7DC] rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -431,7 +500,9 @@ export const WeeklyReportStatusTracker: React.FC<
                     )) &&
                   !isCoordinator;
                 const canSubmitDraft =
-                  isAssignedGPK && report.draftStatus !== 'Done';
+                  isAssignedGPK &&
+                  report.draftStatus !== 'Done' &&
+                  allReports.some((persisted) => persisted.id === report.id);
                 const canReviewCoordinator =
                   isCoordinator &&
                   report.draftStatus === 'Done' &&
@@ -536,7 +607,8 @@ export const WeeklyReportStatusTracker: React.FC<
                         {canSubmitDraft && (
                           <button
                             onClick={() => handleSubmitDraft(report)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition-all text-xs shadow-2xs"
+                            disabled={isMutating}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-[#6E161E] hover:bg-[#581117] text-white rounded-xl font-bold transition-all text-xs shadow-2xs disabled:opacity-50"
                           >
                             <Send className="w-3.5 h-3.5" />
                             <span>Submit</span>
@@ -762,7 +834,8 @@ export const WeeklyReportStatusTracker: React.FC<
               <button
                 type="button"
                 onClick={handleSubmitReview}
-                className={`px-5 py-2 text-white rounded-xl font-bold shadow-xs transition-colors ${
+                disabled={isMutating}
+                className={`px-5 py-2 text-white rounded-xl font-bold shadow-xs transition-colors disabled:opacity-50 ${
                   reviewAction === 'Approve'
                     ? 'bg-emerald-700 hover:bg-emerald-800'
                     : 'bg-rose-600 hover:bg-rose-700'

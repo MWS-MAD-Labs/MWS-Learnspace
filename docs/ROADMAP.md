@@ -822,10 +822,11 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-010 — Migrate weekly IEP reports
 
-- [ ] **Dependencies:** P5-008
+- [x] **Dependencies:** P5-008
 - **Change:** migrate weekly report creation, goal progress, observations, home connection, and report workflow.
 - **Acceptance:** each progress item references a goal belonging to the report's IEP.
 - **Validate:** referential integrity, duplicate week, role/scope, and E2E tests.
+- **Completed (2026-08-27):** Added strict shared weekly-report contracts; server-owned report, teacher, and workflow actor fields; organization-, role-, and assigned-student-scoped report APIs; selected-IEP, date-range, and goal-to-IEP validation; duplicate student/year/week conflict handling; draft-only versioned teacher edits; explicit teacher submission, coordinator decision, and director decision commands; transactional workflow/audit writes; and immutable historical report content, goal progress, workflow history, and audit records. Replaced weekly-report `localStorage` reads and mutations with typed API reads/mutations, loading/retry states, and server-backed reloads. Added database integration coverage for integrity, duplicate, scope, spoofing, concurrency, rollback, actor, and immutability behavior plus a Compose-backed multi-actor creation/edit/submission/review/reload flow.
 
 ## P5-011 — Replace IEP goal synchronization with transactional projections
 

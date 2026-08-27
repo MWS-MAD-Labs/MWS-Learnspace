@@ -43,5 +43,10 @@ export default defineConfig({
       testMatch: /p5-ieps\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
     },
+    {
+      name: 'p5-weekly-reports-chromium',
+      testMatch: /p5-weekly-reports\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
+    },
   ],
 });
