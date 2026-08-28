@@ -34,6 +34,7 @@ import {
 } from './authRoutes.js';
 import { HttpError, parseRequest } from './httpErrors.js';
 import type { SessionService } from './sessionService.js';
+import { organizationSchoolDate } from './organizationTime.js';
 
 const broadRoles = new Set(['DIRECTOR', 'PRINCIPAL', 'SPECIAL_ED_COORDINATOR']);
 const assignedRoles = new Set(['SPECIAL_ED_TEACHER', 'SPECIALIST']);
@@ -101,6 +102,7 @@ export function activeAssignedStudentIds(
       (membership.assignedStudentScopes ?? [])
         .filter(
           (scope) =>
+            scope.organizationId === membership.organizationId &&
             scope.startsOn <= onDate &&
             (scope.endsOn === null || scope.endsOn >= onDate),
         )
@@ -109,8 +111,12 @@ export function activeAssignedStudentIds(
   ];
 }
 
-function assertStudentScope(membership: MembershipScope, studentId: string) {
-  const scopedStudentIds = activeAssignedStudentIds(membership);
+function assertStudentScope(
+  membership: MembershipScope,
+  studentId: string,
+  onDate: Date,
+) {
+  const scopedStudentIds = activeAssignedStudentIds(membership, onDate);
   if (scopedStudentIds === undefined || scopedStudentIds.includes(studentId)) {
     return;
   }
@@ -671,8 +677,12 @@ export async function transitionIep(input: {
   membership: MembershipScope;
   requestId: string;
   transition: IepTransition;
+  onDate: Date;
 }): Promise<IepRow> {
-  const scopedStudentIds = activeAssignedStudentIds(input.membership);
+  const scopedStudentIds = activeAssignedStudentIds(
+    input.membership,
+    input.onDate,
+  );
   const existing = await input.transaction.iEP.findFirst({
     where: {
       id: input.iepId,
@@ -802,7 +812,14 @@ export function createIepRouter(
         const query = parseRequest(iepListQuerySchema, request.query);
         const membership = membershipFor(request, path.organizationId);
         requireIepPermission(membership, 'special-ed:read');
-        const scopedStudentIds = activeAssignedStudentIds(membership);
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
+        const scopedStudentIds = activeAssignedStudentIds(
+          membership,
+          schoolDate,
+        );
         if (scopedStudentIds?.length === 0) {
           response.json(
             iepsResponseSchema.parse({ data: [], meta: { count: 0 } }),
@@ -858,7 +875,14 @@ export function createIepRouter(
         );
         const membership = membershipFor(request, path.organizationId);
         requireIepPermission(membership, 'special-ed:read');
-        const scopedStudentIds = activeAssignedStudentIds(membership);
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
+        const scopedStudentIds = activeAssignedStudentIds(
+          membership,
+          schoolDate,
+        );
         const row = await prisma.iEP.findFirst({
           where: {
             id: path.iepId,
@@ -892,7 +916,11 @@ export function createIepRouter(
         const auth = requireAuth(request);
         const membership = membershipFor(request, path.organizationId);
         requireIepPermission(membership, 'special-ed:write');
-        assertStudentScope(membership, command.studentId);
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
+        assertStudentScope(membership, command.studentId, schoolDate);
         const row = await prisma.$transaction(async (transaction) => {
           await validateReferences(transaction, path.organizationId, command);
           const iep = await transaction.iEP.create({
@@ -954,6 +982,10 @@ export function createIepRouter(
         const membership = membershipFor(request, path.organizationId);
         requireIepPermission(membership, 'special-ed:write');
         requireIepRole(membership, 'SUBMIT');
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
         const row = await prisma.$transaction((transaction) =>
           transitionIep({
             transaction,
@@ -962,6 +994,7 @@ export function createIepRouter(
             expectedVersion: command.expectedVersion,
             actorId: auth.userId,
             membership,
+            onDate: schoolDate,
             requestId: String(response.locals.requestId),
             transition: {
               fromState: 'DRAFT',
@@ -1000,6 +1033,10 @@ export function createIepRouter(
           membership,
           approved ? 'COORDINATOR_APPROVE' : 'COORDINATOR_RETURN',
         );
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
         const row = await prisma.$transaction((transaction) =>
           transitionIep({
             transaction,
@@ -1008,6 +1045,7 @@ export function createIepRouter(
             expectedVersion: command.expectedVersion,
             actorId: auth.userId,
             membership,
+            onDate: schoolDate,
             requestId: String(response.locals.requestId),
             transition: {
               fromState: 'COORDINATOR_REVIEW',
@@ -1049,6 +1087,10 @@ export function createIepRouter(
           membership,
           approved ? 'DIRECTOR_APPROVE' : 'DIRECTOR_RETURN',
         );
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
         const row = await prisma.$transaction((transaction) =>
           transitionIep({
             transaction,
@@ -1057,6 +1099,7 @@ export function createIepRouter(
             expectedVersion: command.expectedVersion,
             actorId: auth.userId,
             membership,
+            onDate: schoolDate,
             requestId: String(response.locals.requestId),
             transition: {
               fromState: 'DIRECTOR_APPROVAL',
@@ -1094,6 +1137,10 @@ export function createIepRouter(
         const membership = membershipFor(request, path.organizationId);
         requireIepPermission(membership, 'special-ed:review');
         requireIepRole(membership, 'ACTIVATE');
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
         const row = await prisma.$transaction((transaction) =>
           transitionIep({
             transaction,
@@ -1102,6 +1149,7 @@ export function createIepRouter(
             expectedVersion: command.expectedVersion,
             actorId: auth.userId,
             membership,
+            onDate: schoolDate,
             requestId: String(response.locals.requestId),
             transition: {
               fromState: 'APPROVED',
@@ -1137,6 +1185,10 @@ export function createIepRouter(
         const membership = membershipFor(request, path.organizationId);
         requireIepPermission(membership, 'special-ed:review');
         requireIepRole(membership, 'ARCHIVE');
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
         const row = await prisma.$transaction((transaction) =>
           transitionIep({
             transaction,
@@ -1145,6 +1197,7 @@ export function createIepRouter(
             expectedVersion: command.expectedVersion,
             actorId: auth.userId,
             membership,
+            onDate: schoolDate,
             requestId: String(response.locals.requestId),
             transition: {
               fromState: 'ACTIVE',
@@ -1178,7 +1231,11 @@ export function createIepRouter(
         const auth = requireAuth(request);
         const membership = membershipFor(request, path.organizationId);
         requireIepPermission(membership, 'special-ed:write');
-        assertStudentScope(membership, command.studentId);
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
+        assertStudentScope(membership, command.studentId, schoolDate);
         const row = await prisma.$transaction(async (transaction) => {
           const existing = await transaction.iEP.findFirst({
             where: {
@@ -1189,7 +1246,7 @@ export function createIepRouter(
             select: { id: true, studentId: true, version: true },
           });
           if (!existing) deny();
-          assertStudentScope(membership, existing.studentId);
+          assertStudentScope(membership, existing.studentId, schoolDate);
           if (existing.version !== command.expectedVersion)
             throw versionConflict();
           await validateReferences(transaction, path.organizationId, command);

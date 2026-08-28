@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { useApp } from '../../context/AppContext';
 import { useIEPs } from '../../hooks/useIEPs';
 import {
@@ -6,6 +12,14 @@ import {
   type WeeklyReport,
 } from '../../services/weeklyReportService';
 import { IEPReport, WeeklyGoalProgress, Student, IEPRecord } from '../../types';
+import {
+  isoWeekForDate,
+  isoWeeksInYear,
+  weeklyReportDateRange,
+} from '../../services/weeklyReportDates';
+
+import { attendanceService } from '../../services/attendanceService';
+import { isRequestCancelled } from '../../services/apiClient';
 import { WeeklyReportStatusTracker } from './WeeklyReportStatusTracker';
 import { StatusBadge } from '../common/StatusBadge';
 import {
@@ -29,6 +43,19 @@ import {
   Info,
 } from 'lucide-react';
 
+export function weeklyReportYearOptions(
+  authoritativeYear: number,
+  selectedYear: number,
+  radius = 5,
+) {
+  const years = Array.from(
+    { length: radius * 2 + 1 },
+    (_, index) => authoritativeYear - radius + index,
+  );
+  if (!years.includes(selectedYear)) years.push(selectedYear);
+  return years.sort((a, b) => b - a);
+}
+
 export const WeeklyReportView: React.FC = () => {
   const {
     organizationId,
@@ -39,11 +66,21 @@ export const WeeklyReportView: React.FC = () => {
     showToast,
     refreshData,
     navigateToIEP,
+    selectedWeeklyReportId,
+    setSelectedWeeklyReportId,
+    weeklyReportTrackerRequested,
+    setWeeklyReportTrackerRequested,
   } = useApp();
 
   const [reportViewMode, setReportViewMode] = useState<
     'EDITOR' | 'STATUS_TRACKER'
-  >('EDITOR');
+  >(weeklyReportTrackerRequested ? 'STATUS_TRACKER' : 'EDITOR');
+
+  useEffect(() => {
+    if (!weeklyReportTrackerRequested) return;
+    setReportViewMode('STATUS_TRACKER');
+    setWeeklyReportTrackerRequested(false);
+  }, [weeklyReportTrackerRequested]);
   const [goalFilter, setGoalFilter] = useState<
     'ALL' | 'ADDRESSED' | 'UNADDRESSED'
   >('ALL');
@@ -85,7 +122,76 @@ export const WeeklyReportView: React.FC = () => {
     accessibleStudents.find((s) => s.id === selectedStudentId) ||
     accessibleStudents[0];
 
-  const [selectedWeek, setSelectedWeek] = useState(8);
+  const [selectedWeek, setSelectedWeek] = useState(1);
+  const [authoritativeYear, setAuthoritativeYear] = useState<number>(2026);
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [periodStatus, setPeriodStatus] = useState<
+    'loading' | 'ready' | 'error'
+  >('loading');
+  const [periodError, setPeriodError] = useState<string>();
+  const [periodRetry, setPeriodRetry] = useState(0);
+  const [targetReportId, setTargetReportId] = useState<string>();
+  const periodRequestSequenceRef = useRef(0);
+  const consumedExactTargetRef = useRef<string | null>(null);
+  const clearExactReportTarget = () => {
+    setTargetReportId(undefined);
+  };
+
+  useEffect(() => {
+    if (!organizationId) return;
+    if (!selectedWeeklyReportId && consumedExactTargetRef.current) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const requestSequence = ++periodRequestSequenceRef.current;
+    setPeriodStatus('loading');
+    setPeriodError(undefined);
+
+    const request = selectedWeeklyReportId
+      ? weeklyReportService.getWeeklyReport(
+          organizationId,
+          selectedWeeklyReportId,
+          controller.signal,
+        )
+      : attendanceService.getSchoolDate(organizationId, controller.signal);
+
+    void request
+      .then((response) => {
+        if (periodRequestSequenceRef.current !== requestSequence) return;
+        if ('studentId' in response) {
+          consumedExactTargetRef.current = response.id;
+          setSelectedStudentId(response.studentId);
+          setSelectedWeek(response.weekNumber);
+          setAuthoritativeYear(Number(response.year));
+          setSelectedYear(Number(response.year));
+          setTargetReportId(response.id);
+          setReportViewMode('EDITOR');
+          setPeriodStatus('ready');
+          setSelectedWeeklyReportId(null);
+          return;
+        }
+
+        const current = isoWeekForDate(response.data.schoolDate);
+        setSelectedWeek(current.week);
+        setAuthoritativeYear(current.year);
+        setSelectedYear(current.year);
+        setPeriodStatus('ready');
+      })
+      .catch((error: unknown) => {
+        if (isRequestCancelled(error)) return;
+        if (periodRequestSequenceRef.current !== requestSequence) return;
+        setPeriodStatus('error');
+        setPeriodError(
+          error instanceof Error
+            ? error.message
+            : selectedWeeklyReportId
+              ? 'The requested weekly report could not be opened.'
+              : 'The organization school date could not be loaded.',
+        );
+      });
+    return () => controller.abort();
+  }, [organizationId, selectedWeeklyReportId, periodRetry]);
 
   const [weeklyReports, setWeeklyReports] = useState<WeeklyReport[]>([]);
   const [weeklyReportStatus, setWeeklyReportStatus] = useState<
@@ -94,6 +200,32 @@ export const WeeklyReportView: React.FC = () => {
   const [weeklyReportError, setWeeklyReportError] = useState<string>();
   const [weeklyReportRetry, setWeeklyReportRetry] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+
+  const selectableYears = useMemo(
+    () => weeklyReportYearOptions(authoritativeYear, selectedYear),
+    [authoritativeYear, selectedYear],
+  );
+  const reportContextKey = [
+    currentStudent?.id ?? '',
+    selectedWeek,
+    selectedYear,
+    targetReportId ?? '',
+  ].join(':');
+  const reportContextKeyRef = useRef(reportContextKey);
+  reportContextKeyRef.current = reportContextKey;
+  const mutationSequenceRef = useRef(0);
+  const mutationStillCurrent = (contextKey: string, sequence: number) =>
+    reportContextKeyRef.current === contextKey &&
+    mutationSequenceRef.current === sequence;
+
+  useLayoutEffect(() => {
+    mutationSequenceRef.current += 1;
+    setIsSaving(false);
+    setWeeklyReports([]);
+    setSelectedIepId('');
+    setWeeklyReportError(undefined);
+    setWeeklyReportStatus('loading');
+  }, [reportContextKey]);
 
   // IEP plans and weekly reports are API-backed.
   const iepData = useIEPs(
@@ -110,27 +242,17 @@ export const WeeklyReportView: React.FC = () => {
     week: number,
     iep?: IEPRecord,
   ): IEPReport => {
-    const existing = weeklyReports.find((r) => r.weekNumber === week);
+    const existing =
+      weeklyReports.find((candidate) => candidate.id === targetReportId) ??
+      weeklyReports.find(
+        (candidate) =>
+          candidate.weekNumber === week &&
+          (selectedYear === undefined ||
+            Number(candidate.year) === selectedYear),
+      );
 
-    // Week date range calculation
-    const weekRanges: Record<
-      number,
-      { range: string; start: string; end: string }
-    > = {
-      6: { range: 'Oct 5–9, 2026', start: '2026-10-05', end: '2026-10-09' },
-      7: { range: 'Oct 12–16, 2026', start: '2026-10-12', end: '2026-10-16' },
-      8: { range: 'Oct 19–23, 2026', start: '2026-10-19', end: '2026-10-23' },
-      9: { range: 'Oct 26–30, 2026', start: '2026-10-26', end: '2026-10-30' },
-      10: { range: 'Nov 2–6, 2026', start: '2026-11-02', end: '2026-11-06' },
-      14: { range: 'Nov 6–10, 2026', start: '2026-11-06', end: '2026-11-10' },
-      15: { range: 'Nov 13–17, 2026', start: '2026-11-13', end: '2026-11-17' },
-    };
-
-    const dates = weekRanges[week] || {
-      range: `Week ${week}`,
-      start: '2026-10-19',
-      end: '2026-10-23',
-    };
+    const reportYear = selectedYear;
+    const dates = weeklyReportDateRange(reportYear, week);
 
     // Goals pulled directly from the student's IEP Plan
     const iepGoals = iep?.goals || [];
@@ -192,10 +314,10 @@ export const WeeklyReportView: React.FC = () => {
     }
 
     return {
-      id: `wr-${stud.id}-w${week}`,
+      id: `new-${stud.id}-${reportYear}-w${week}`,
       studentId: stud.id,
       iepId: iep?.id || '',
-      year: '2026',
+      year: String(reportYear),
       weekNumber: week,
       weekRange: dates.range,
       weekStart: dates.start,
@@ -232,19 +354,26 @@ export const WeeklyReportView: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!organizationId || !currentStudent) return;
+    if (!organizationId || !currentStudent || periodStatus !== 'ready') return;
     const controller = new AbortController();
     setWeeklyReportStatus('loading');
     setWeeklyReportError(undefined);
     weeklyReportService
       .getWeeklyReports(
         organizationId,
-        { studentId: currentStudent.id, weekNumber: selectedWeek },
+        {
+          studentId: currentStudent.id,
+          weekNumber: selectedWeek,
+          year: selectedYear,
+        },
         controller.signal,
       )
       .then((reports) => {
         setWeeklyReports(reports);
-        setSelectedIepId(reports[0]?.iepId ?? '');
+        const selected =
+          reports.find((candidate) => candidate.id === targetReportId) ??
+          reports[0];
+        setSelectedIepId(selected?.iepId ?? '');
         setWeeklyReportStatus('ready');
       })
       .catch((error: unknown) => {
@@ -257,7 +386,15 @@ export const WeeklyReportView: React.FC = () => {
         );
       });
     return () => controller.abort();
-  }, [organizationId, currentStudent?.id, selectedWeek, weeklyReportRetry]);
+  }, [
+    organizationId,
+    periodStatus,
+    currentStudent?.id,
+    selectedWeek,
+    selectedYear,
+    targetReportId,
+    weeklyReportRetry,
+  ]);
 
   // Sync report on student, week, IEP, or loaded weekly-report change.
   useEffect(() => {
@@ -276,6 +413,8 @@ export const WeeklyReportView: React.FC = () => {
     iepData.status,
     weeklyReportStatus,
     weeklyReports,
+    targetReportId,
+    selectedYear,
   ]);
 
   // Find latest return feedback if returned
@@ -437,7 +576,6 @@ export const WeeklyReportView: React.FC = () => {
             organizationId,
             nextReport,
           );
-    setWeeklyReports([saved]);
     return saved;
   };
 
@@ -482,9 +620,13 @@ export const WeeklyReportView: React.FC = () => {
       draftStatus: isDraftSubmitted ? report.draftStatus : 'On Progress',
       updatedAt: new Date().toISOString(),
     };
+    const mutationContextKey = reportContextKey;
+    const mutationSequence = ++mutationSequenceRef.current;
     setIsSaving(true);
     try {
       const saved = await persistReport(updated);
+      if (!mutationStillCurrent(mutationContextKey, mutationSequence)) return;
+      setWeeklyReports([saved]);
       setReport({ ...updated, ...saved });
       showToast(
         'success',
@@ -493,13 +635,16 @@ export const WeeklyReportView: React.FC = () => {
       );
       refreshData();
     } catch (error) {
+      if (!mutationStillCurrent(mutationContextKey, mutationSequence)) return;
       showToast(
         'error',
         'Could Not Save Weekly Report',
         error instanceof Error ? error.message : 'Please try again.',
       );
     } finally {
-      setIsSaving(false);
+      if (mutationStillCurrent(mutationContextKey, mutationSequence)) {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -536,6 +681,8 @@ export const WeeklyReportView: React.FC = () => {
       return;
     }
 
+    const mutationContextKey = reportContextKey;
+    const mutationSequence = ++mutationSequenceRef.current;
     setIsSaving(true);
     try {
       // Persist draft changes before issuing the workflow command.
@@ -551,6 +698,7 @@ export const WeeklyReportView: React.FC = () => {
         organizationId,
         saved,
       );
+      if (!mutationStillCurrent(mutationContextKey, mutationSequence)) return;
       setWeeklyReports([updated]);
       setReport({ ...report, ...updated });
       showToast(
@@ -560,13 +708,16 @@ export const WeeklyReportView: React.FC = () => {
       );
       refreshData();
     } catch (error) {
+      if (!mutationStillCurrent(mutationContextKey, mutationSequence)) return;
       showToast(
         'error',
         'Could Not Submit Weekly Report',
         error instanceof Error ? error.message : 'Please try again.',
       );
     } finally {
-      setIsSaving(false);
+      if (mutationStillCurrent(mutationContextKey, mutationSequence)) {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -590,6 +741,8 @@ export const WeeklyReportView: React.FC = () => {
       return;
     }
 
+    const mutationContextKey = reportContextKey;
+    const mutationSequence = ++mutationSequenceRef.current;
     setIsSaving(true);
     try {
       const comment =
@@ -614,6 +767,7 @@ export const WeeklyReportView: React.FC = () => {
             reviewAction === 'Approve' ? 'APPROVE' : 'RETURN',
             comment,
           );
+      if (!mutationStillCurrent(mutationContextKey, mutationSequence)) return;
       setWeeklyReports([updated]);
       setReport({ ...report, ...updated });
       showToast(
@@ -637,19 +791,69 @@ export const WeeklyReportView: React.FC = () => {
       setReviewComment('');
       refreshData();
     } catch (error) {
+      if (!mutationStillCurrent(mutationContextKey, mutationSequence)) return;
       showToast(
         'error',
         'Could Not Process Decision',
         error instanceof Error ? error.message : 'Please try again.',
       );
     } finally {
-      setIsSaving(false);
+      if (mutationStillCurrent(mutationContextKey, mutationSequence)) {
+        setIsSaving(false);
+      }
     }
   };
 
   const handlePrint = () => {
     window.print();
   };
+
+  const reportMatchesRequestedContext =
+    Boolean(currentStudent) &&
+    report.studentId === currentStudent?.id &&
+    report.weekNumber === selectedWeek &&
+    Number(report.year) === selectedYear &&
+    (!targetReportId || report.id === targetReportId);
+  const reportContextLoading =
+    accessibleStudents.length > 0 &&
+    (periodStatus === 'loading' ||
+      Boolean(selectedWeeklyReportId) ||
+      weeklyReportStatus === 'loading' ||
+      iepData.status === 'loading' ||
+      (weeklyReportStatus === 'ready' &&
+        iepData.status === 'ready' &&
+        !reportMatchesRequestedContext));
+
+  if (periodStatus === 'error') {
+    return (
+      <div className="max-w-3xl mx-auto my-12 bg-white border border-rose-200 rounded-3xl p-8 text-center space-y-4 shadow-xs">
+        <AlertTriangle className="w-8 h-8 text-rose-700 mx-auto" />
+        <p className="text-sm font-bold text-rose-900">
+          Weekly report period could not be initialized.
+        </p>
+        <p className="text-xs text-stone-600">{periodError}</p>
+        <button
+          type="button"
+          onClick={() => setPeriodRetry((attempt) => attempt + 1)}
+          className="px-4 py-2 bg-[#6E161E] text-white rounded-xl text-xs font-bold"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (reportContextLoading) {
+    return (
+      <div
+        className="flex min-h-80 items-center justify-center gap-3 text-sm font-semibold text-stone-700"
+        aria-live="polite"
+      >
+        <Clock className="h-5 w-5 animate-pulse text-[#6E161E]" />
+        Loading the selected student and weekly report…
+      </div>
+    );
+  }
 
   if (weeklyReportStatus === 'error') {
     return (
@@ -688,14 +892,6 @@ export const WeeklyReportView: React.FC = () => {
           <strong>Ms. Elena Johnson</strong>) to assign students to your
           profile.
         </p>
-      </div>
-    );
-  }
-
-  if (iepData.status === 'loading') {
-    return (
-      <div className="p-8 text-center text-sm text-stone-600">
-        Loading IEP goals…
       </div>
     );
   }
@@ -795,9 +991,13 @@ export const WeeklyReportView: React.FC = () => {
 
       {reportViewMode === 'STATUS_TRACKER' ? (
         <WeeklyReportStatusTracker
-          onSelectReportForEdit={(studentId, weekNum) => {
+          onSelectReportForEdit={(studentId, weekNum, reportId, year) => {
             setSelectedStudentId(studentId);
             setSelectedWeek(weekNum);
+            setTargetReportId(reportId);
+            setSelectedYear(year ?? selectedYear);
+            consumedExactTargetRef.current = reportId ?? null;
+            setPeriodStatus('ready');
             setReportViewMode('EDITOR');
           }}
         />
@@ -1046,6 +1246,7 @@ export const WeeklyReportView: React.FC = () => {
                   id="weekly-student-select"
                   value={selectedStudentId}
                   onChange={(e) => {
+                    clearExactReportTarget();
                     setSelectedStudentId(e.target.value);
                   }}
                   className="px-3.5 py-2 text-xs font-bold bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl text-stone-900 focus:outline-hidden"
@@ -1059,14 +1260,44 @@ export const WeeklyReportView: React.FC = () => {
               </div>
 
               <div className="space-y-1">
+                <label
+                  htmlFor="weekly-report-year-select"
+                  className="block text-[10px] font-bold uppercase tracking-wider text-stone-400"
+                >
+                  Report Year
+                </label>
+                <select
+                  id="weekly-report-year-select"
+                  value={selectedYear}
+                  onChange={(event) => {
+                    clearExactReportTarget();
+                    const nextYear = Number(event.target.value);
+                    setSelectedYear(nextYear);
+                    setSelectedWeek((week) =>
+                      Math.min(week, isoWeeksInYear(nextYear)),
+                    );
+                  }}
+                  className="rounded-xl border border-[#E8DFC8] bg-[#FAF5EF] px-3.5 py-2 text-xs font-bold text-stone-900 focus:outline-hidden"
+                >
+                  {selectableYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
                 <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
                   Week Number
                 </span>
                 <div className="flex items-center gap-1 bg-[#FAF5EF] border border-[#E8DFC8] p-1 rounded-xl">
                   <button
-                    onClick={() =>
-                      setSelectedWeek((prev) => Math.max(1, prev - 1))
-                    }
+                    aria-label="Previous report week"
+                    onClick={() => {
+                      clearExactReportTarget();
+                      setSelectedWeek((prev) => Math.max(1, prev - 1));
+                    }}
                     className="p-1 hover:bg-stone-200/60 rounded-lg text-stone-600"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -1075,7 +1306,14 @@ export const WeeklyReportView: React.FC = () => {
                     Week {report.weekNumber}
                   </span>
                   <button
-                    onClick={() => setSelectedWeek((prev) => prev + 1)}
+                    aria-label="Next report week"
+                    disabled={selectedWeek >= isoWeeksInYear(selectedYear)}
+                    onClick={() => {
+                      clearExactReportTarget();
+                      setSelectedWeek((prev) =>
+                        Math.min(isoWeeksInYear(selectedYear), prev + 1),
+                      );
+                    }}
                     className="p-1 hover:bg-stone-200/60 rounded-lg text-stone-600"
                   >
                     <ChevronRight className="w-4 h-4" />

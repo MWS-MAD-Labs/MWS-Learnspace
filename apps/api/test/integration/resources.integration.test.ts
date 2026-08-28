@@ -63,7 +63,7 @@ function get(path: string, cookie = gradeTeacherCookie) {
   return request(app).get(path).set('cookie', cookie);
 }
 
-function put(path: string, body: unknown) {
+function put(path: string, body: object) {
   return request(app)
     .put(path)
     .set('cookie', `${gradeTeacherCookie}; learnspace_csrf=${csrf}`)
@@ -425,6 +425,99 @@ integration('academic, student, and attendance routes', () => {
       specialistCookie,
     );
     expect(expired.status).toBe(403);
+  });
+
+  it('scopes dashboard attendance to authorized classes and deduplicates students', async () => {
+    const [year, unscopedClass, scopedEnrollment] = await Promise.all([
+      prisma.academicYear.findFirstOrThrow({ where: { organizationId } }),
+      prisma.schoolClass.findFirstOrThrow({
+        where: { organizationId, name: 'Unscoped Class' },
+      }),
+      prisma.enrollment.findFirstOrThrow({
+        where: { organizationId, studentId: rosterStudentIds[0], classId },
+      }),
+    ]);
+    const unscopedEnrollment = await prisma.enrollment.create({
+      data: {
+        organizationId,
+        studentId: rosterStudentIds[0],
+        academicYearId: year.id,
+        classId: unscopedClass.id,
+        startsOn: new Date('2026-07-01T00:00:00.000Z'),
+      },
+    });
+    const expiredEnrollment = await prisma.enrollment.create({
+      data: {
+        organizationId,
+        studentId: rosterStudentIds[1],
+        academicYearId: year.id,
+        classId,
+        startsOn: new Date('2025-01-01T00:00:00.000Z'),
+        endsOn: new Date('2025-12-31T00:00:00.000Z'),
+      },
+    });
+    const schoolDate = new Date().toISOString().slice(0, 10);
+    await Promise.all([
+      prisma.attendanceRecord.create({
+        data: {
+          organizationId,
+          studentId: rosterStudentIds[0],
+          enrollmentId: scopedEnrollment.id,
+          classId,
+          schoolDate: new Date(`${schoolDate}T00:00:00.000Z`),
+          status: 'PRESENT',
+          recordedById: gradeTeacherId,
+        },
+      }),
+      prisma.attendanceRecord.create({
+        data: {
+          organizationId,
+          studentId: rosterStudentIds[0],
+          enrollmentId: unscopedEnrollment.id,
+          classId: unscopedClass.id,
+          schoolDate: new Date(`${schoolDate}T00:00:00.000Z`),
+          status: 'UNEXCUSED_ABSENCE',
+          recordedById: gradeTeacherId,
+        },
+      }),
+      prisma.attendanceRecord.create({
+        data: {
+          organizationId,
+          studentId: rosterStudentIds[1],
+          enrollmentId: expiredEnrollment.id,
+          classId,
+          schoolDate: new Date(`${schoolDate}T00:00:00.000Z`),
+          status: 'LATE',
+          minutesLate: 5,
+          recordedById: gradeTeacherId,
+        },
+      }),
+    ]);
+
+    const search = await get(
+      `/api/v1/organizations/${organizationId}/search?q=Roster%20Student%201`,
+    );
+    expect(search.status).toBe(200);
+    expect(search.body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: rosterStudentIds[0],
+          classId,
+        }),
+      ]),
+    );
+
+    const response = await get(
+      `/api/v1/organizations/${organizationId}/dashboard-summary`,
+    );
+    expect(response.status).toBe(200);
+    expect(response.body.data.attendance).toMatchObject({
+      totalStudents: 2,
+      recorded: 1,
+      present: 1,
+      late: 0,
+      absent: 0,
+    });
   });
 
   it('validates attendance dates and returns active roster plus existing attendance', async () => {

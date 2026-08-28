@@ -127,6 +127,91 @@ describe('importExport', () => {
     expect(report.importRunId).toBe(importRunId);
   });
 
+  it('rejects normalized weekly-report key collisions before opening a transaction', async () => {
+    const collisionDocument = structuredClone(document);
+    collisionDocument.records.weeklyReports = [
+      {
+        id: 'report-monday',
+        studentId: 'student-1',
+        iepId: 'iep-1',
+        teacherId: 'teacher-1',
+        year: '2026',
+        weekNumber: 35,
+        weekStart: '2026-08-24',
+        weekEnd: '2026-08-28',
+        createdAt: '2026-08-24T10:00:00.000Z',
+        updatedAt: '2026-08-24T11:00:00.000Z',
+        goalProgress: [],
+      },
+      {
+        id: 'report-wednesday',
+        studentId: 'student-1',
+        iepId: 'iep-1',
+        teacherId: 'teacher-1',
+        year: '2026',
+        weekNumber: 34,
+        weekStart: '2026-08-26',
+        weekEnd: '2026-08-30',
+        createdAt: '2026-08-26T10:00:00.000Z',
+        updatedAt: '2026-08-26T11:00:00.000Z',
+        goalProgress: [],
+      },
+    ] as LearnspaceExportV1['records']['weeklyReports'];
+    const prisma = {
+      $transaction: vi.fn(),
+    } as unknown as PrismaClient;
+
+    for (const mode of ['dry-run', 'apply'] as const) {
+      await expect(
+        importExport({
+          prisma,
+          document: collisionDocument,
+          exportSha256: 'e'.repeat(64),
+          manifest,
+          mode,
+        }),
+      ).rejects.toThrow(
+        /report-monday.*report-wednesday|report-wednesday.*report-monday/,
+      );
+    }
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects impossible weekly-report calendar dates before opening a transaction', async () => {
+    const invalidDateDocument = structuredClone(document);
+    invalidDateDocument.records.weeklyReports = [
+      {
+        id: 'report-invalid-date',
+        studentId: 'student-1',
+        iepId: 'iep-1',
+        teacherId: 'teacher-1',
+        year: '2026',
+        weekNumber: 9,
+        weekStart: '2026-02-30',
+        weekEnd: '2026-03-06',
+        createdAt: '2026-02-23T10:00:00.000Z',
+        updatedAt: '2026-02-23T11:00:00.000Z',
+        goalProgress: [],
+      },
+    ] as LearnspaceExportV1['records']['weeklyReports'];
+    const prisma = {
+      $transaction: vi.fn(),
+    } as unknown as PrismaClient;
+
+    await expect(
+      importExport({
+        prisma,
+        document: invalidDateDocument,
+        exportSha256: 'f'.repeat(64),
+        manifest,
+        mode: 'apply',
+      }),
+    ).rejects.toThrow('report-invalid-date.weekStart must be a valid');
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it('rejects a changed export discovered inside the transaction', async () => {
     const transaction = transactionClient('c'.repeat(64));
     const prisma = {

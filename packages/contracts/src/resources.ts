@@ -7,6 +7,7 @@ export const schoolDateSchema = z
     /^\d{4}-\d{2}-\d{2}$/,
     'Expected an ISO 8601 calendar date (YYYY-MM-DD).',
   )
+  .date('Expected a valid calendar date.')
   .refine((value) => {
     const parsed = new Date(`${value}T00:00:00.000Z`);
     return (
@@ -40,6 +41,42 @@ export const organizationsResponseSchema = z
   .object({
     data: z.array(organizationSummarySchema),
     meta: collectionMetaSchema,
+  })
+  .strict();
+
+export const ianaTimezoneSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .refine((value) => {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: value }).format();
+      return true;
+    } catch {
+      return false;
+    }
+  }, 'Expected a valid IANA timezone identifier.');
+export const organizationSettingsSchema = z
+  .object({
+    organizationId: uuidSchema,
+    name: z.string().min(1),
+    timezone: ianaTimezoneSchema,
+  })
+  .strict();
+export const organizationSettingsResponseSchema = z
+  .object({ data: organizationSettingsSchema })
+  .strict();
+export const organizationSettingsUpdateCommandSchema = z
+  .object({ timezone: ianaTimezoneSchema })
+  .strict();
+export const organizationSchoolDateResponseSchema = z
+  .object({
+    data: z.object({
+      organizationId: uuidSchema,
+      timezone: ianaTimezoneSchema,
+      schoolDate: schoolDateSchema,
+    }),
   })
   .strict();
 
@@ -1518,6 +1555,15 @@ export const learningJourneyMutationResponseSchema = z
   .strict();
 
 export type OrganizationsResponse = z.infer<typeof organizationsResponseSchema>;
+export type OrganizationSettingsResponse = z.infer<
+  typeof organizationSettingsResponseSchema
+>;
+export type OrganizationSettingsUpdateCommand = z.infer<
+  typeof organizationSettingsUpdateCommandSchema
+>;
+export type OrganizationSchoolDateResponse = z.infer<
+  typeof organizationSchoolDateResponseSchema
+>;
 export type AcademicYearsResponse = z.infer<typeof academicYearsResponseSchema>;
 export type SemestersResponse = z.infer<typeof semestersResponseSchema>;
 export type UnitsResponse = z.infer<typeof unitsResponseSchema>;

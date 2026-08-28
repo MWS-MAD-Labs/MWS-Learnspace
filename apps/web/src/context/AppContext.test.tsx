@@ -43,14 +43,44 @@ const emptyStudents = { data: [], meta: { count: 0 } };
 const emptyStaff = { data: [], meta: { count: 0 } };
 
 function RefreshHarness({ onMount }: { onMount: () => void }) {
-  const { refreshData } = useApp();
+  const { refreshData, students } = useApp();
   useEffect(onMount, [onMount]);
   return (
     <div>
       <span>Administration workspace</span>
+      <span>{students[0]?.fullName ?? 'No students'}</span>
       <button onClick={() => void refreshData()}>Refresh data</button>
     </div>
   );
+}
+
+type StudentsResponse = Awaited<
+  ReturnType<typeof studentAdministrationService.getStudents>
+>;
+
+function studentsResponse(id: string, fullName: string): StudentsResponse {
+  return {
+    data: [
+      {
+        id,
+        organizationId: '33333333-3333-4333-8333-333333333333',
+        studentNumber: `STU-${id.slice(0, 4)}`,
+        fullName,
+        nickname: null,
+        gender: 'UNSPECIFIED' as const,
+        dateOfBirth: '2015-01-01',
+        specialNeedsFlag: false,
+        status: 'ACTIVE' as const,
+        avatarUrl: null,
+        primaryClassification: null,
+        currentPlacement: null,
+        enrollments: [],
+        activeEnrollment: null,
+        activeGpkAssignment: null,
+      },
+    ],
+    meta: { count: 1 },
+  } as StudentsResponse;
 }
 
 describe('AppProvider administration refresh', () => {
@@ -99,6 +129,60 @@ describe('AppProvider administration refresh', () => {
     });
     expect(screen.getByText('Administration workspace')).toBeVisible();
     expect(onMount).toHaveBeenCalledTimes(1);
+  });
+
+  it('only commits the latest concurrent refresh response', async () => {
+    const staleResponse = studentsResponse(
+      '44444444-4444-4444-8444-444444444444',
+      'Stale Student',
+    );
+    const latestResponse = studentsResponse(
+      '55555555-5555-4555-8555-555555555555',
+      'Latest Student',
+    );
+    let resolveStale: ((value: typeof staleResponse) => void) | undefined;
+    let resolveLatest: ((value: typeof latestResponse) => void) | undefined;
+    vi.mocked(studentAdministrationService.getStudents)
+      .mockResolvedValueOnce(emptyStudents)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveStale = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveLatest = resolve;
+          }),
+      );
+    vi.mocked(studentAdministrationService.getStaff).mockResolvedValue(
+      emptyStaff,
+    );
+
+    render(
+      <AppProvider
+        authenticatedUser={authenticatedUser}
+        organizationId="33333333-3333-4333-8333-333333333333"
+      >
+        <RefreshHarness onMount={vi.fn()} />
+      </AppProvider>,
+    );
+
+    expect(await screen.findByText('Administration workspace')).toBeVisible();
+    const refreshButton = screen.getByRole('button', { name: 'Refresh data' });
+    fireEvent.click(refreshButton);
+    fireEvent.click(refreshButton);
+    await waitFor(() =>
+      expect(studentAdministrationService.getStudents).toHaveBeenCalledTimes(3),
+    );
+
+    await act(async () => resolveLatest?.(latestResponse));
+    expect(await screen.findByText('Latest Student')).toBeVisible();
+
+    await act(async () => resolveStale?.(staleResponse));
+    expect(screen.getByText('Latest Student')).toBeVisible();
+    expect(screen.queryByText('Stale Student')).not.toBeInTheDocument();
   });
 
   it('shows a non-blocking error when a later refresh fails', async () => {

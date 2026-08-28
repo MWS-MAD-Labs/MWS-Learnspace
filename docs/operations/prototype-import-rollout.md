@@ -71,7 +71,7 @@ The manifest shape is:
 
 Dry run executes the exact database persistence plan inside a serializable transaction and deliberately rolls it back. Apply repeats target validation, writes all imported records and the import ledger atomically, and appends a safe aggregate audit event. An exact repeated export is skipped; a changed export using an already applied source key is rejected rather than overwriting migrated data.
 
-The importer is strictly fail-closed: malformed, unmapped, conflicting, or otherwise invalid input throws an actionable error and the complete transaction is rolled back. Successful reports therefore have `rejected: 0`; the field is reserved for a future reviewed partial-import policy. Operators must treat any nonzero CLI exit as a rejected import and must not proceed to apply.
+The importer is strictly fail-closed: malformed, unmapped, conflicting, or otherwise invalid input throws an actionable error and the complete transaction is rolled back. Before either dry-run or apply opens a database transaction, it normalizes each weekly report from `weekStart` to an ISO year/week and Monday–Friday range, then rejects any source reports for the same student that collapse to the same normalized key. The error names the conflicting source report IDs so operators can resolve or merge them at the source. Successful reports therefore have `rejected: 0`; the field is reserved for a future reviewed partial-import policy. Operators must treat any nonzero CLI exit as a rejected import and must not proceed to apply.
 
 ## Local Docker rehearsal
 
@@ -183,17 +183,32 @@ Never use `docker compose down --volumes` as a rollback mechanism.
 
 Record pass/fail, deviations, follow-up owners and dates, artifact retention, sanitization review, and approver sign-off. Keep raw command output in the approved protected evidence location; include only sanitized summaries in Git.
 
+## Weekly-report ISO week normalization
+
+Before applying `20260827040000_authorized_aggregates` (the timezone and weekly-report normalization migration) to a database containing weekly reports:
+
+1. Audit weekly reports grouped by organization, student, and the ISO Monday derived from `weekStart`. Resolve any groups with more than one report; the migration intentionally aborts rather than merge ambiguous reports.
+2. Back up the database. The migration treats the existing `weekStart` as the source of truth, normalizes it to that ISO week's Monday, sets `weekEnd` to Friday, and derives `year` and `weekNumber` using PostgreSQL `ISOYEAR`/`WEEK` semantics. It does not preserve legacy academic or locale-specific week numbers.
+3. Verify representative historical reports after migration, especially ISO weeks crossing calendar-year boundaries. API create/update contracts require the submitted ISO year/week to match `weekStart` and require the exact Monday–Friday range. The import service performs the same normalization for prototype exports and preflights normalized-key collisions before database work.
+4. Keep the pre-migration backup until workflow and goal-projection verification passes.
+
+## Organization timezone backfill
+
+The `20260827040000_authorized_aggregates` migration adds `Organization.timezone` with a safe `UTC` default. The following `20260827050000_aggregate_search_indexes` migration adds `pg_trgm` and the aggregate/search indexes. Operators must set each existing school's actual IANA timezone before enabling dashboards, attendance summaries, search, or action-item queries in staging or production.
+
+1. Inventory every organization and obtain an approved IANA identifier such as `America/Los_Angeles`, `Asia/Jakarta`, or `Pacific/Auckland`.
+2. As an organization administrator, update the timezone through `PATCH /api/v1/organizations/{organizationId}/settings` or the **People & access → School timezone** control. The API rejects invalid timezone identifiers.
+3. Verify the dashboard `attendance.schoolDate` around local midnight and confirm date-effective enrollments and staff assignments use the expected school date.
+4. Record the configured timezone and verification evidence in the rollout log. Do not leave a non-UTC school on the migration's `UTC` default.
+
 ## Current implementation status
 
 The repository includes the version 1 export contract, development-only browser exporter, database-mutating administrative importer, import ledger, and a sanitized local Docker rehearsal report at `docs/operations/prototype-import-rehearsal-2026-08-24-local.md`.
 
 The requested local Docker rehearsal is recorded at `docs/operations/prototype-import-rehearsal-2026-08-24-local.md` and validates the implemented P6 tooling.
 
-P6 is not ready for production rollout while `P5-013` remains incomplete. Before repeating this procedure in staging:
+P6 is not ready for production rollout while `P5-013` remains incomplete. P5-004 through P5-012 are complete, including observations, IEPs, weekly reports, transactional goal projections, and authorized dashboard/report/search/notification queries. Before repeating this procedure in staging:
 
-1. Migrate observation definitions, assignments, and all three observation instruments (`P5-004`–`P5-007`).
-2. Migrate IEPs, IEP workflow, weekly reports, and transactional goal projections (`P5-008`–`P5-011`).
-3. Replace dashboard/report/search/notification browser-derived reads (`P5-012`).
-4. Remove sensitive browser persistence, automatic domain seed initialization, production reset controls, and obsolete browser domain types (`P5-013`).
+1. Remove sensitive browser persistence, automatic domain seed initialization, production reset controls, and obsolete browser domain types (`P5-013`).
 
 After P5-013 passes, repeat the import procedure in staging with an approved sensitive export and manifest, deployment-specific writer freeze/cutover commands, named operators, application workflow verification, and approver sign-off.

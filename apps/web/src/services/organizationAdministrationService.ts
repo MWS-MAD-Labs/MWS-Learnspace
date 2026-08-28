@@ -2,6 +2,7 @@ import {
   gradesResponseSchema,
   organizationAccountMutationResponseSchema,
   organizationAccountsResponseSchema,
+  organizationSettingsResponseSchema,
   subjectsResponseSchema,
   unitsResponseSchema,
 } from '@learnspace/contracts';
@@ -11,6 +12,8 @@ import type {
   OrganizationAccountMutationResponse,
   OrganizationAccountsResponse,
   OrganizationAccountUpdateCommand,
+  OrganizationSettingsResponse,
+  OrganizationSettingsUpdateCommand,
   SubjectsResponse,
   UnitsResponse,
 } from '@learnspace/contracts';
@@ -21,6 +24,28 @@ function organizationPath(organizationId: string): string {
 }
 
 export const organizationAdministrationService = {
+  getSettings(
+    organizationId: string,
+    signal?: AbortSignal,
+  ): Promise<OrganizationSettingsResponse> {
+    return apiClient.request(`${organizationPath(organizationId)}/settings`, {
+      schema: organizationSettingsResponseSchema,
+      signal,
+    });
+  },
+
+  updateSettings(
+    organizationId: string,
+    command: OrganizationSettingsUpdateCommand,
+    signal?: AbortSignal,
+  ): Promise<OrganizationSettingsResponse> {
+    return apiClient.request(`${organizationPath(organizationId)}/settings`, {
+      method: 'PATCH',
+      body: command,
+      schema: organizationSettingsResponseSchema,
+      signal,
+    });
+  },
   getAccounts(
     organizationId: string,
     signal?: AbortSignal,

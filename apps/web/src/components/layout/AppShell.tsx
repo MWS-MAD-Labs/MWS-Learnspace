@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import type {
+  AggregateNotification,
+  AggregateSearchItem,
+} from '@learnspace/contracts';
 import { useApp } from '../../context/AppContext';
 import {
   LayoutDashboard,
@@ -21,6 +25,7 @@ import {
   UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useGlobalSearch, useNotifications } from '../../hooks/useAggregates';
 
 const demoRoleSwitcherEnabled =
   import.meta.env.DEV &&
@@ -32,6 +37,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const {
     currentUser,
+    organizationId,
     allUsers,
     switchRole,
     activeTab,
@@ -42,6 +48,10 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
     setSearchQuery,
     resetAllDataToDefault,
     navigateToJourneyEditor,
+    navigateToIEP,
+    navigateToWeeklyReport,
+    navigateToObservation,
+    navigateToAttendanceStudent,
   } = useApp();
 
   const { logout, session } = useAuth();
@@ -52,6 +62,67 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
   const [specialEdMenuOpen, setSpecialEdMenuOpen] = useState(true);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [activeSearchIndex, setActiveSearchIndex] = useState(-1);
+  const search = useGlobalSearch(organizationId, searchQuery);
+  const notifications = useNotifications(organizationId);
+
+  useEffect(() => {
+    setActiveSearchIndex(search.data.length ? 0 : -1);
+  }, [search.data]);
+
+  const canOpenAttendanceRoster =
+    currentUser.role === 'DIRECTOR' ||
+    currentUser.role === 'PRINCIPAL' ||
+    (currentUser.role === 'GRADE_TEACHER' &&
+      Boolean(currentUser.unitIds?.length || currentUser.gradeIds?.length));
+
+  const openSearchResult = (item: AggregateSearchItem) => {
+    setSearchQuery('');
+    if (item.kind === 'LEARNING_JOURNEY') {
+      navigateToJourneyEditor(item.id);
+    } else if (item.kind === 'IEP' || item.kind === 'IEP_GOAL') {
+      if (item.studentId)
+        navigateToIEP(
+          item.studentId,
+          item.kind === 'IEP' ? item.id : item.parentId,
+        );
+    } else if (item.kind === 'WEEKLY_REPORT') {
+      if (item.studentId) navigateToWeeklyReport(item.studentId, item.id);
+    } else if (item.studentId) {
+      if (canOpenAttendanceRoster && item.classId) {
+        navigateToAttendanceStudent(item.studentId, item.classId);
+      } else if (currentUser.permissions.includes('special-ed:read')) {
+        if (currentUser.role === 'SPECIAL_ED_COORDINATOR') {
+          navigateToObservation(item.studentId, 'FEDC', undefined, 'ALL_RESULTS');
+        } else {
+          navigateToObservation(item.studentId);
+        }
+      }
+    }
+  };
+
+  const openNotification = (item: AggregateNotification) => {
+    setNotificationsOpen(false);
+    if (item.target.tab === 'LEARNING_JOURNEY_EDITOR') {
+      navigateToJourneyEditor(item.target.recordId);
+    } else if (item.target.tab === 'SPECIAL_ED_IEP' && item.target.studentId) {
+      navigateToIEP(item.target.studentId, item.target.recordId);
+    } else if (
+      item.target.tab === 'SPECIAL_ED_WEEKLY_REPORT' &&
+      item.target.studentId
+    ) {
+      navigateToWeeklyReport(item.target.studentId, item.target.recordId);
+    } else if (
+      item.target.tab === 'SPECIAL_ED_OBSERVATION' &&
+      item.target.studentId
+    ) {
+      navigateToObservation(
+        item.target.studentId,
+        item.target.observationType,
+        item.target.recordId,
+      );
+    }
+  };
 
   const isLearningJourneyActive =
     activeTab === 'LEARNING_JOURNEY_CALENDAR' ||
@@ -92,16 +163,90 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
           </div>
 
           {/* Global Search */}
-          <div className="hidden md:flex items-center relative w-72 lg:w-96">
-            <Search className="w-4 h-4 text-stone-400 absolute left-3 pointer-events-none" />
-            <input
-              id="global-search-input"
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search students, plans, goals, or subjects..."
-              className="w-full pl-9 pr-4 py-2 text-xs bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#6E161E]/20 focus:border-[#6E161E] placeholder-stone-400 transition-all"
-            />
+          <div className="relative hidden w-72 md:block lg:w-96">
+            <div className="relative flex items-center">
+              <Search className="pointer-events-none absolute left-3 h-4 w-4 text-stone-400" />
+              <input
+                id="global-search-input"
+                type="search"
+                role="combobox"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    setSearchQuery('');
+                    setActiveSearchIndex(-1);
+                    return;
+                  }
+                  if (!search.data.length) return;
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    setActiveSearchIndex((index) =>
+                      index >= search.data.length - 1 ? 0 : index + 1,
+                    );
+                  } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    setActiveSearchIndex((index) =>
+                      index <= 0 ? search.data.length - 1 : index - 1,
+                    );
+                  } else if (event.key === 'Enter' && activeSearchIndex >= 0) {
+                    event.preventDefault();
+                    openSearchResult(search.data[activeSearchIndex]);
+                  }
+                }}
+                placeholder="Search authorized students, plans, goals…"
+                aria-label="Global search"
+                aria-autocomplete="list"
+                aria-controls="global-search-results"
+                aria-expanded={searchQuery.trim().length >= 2}
+                aria-activedescendant={
+                  activeSearchIndex >= 0
+                    ? `global-search-option-${activeSearchIndex}`
+                    : undefined
+                }
+                className="w-full rounded-xl border border-[#E8DFC8] bg-[#FAF5EF] py-2 pl-9 pr-4 text-xs placeholder-stone-400 transition-all focus:border-[#6E161E] focus:outline-hidden focus:ring-2 focus:ring-[#6E161E]/20"
+              />
+            </div>
+            {searchQuery.trim().length >= 2 && (
+              <div
+                id="global-search-results"
+                role="listbox"
+                aria-label="Global search results"
+                className="absolute left-0 right-0 top-full z-50 mt-2 max-h-96 overflow-y-auto rounded-2xl border border-stone-200 bg-white p-2 shadow-xl"
+              >
+                {search.status === 'loading' ? (
+                  <p className="p-3 text-xs text-stone-500">
+                    Searching authorized records…
+                  </p>
+                ) : search.status === 'error' ? (
+                  <p className="p-3 text-xs text-rose-700">{search.error}</p>
+                ) : search.data.length === 0 ? (
+                  <p className="p-3 text-xs text-stone-500">
+                    No authorized results found.
+                  </p>
+                ) : (
+                  search.data.map((item, index) => (
+                    <button
+                      key={`${item.kind}:${item.id}`}
+                      id={`global-search-option-${index}`}
+                      type="button"
+                      role="option"
+                      aria-selected={activeSearchIndex === index}
+                      onMouseEnter={() => setActiveSearchIndex(index)}
+                      onClick={() => openSearchResult(item)}
+                      className="w-full rounded-xl px-3 py-2.5 text-left hover:bg-[#FAF5EF]"
+                    >
+                      <p className="truncate text-xs font-bold text-stone-900">
+                        {item.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-[11px] text-stone-500">
+                        {item.subtitle}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -200,11 +345,18 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
           <div className="relative">
             <button
               id="notifications-bell-button"
-              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              aria-label="Notifications"
+              onClick={() => {
+                const opening = !notificationsOpen;
+                setNotificationsOpen(opening);
+                if (opening) notifications.retry();
+              }}
               className="p-2 text-stone-600 hover:text-stone-900 hover:bg-[#FAF5EF] rounded-xl border border-transparent hover:border-[#E8DEC7] transition-all relative"
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#6E161E]" />
+              {notifications.data.length > 0 && (
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#6E161E]" />
+              )}
             </button>
 
             {notificationsOpen && (
@@ -216,29 +368,47 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
                   <span className="text-xs font-bold text-stone-900">
                     Notifications & Action Items
                   </span>
-                  <span className="text-[10px] bg-[#6E161E]/10 text-[#6E161E] font-bold px-1.5 py-0.5 rounded-full">
-                    2 New
+                  <span className="rounded-full bg-[#6E161E]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#6E161E]">
+                    {notifications.data.length} Open
                   </span>
                 </div>
-                <div className="py-2 space-y-2">
-                  <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-left">
-                    <p className="text-xs font-bold text-amber-900">
-                      Learning Journey Review Required
+                <div className="space-y-2 py-2">
+                  {notifications.status === 'loading' ? (
+                    <p className="p-2 text-xs text-stone-500">
+                      Loading action items…
                     </p>
-                    <p className="text-[11px] text-amber-700 mt-0.5">
-                      "Moving My Body" by Coach Marcus Vance is awaiting
-                      Principal review.
+                  ) : notifications.status === 'error' ? (
+                    <div className="p-2 text-xs text-rose-700">
+                      <p>{notifications.error}</p>
+                      <button
+                        type="button"
+                        onClick={notifications.retry}
+                        className="mt-2 font-bold underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : notifications.data.length === 0 ? (
+                    <p className="p-2 text-xs text-stone-500">
+                      No open action items in your current scope.
                     </p>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-200/60 text-left">
-                    <p className="text-xs font-bold text-purple-900">
-                      Weekly IEP Report Due
-                    </p>
-                    <p className="text-[11px] text-purple-700 mt-0.5">
-                      Week 14 IEP progress logging for Leo M. is ready for
-                      completion.
-                    </p>
-                  </div>
+                  ) : (
+                    notifications.data.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => openNotification(item)}
+                        className="w-full rounded-xl border border-[#E8DFC8] bg-[#FAF5EF] p-2.5 text-left hover:border-[#6E161E]/30"
+                      >
+                        <p className="text-xs font-bold text-stone-900">
+                          {item.title}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-stone-600">
+                          {item.message}
+                        </p>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             )}

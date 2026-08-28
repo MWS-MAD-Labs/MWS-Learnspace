@@ -91,6 +91,7 @@ export type MembershipScope = {
   assignedStudentIds: string[];
   observationAssignedStudentIds?: string[];
   assignedStudentScopes?: Array<{
+    organizationId: string;
     studentId: string;
     startsOn: Date;
     endsOn: Date | null;

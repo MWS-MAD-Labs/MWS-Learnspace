@@ -52,6 +52,11 @@ interface AppContextType {
   selectedStudentId: string;
   selectedJourneyId: string | null;
   selectedIepId: string | null;
+  selectedWeeklyReportId: string | null;
+  weeklyReportTrackerRequested: boolean;
+  attendanceTarget: { studentId: string; classId: string } | null;
+  selectedObservationAssignmentId: string | null;
+  observationResultsStudentId: string | null;
   searchQuery: string;
   toasts: ToastMessage[];
   isObservationDrawerOpen: boolean;
@@ -62,6 +67,13 @@ interface AppContextType {
   setSelectedStudentId: (id: string) => void;
   setSelectedJourneyId: (id: string | null) => void;
   setSelectedIepId: (id: string | null) => void;
+  setSelectedWeeklyReportId: (id: string | null) => void;
+  setWeeklyReportTrackerRequested: (requested: boolean) => void;
+  setAttendanceTarget: (
+    target: { studentId: string; classId: string } | null,
+  ) => void;
+  setSelectedObservationAssignmentId: (id: string | null) => void;
+  setObservationResultsStudentId: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
   setIsObservationDrawerOpen: (open: boolean) => void;
   toggleObservationDrawer: () => void;
@@ -75,9 +87,16 @@ interface AppContextType {
   resetAllDataToDefault: () => void;
 
   navigateToJourneyEditor: (journeyId?: string) => void;
-  navigateToObservation: (studentId: string, type?: SpecialEdSubTab) => void;
+  navigateToObservation: (
+    studentId: string,
+    type?: SpecialEdSubTab,
+    assignmentId?: string,
+    target?: 'ALL_RESULTS',
+  ) => void;
   navigateToIEP: (studentId: string, iepId?: string) => void;
-  navigateToWeeklyReport: (studentId: string) => void;
+  navigateToWeeklyReport: (studentId: string, reportId?: string) => void;
+  navigateToWeeklyReportTracker: () => void;
+  navigateToAttendanceStudent: (studentId: string, classId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -118,6 +137,8 @@ export const AppProvider: React.FC<{
     string | undefined
   >();
   const hasLoadedAdministrationData = useRef(demoRoleSwitcherEnabled);
+  const administrationRequestSequenceRef = useRef(0);
+  const administrationRequestControllerRef = useRef<AbortController>();
 
   const [activeTab, setActiveTab] = useState<NavigationTab>('DASHBOARD');
   const [specialEdSubTab, setSpecialEdSubTab] =
@@ -129,12 +150,33 @@ export const AppProvider: React.FC<{
     null,
   );
   const [selectedIepId, setSelectedIepId] = useState<string | null>(null);
+  const [selectedWeeklyReportId, setSelectedWeeklyReportId] = useState<
+    string | null
+  >(null);
+  const [weeklyReportTrackerRequested, setWeeklyReportTrackerRequested] =
+    useState(false);
+  const [attendanceTarget, setAttendanceTarget] = useState<{
+    studentId: string;
+    classId: string;
+  } | null>(null);
+  const [selectedObservationAssignmentId, setSelectedObservationAssignmentId] =
+    useState<string | null>(null);
+  const [observationResultsStudentId, setObservationResultsStudentId] =
+    useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isObservationDrawerOpen, setIsObservationDrawerOpen] =
     useState<boolean>(false);
 
   const refreshData = useCallback(async () => {
+    const requestSequence = ++administrationRequestSequenceRef.current;
+    administrationRequestControllerRef.current?.abort();
+    const controller = new AbortController();
+    administrationRequestControllerRef.current = controller;
+    const requestStillCurrent = () =>
+      administrationRequestSequenceRef.current === requestSequence &&
+      administrationRequestControllerRef.current === controller;
+
     if (demoRoleSwitcherEnabled) {
       const user = storageService.getCurrentUser();
       const loadedStudents = storageService.getStudents();
@@ -155,9 +197,15 @@ export const AppProvider: React.FC<{
         'staff-directory:read',
       );
       const [studentsResponse, staffResponse] = await Promise.all([
-        studentAdministrationService.getStudents(organizationId),
+        studentAdministrationService.getStudents(
+          organizationId,
+          controller.signal,
+        ),
         canReadStaff
-          ? studentAdministrationService.getStaff(organizationId)
+          ? studentAdministrationService.getStaff(
+              organizationId,
+              controller.signal,
+            )
           : Promise.resolve(undefined),
       ]);
       const loadedStudents = studentsResponse.data.map(
@@ -170,6 +218,7 @@ export const AppProvider: React.FC<{
           : user,
       );
 
+      if (!requestStillCurrent()) return;
       setCurrentUser(authenticatedUser);
       setAllUsers(directoryUsers ?? [authenticatedUser]);
       setStudents(loadedStudents);
@@ -184,7 +233,7 @@ export const AppProvider: React.FC<{
       setAdministrationDataError(undefined);
       setAdministrationDataStatus('ready');
     } catch (error) {
-      if (isRequestCancelled(error)) return;
+      if (isRequestCancelled(error) || !requestStillCurrent()) return;
       setAdministrationDataError(administrationErrorMessage(error));
       if (isInitialLoad) {
         setStudents([]);
@@ -199,6 +248,7 @@ export const AppProvider: React.FC<{
 
   useEffect(() => {
     void refreshData();
+    return () => administrationRequestControllerRef.current?.abort();
   }, [refreshData]);
 
   const toggleObservationDrawer = () => {
@@ -258,9 +308,15 @@ export const AppProvider: React.FC<{
   const navigateToObservation = (
     studentId: string,
     type: SpecialEdSubTab = 'FEDC',
+    assignmentId?: string,
+    target?: 'ALL_RESULTS',
   ) => {
     setSelectedStudentId(studentId);
     setSpecialEdSubTab(type);
+    setSelectedObservationAssignmentId(assignmentId ?? null);
+    setObservationResultsStudentId(
+      target === 'ALL_RESULTS' ? studentId : null,
+    );
     setActiveTab('SPECIAL_ED_OBSERVATION');
   };
 
@@ -270,8 +326,21 @@ export const AppProvider: React.FC<{
     setActiveTab('SPECIAL_ED_IEP');
   };
 
-  const navigateToWeeklyReport = (studentId: string) => {
+  const navigateToWeeklyReport = (studentId: string, reportId?: string) => {
     setSelectedStudentId(studentId);
+    setSelectedWeeklyReportId(reportId ?? null);
+    setWeeklyReportTrackerRequested(false);
+    setActiveTab('SPECIAL_ED_WEEKLY_REPORT');
+  };
+
+  const navigateToAttendanceStudent = (studentId: string, classId: string) => {
+    setAttendanceTarget({ studentId, classId });
+    setActiveTab('ATTENDANCE');
+  };
+
+  const navigateToWeeklyReportTracker = () => {
+    setSelectedWeeklyReportId(null);
+    setWeeklyReportTrackerRequested(true);
     setActiveTab('SPECIAL_ED_WEEKLY_REPORT');
   };
 
@@ -288,6 +357,11 @@ export const AppProvider: React.FC<{
     selectedStudentId,
     selectedJourneyId,
     selectedIepId,
+    selectedWeeklyReportId,
+    weeklyReportTrackerRequested,
+    attendanceTarget,
+    selectedObservationAssignmentId,
+    observationResultsStudentId,
     searchQuery,
     toasts,
     isObservationDrawerOpen,
@@ -297,6 +371,11 @@ export const AppProvider: React.FC<{
     setSelectedStudentId,
     setSelectedJourneyId,
     setSelectedIepId,
+    setSelectedWeeklyReportId,
+    setWeeklyReportTrackerRequested,
+    setAttendanceTarget,
+    setSelectedObservationAssignmentId,
+    setObservationResultsStudentId,
     setSearchQuery,
     setIsObservationDrawerOpen,
     toggleObservationDrawer,
@@ -308,6 +387,8 @@ export const AppProvider: React.FC<{
     navigateToObservation,
     navigateToIEP,
     navigateToWeeklyReport,
+    navigateToWeeklyReportTracker,
+    navigateToAttendanceStudent,
   };
 
   return (

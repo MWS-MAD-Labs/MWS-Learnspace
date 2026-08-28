@@ -1,10 +1,12 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AttendanceView } from './AttendanceView';
 import { useAuth } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext';
 import { ApiClientError } from '../../services/apiClient';
 import { attendanceService } from '../../services/attendanceService';
 
+vi.mock('../../context/AppContext', () => ({ useApp: vi.fn() }));
 vi.mock('../../context/AuthContext', () => ({
   useAuth: vi.fn(() => ({
     currentUser: {
@@ -23,8 +25,10 @@ vi.mock('../../context/AuthContext', () => ({
   })),
 }));
 
+
 vi.mock('../../services/attendanceService', () => ({
   attendanceService: {
+    getSchoolDate: vi.fn(),
     getClasses: vi.fn(),
     getRoster: vi.fn(),
     saveRoster: vi.fn(),
@@ -68,9 +72,15 @@ const rosterResponse = {
 
 const mockedAttendanceService = vi.mocked(attendanceService);
 const mockedUseAuth = vi.mocked(useAuth);
+const mockedUseApp = vi.mocked(useApp);
+const setAttendanceTarget = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockedUseApp.mockReturnValue({
+    attendanceTarget: null,
+    setAttendanceTarget,
+  } as ReturnType<typeof useApp>);
   mockedUseAuth.mockReturnValue({
     status: 'authenticated',
     currentUser: {
@@ -113,6 +123,13 @@ beforeEach(() => {
     retry: vi.fn(),
   });
   vi.useFakeTimers({ now: new Date(2026, 7, 24, 12), shouldAdvanceTime: true });
+  mockedAttendanceService.getSchoolDate.mockResolvedValue({
+    data: {
+      organizationId: schoolClass.organizationId,
+      schoolDate: '2026-08-24',
+      timezone: 'UTC',
+    },
+  });
   mockedAttendanceService.getClasses.mockResolvedValue(classesResponse);
   mockedAttendanceService.getRoster.mockResolvedValue(rosterResponse);
   mockedAttendanceService.saveRoster.mockResolvedValue({
@@ -137,6 +154,95 @@ describe('AttendanceView', () => {
       screen.getByText(/unsaved draft defaults to present/i),
     ).toBeVisible();
     expect(screen.getByText(/1 unsaved draft/i)).toBeVisible();
+  });
+
+  it('loads the authoritative school date from attendance service', async () => {
+    mockedAttendanceService.getSchoolDate.mockResolvedValue({
+      data: {
+        organizationId: schoolClass.organizationId,
+        schoolDate: '2026-08-25',
+        timezone: 'UTC',
+      },
+    });
+    render(<AttendanceView />);
+
+    await waitFor(() =>
+      expect(mockedAttendanceService.getRoster).toHaveBeenCalledWith(
+        schoolClass.organizationId,
+        schoolClass.id,
+        '2026-08-25',
+        expect.any(AbortSignal),
+      ),
+    );
+  });
+
+  it('selects and focuses an attendance student navigation target', async () => {
+    mockedUseApp.mockReturnValue({
+      attendanceTarget: { studentId: student.id, classId: schoolClass.id },
+      setAttendanceTarget,
+    } as ReturnType<typeof useApp>);
+    render(<AttendanceView />);
+
+    const studentCard = await screen.findByText('Alex Student');
+    await waitFor(() => expect(studentCard.closest('article')).toHaveFocus());
+    expect(screen.getByLabelText(/search students/i)).toHaveValue(
+      student.studentNumber,
+    );
+    expect(setAttendanceTarget).toHaveBeenCalledTimes(1);
+    expect(setAttendanceTarget).toHaveBeenCalledWith(null);
+    expect(mockedAttendanceService.getRoster).toHaveBeenCalledTimes(1);
+  });
+
+  it('focuses a new target when the same class roster is already loaded', async () => {
+    const { rerender } = render(<AttendanceView />);
+    await screen.findByText('Alex Student');
+    mockedUseApp.mockReturnValue({
+      attendanceTarget: { studentId: student.id, classId: schoolClass.id },
+      setAttendanceTarget,
+    } as ReturnType<typeof useApp>);
+
+    rerender(<AttendanceView />);
+
+    await waitFor(() =>
+      expect(screen.getByText('Alex Student').closest('article')).toHaveFocus(),
+    );
+    expect(setAttendanceTarget).toHaveBeenCalledTimes(1);
+    expect(setAttendanceTarget).toHaveBeenCalledWith(null);
+    expect(mockedAttendanceService.getRoster).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed and retries before loading a roster when the school date fails', async () => {
+    mockedAttendanceService.getSchoolDate
+      .mockRejectedValueOnce(new Error('School date unavailable'))
+      .mockResolvedValueOnce({
+        data: {
+          organizationId: schoolClass.organizationId,
+          schoolDate: '2026-08-25',
+          timezone: 'UTC',
+        },
+      });
+    render(<AttendanceView />);
+
+    expect(
+      await screen.findByRole('heading', {
+        name: /could not load the school date/i,
+      }),
+    ).toBeVisible();
+    expect(mockedAttendanceService.getRoster).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('button', { name: /save attendance/i }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+
+    await waitFor(() =>
+      expect(mockedAttendanceService.getRoster).toHaveBeenCalledWith(
+        schoolClass.organizationId,
+        schoolClass.id,
+        '2026-08-25',
+        expect.any(AbortSignal),
+      ),
+    );
   });
 
   it('validates Late minutes and saves only the loaded roster using the server version', async () => {
@@ -184,6 +290,45 @@ describe('AttendanceView', () => {
     expect(
       screen.queryByText(/unsaved draft defaults to present/i),
     ).not.toBeInTheDocument();
+  });
+
+  it('discards a pending save response after the class/date context changes', async () => {
+    let resolveSave:
+      | ((value: {
+          data: { schoolDate: string; version: string; savedCount: number };
+        }) => void)
+      | undefined;
+    mockedAttendanceService.saveRoster.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+
+    render(<AttendanceView />);
+    await screen.findByText('Alex Student');
+    fireEvent.click(screen.getByRole('button', { name: /save attendance/i }));
+    expect(mockedAttendanceService.saveRoster).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: /next day/i }));
+    await waitFor(() =>
+      expect(screen.getByLabelText('School date')).toHaveValue('2026-08-25'),
+    );
+
+    await act(async () => {
+      resolveSave?.({
+        data: {
+          schoolDate: '2026-08-24',
+          version: 'version-stale',
+          savedCount: 1,
+        },
+      });
+    });
+
+    expect(
+      screen.queryByText(/saved attendance for 1 students/i),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/1 unsaved draft/i)).toBeVisible();
   });
 
   it('renders the roster as read-only without write permission', async () => {

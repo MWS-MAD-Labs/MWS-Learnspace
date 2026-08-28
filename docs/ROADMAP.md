@@ -842,10 +842,11 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-012 — Migrate dashboards, reports, search, and notifications
 
-- [ ] **Dependencies:** P5-003, P5-005, P5-006, P5-007, P5-011
+- [x] **Dependencies:** P5-003, P5-005, P5-006, P5-007, P5-011
 - **Change:** replace derived `storageService` reads and hard-coded notifications with authorized API queries.
 - **Acceptance:** aggregate responses include only records the current user may access; no client-side filtering is used as a security boundary.
 - **Validate:** aggregate authorization tests, query performance tests, and UI tests.
+- **Completed (2026-08-27):** Added strict shared contracts and authenticated organization routes for dashboard summaries, bounded/paginated global search, notifications/action items, and cross-domain reporting aggregates. Every source-domain query applies organization plus role, unit, grade, subject, date-effective assignment, and observation-assignment predicates in Prisma before rows or counts are returned; unauthorized sections are omitted or zero-scoped instead of loading broad datasets for client filtering. Migrated `DashboardView`, `ReportsAnalyticsView`, and `AppShell` search/notifications to cancellable API hooks with loading, empty, error, retry, and direct-navigation states, removing hard-coded dashboard people/metrics/action items and full-list client aggregation. Added PostgreSQL trigram and organization/state/date indexes, bounded search to 20 response items with a maximum offset, generated OpenAPI coverage, unit scope/query-bound tests, component retry/empty tests, and PostgreSQL cross-tenant tests. On a disposable PostgreSQL 16 database with 50,000 synthetic students and 50,000 journeys, representative `EXPLAIN (ANALYZE, BUFFERS)` execution times were approximately 10.4 ms for journey state aggregation, 0.03 ms for recent journeys, and 1.7–22.6 ms for selective search probes depending on planner choice; the full 71-test integration suite passed.
 
 ## P5-013 — Remove sensitive browser persistence
 
@@ -866,7 +867,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 **Milestone exit gate:** any approved prototype data can be imported through a validated, versioned, auditable, and rehearsed process with rollback.
 
-> **Implementation status (updated 2026-08-27):** P6-001 through P6-004 are implemented and validated against a disposable local Docker database, including migration drift, concurrent apply, backup, restore, and rollback checks. Learning Journey workflows, the FEDC, Sensory Profile, and SFA observation slices, and IEP plan authoring are now API/PostgreSQL-backed, but the `0.9.0-beta.1` release gate remains blocked by the declared `P5-013` dependency: IEP transitions, weekly reports, remaining cross-domain dashboards/search/notifications, and related browser persistence must become authorized API/PostgreSQL resources before sensitive browser persistence can be removed. Repeat the rehearsal in staging after P5-013 passes.
+> **Implementation status (updated 2026-08-27):** P6-001 through P6-004 are implemented and validated against a disposable local Docker database, including migration drift, concurrent apply, backup, restore, and rollback checks. Learning Journey workflows, observation slices, IEP plans and transitions, weekly reports, and cross-domain dashboards/search/notifications are now API/PostgreSQL-backed, but the `0.9.0-beta.1` release gate remains blocked by the declared `P5-013` dependency: remaining sensitive browser persistence, automatic prototype seed initialization, reset controls, and obsolete domain types must be removed. Repeat the rehearsal in staging after P5-013 passes.
 
 ## P6-001 — Define a versioned export format
 

@@ -27,6 +27,23 @@ const session = {
   expiresAt: '2026-08-21T00:00:00.000Z',
 };
 
+const dashboard = {
+  data: {
+    generatedAt: '2026-08-27T12:00:00.000Z',
+    role: 'PRINCIPAL',
+    students: { total: 0, specialSupport: 0 },
+    attendance: {
+      schoolDate: '2026-08-27',
+      totalStudents: 0,
+      recorded: 0,
+      present: 0,
+      late: 0,
+      absent: 0,
+    },
+    recentJourneys: [],
+  },
+};
+
 afterEach(() => {
   vi.unstubAllGlobals();
   window.history.replaceState({}, '', '/');
@@ -49,7 +66,11 @@ describe('App authentication shell', () => {
       const url = String(input);
       const payload = url.includes('/students')
         ? { data: [], meta: { count: 0 } }
-        : session;
+        : url.includes('/dashboard-summary')
+          ? dashboard
+          : url.includes('/notifications')
+            ? { data: [], meta: { count: 0 } }
+            : session;
       return new Response(JSON.stringify(payload), {
         status: 200,
         headers: { 'content-type': 'application/json' },
@@ -63,7 +84,7 @@ describe('App authentication shell', () => {
         name: /good morning, demo principal/i,
       }),
     ).toBeVisible();
-    expect(screen.getByText('Attendance workspace')).toBeVisible();
+    expect(screen.getByText('Attendance Today')).toBeVisible();
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(
         '/api/v1/organizations/33333333-3333-4333-8333-333333333333/students',
@@ -83,7 +104,23 @@ describe('App authentication shell', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
-        if (!String(input).includes('/students')) {
+        const url = String(input);
+        if (url.includes('/notifications')) {
+          return new Response(
+            JSON.stringify({ data: [], meta: { count: 0 } }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            },
+          );
+        }
+        if (url.includes('/dashboard-summary')) {
+          return new Response(JSON.stringify(dashboard), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        if (!url.includes('/students')) {
           return new Response(JSON.stringify(session), {
             status: 200,
             headers: { 'content-type': 'application/json' },

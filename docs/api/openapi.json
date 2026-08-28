@@ -121,6 +121,550 @@
         }
       }
     },
+    "/organizations/{organizationId}/school-date": {
+      "get": {
+        "tags": [
+          "Academic data"
+        ],
+        "operationId": "getOrganizationSchoolDate",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationSchoolDateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/settings": {
+      "get": {
+        "tags": [
+          "Organization administration"
+        ],
+        "operationId": "getOrganizationSettings",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Organization administration"
+        ],
+        "operationId": "updateOrganizationSettings",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationSettingsUpdateCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/dashboard-summary": {
+      "get": {
+        "tags": [
+          "Aggregates"
+        ],
+        "operationId": "getDashboardSummary",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/search": {
+      "get": {
+        "tags": [
+          "Aggregates"
+        ],
+        "operationId": "searchAuthorizedRecords",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 10
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AggregateSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/notifications": {
+      "get": {
+        "tags": [
+          "Aggregates"
+        ],
+        "operationId": "listAuthorizedNotifications",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AggregateNotificationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/reporting-aggregate": {
+      "get": {
+        "tags": [
+          "Aggregates"
+        ],
+        "operationId": "getReportingAggregate",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingAggregateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/organizations/{organizationId}/academic-years": {
       "get": {
         "tags": [
@@ -5325,6 +5869,597 @@
         ],
         "additionalProperties": false
       },
+      "DashboardSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "generatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "PRINCIPAL",
+                  "DIRECTOR",
+                  "GRADE_TEACHER",
+                  "SUBJECT_TEACHER",
+                  "SPECIAL_ED_COORDINATOR",
+                  "SPECIAL_ED_TEACHER",
+                  "SPECIALIST"
+                ]
+              },
+              "students": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "specialSupport": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "total",
+                  "specialSupport"
+                ],
+                "additionalProperties": false
+              },
+              "attendance": {
+                "type": "object",
+                "properties": {
+                  "schoolDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "totalStudents": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "recorded": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "present": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "late": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "absent": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "schoolDate",
+                  "totalStudents",
+                  "recorded",
+                  "present",
+                  "late",
+                  "absent"
+                ],
+                "additionalProperties": false
+              },
+              "journeys": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "approved": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "inReview": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "draft": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "total",
+                  "approved",
+                  "inReview",
+                  "draft"
+                ],
+                "additionalProperties": false
+              },
+              "specialEducation": {
+                "type": "object",
+                "properties": {
+                  "activeIeps": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "activeGoals": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "achievedGoals": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "weeklyReportsDue": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "activeIeps",
+                  "activeGoals",
+                  "achievedGoals",
+                  "weeklyReportsDue"
+                ],
+                "additionalProperties": false
+              },
+              "recentJourneys": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "grade": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "subject": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "PRINCIPAL_REVIEW",
+                        "COORDINATOR_REVIEW",
+                        "DIRECTOR_APPROVAL",
+                        "APPROVED",
+                        "ACTIVE",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "grade",
+                    "subject",
+                    "state",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 3
+              }
+            },
+            "required": [
+              "generatedAt",
+              "role",
+              "students",
+              "recentJourneys"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "AggregateSearchResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "STUDENT",
+                    "LEARNING_JOURNEY",
+                    "IEP",
+                    "IEP_GOAL",
+                    "WEEKLY_REPORT"
+                  ]
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "subtitle": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "studentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "classId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "parentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "DRAFT",
+                    "PRINCIPAL_REVIEW",
+                    "COORDINATOR_REVIEW",
+                    "DIRECTOR_APPROVAL",
+                    "APPROVED",
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "title",
+                "subtitle",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 20
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "hasMore": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "count",
+              "limit",
+              "offset",
+              "hasMore"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "AggregateNotificationsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "JOURNEY_REVIEW",
+                    "IEP_REVIEW",
+                    "WEEKLY_REPORT_REVIEW",
+                    "OBSERVATION_DUE",
+                    "WEEKLY_REPORT_DRAFT"
+                  ]
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "occurredAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "dueAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "target": {
+                  "type": "object",
+                  "properties": {
+                    "tab": {
+                      "type": "string",
+                      "enum": [
+                        "LEARNING_JOURNEY_EDITOR",
+                        "SPECIAL_ED_IEP",
+                        "SPECIAL_ED_WEEKLY_REPORT",
+                        "SPECIAL_ED_OBSERVATION"
+                      ]
+                    },
+                    "recordId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "studentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "observationType": {
+                      "type": "string",
+                      "enum": [
+                        "FEDC",
+                        "SENSORY_PROFILE",
+                        "SFA"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "tab"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "title",
+                "message",
+                "occurredAt",
+                "target"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 10
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "count"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "ReportingAggregateResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "generatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "students": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "specialSupport": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "total",
+                  "specialSupport"
+                ],
+                "additionalProperties": false
+              },
+              "attendance": {
+                "type": "object",
+                "properties": {
+                  "schoolDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "totalStudents": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "recorded": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "present": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "late": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "absent": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "schoolDate",
+                  "totalStudents",
+                  "recorded",
+                  "present",
+                  "late",
+                  "absent"
+                ],
+                "additionalProperties": false
+              },
+              "journeys": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "approved": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "inReview": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "draft": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "total",
+                  "approved",
+                  "inReview",
+                  "draft"
+                ],
+                "additionalProperties": false
+              },
+              "specialEducation": {
+                "type": "object",
+                "properties": {
+                  "activeIeps": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "activeGoals": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "achievedGoals": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "weeklyReportsDue": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "activeIeps",
+                  "activeGoals",
+                  "achievedGoals",
+                  "weeklyReportsDue"
+                ],
+                "additionalProperties": false
+              },
+              "observations": {
+                "type": "object",
+                "properties": {
+                  "pending": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "inProgress": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "completed": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "completedByType": {
+                    "type": "object",
+                    "properties": {
+                      "FEDC": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "SENSORY_PROFILE": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "SFA": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "FEDC",
+                      "SENSORY_PROFILE",
+                      "SFA"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "pending",
+                  "inProgress",
+                  "completed",
+                  "completedByType"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "generatedAt",
+              "students"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
       "OrganizationsResponse": {
         "type": "object",
         "properties": {
@@ -5396,11 +6531,13 @@
                 },
                 "startsOn": {
                   "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "format": "date"
                 },
                 "endsOn": {
                   "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "format": "date"
                 }
               },
               "required": [
@@ -5672,11 +6809,13 @@
                     },
                     "startsOn": {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     },
                     "endsOn": {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     }
                   },
                   "required": [
@@ -5714,11 +6853,13 @@
                         },
                         "startsOn": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         "endsOn": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         }
                       },
                       "required": [
@@ -5817,7 +6958,8 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     },
                     {
                       "type": "null"
@@ -5826,11 +6968,13 @@
                 },
                 "startsOn": {
                   "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "format": "date"
                 },
                 "endsOn": {
                   "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "format": "date"
                 },
                 "teamMembers": {
                   "type": "array",
@@ -5950,7 +7094,8 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           {
                             "type": "null"
@@ -6383,7 +7528,8 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           {
                             "type": "null"
@@ -6401,7 +7547,8 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           {
                             "type": "null"
@@ -6444,7 +7591,8 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           {
                             "type": "null"
@@ -6612,11 +7760,13 @@
                   },
                   "startsOn": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   "endsOn": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   }
                 },
                 "required": [
@@ -6654,11 +7804,13 @@
                       },
                       "startsOn": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "format": "date"
                       },
                       "endsOn": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "format": "date"
                       }
                     },
                     "required": [
@@ -6757,7 +7909,8 @@
                 "anyOf": [
                   {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   {
                     "type": "null"
@@ -6766,11 +7919,13 @@
               },
               "startsOn": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "endsOn": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "teamMembers": {
                 "type": "array",
@@ -6890,7 +8045,8 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         {
                           "type": "null"
@@ -7323,7 +8479,8 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         {
                           "type": "null"
@@ -7341,7 +8498,8 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         {
                           "type": "null"
@@ -7384,7 +8542,8 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         {
                           "type": "null"
@@ -7435,7 +8594,8 @@
                           },
                           "date": {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           "rating": {
                             "anyOf": [
@@ -7501,7 +8661,8 @@
                             "anyOf": [
                               {
                                 "type": "string",
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "format": "date"
                               },
                               {
                                 "type": "null"
@@ -7728,7 +8889,8 @@
             "anyOf": [
               {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               {
                 "type": "null"
@@ -7737,11 +8899,13 @@
           },
           "startsOn": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "endsOn": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "teamMembers": {
             "type": "array",
@@ -7853,7 +9017,8 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     },
                     {
                       "type": "null"
@@ -8039,7 +9204,8 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     },
                     {
                       "type": "null"
@@ -8255,7 +9421,8 @@
             "anyOf": [
               {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               {
                 "type": "null"
@@ -8264,11 +9431,13 @@
           },
           "startsOn": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "endsOn": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "teamMembers": {
             "type": "array",
@@ -8380,7 +9549,8 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     },
                     {
                       "type": "null"
@@ -8566,7 +9736,8 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     },
                     {
                       "type": "null"
@@ -8776,11 +9947,13 @@
                   },
                   "startsOn": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   "endsOn": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   }
                 },
                 "required": [
@@ -8818,11 +9991,13 @@
                       },
                       "startsOn": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "format": "date"
                       },
                       "endsOn": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "format": "date"
                       }
                     },
                     "required": [
@@ -8921,7 +10096,8 @@
                 "anyOf": [
                   {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   {
                     "type": "null"
@@ -8930,11 +10106,13 @@
               },
               "startsOn": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "endsOn": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "teamMembers": {
                 "type": "array",
@@ -9054,7 +10232,8 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         {
                           "type": "null"
@@ -9487,7 +10666,8 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         {
                           "type": "null"
@@ -9505,7 +10685,8 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         {
                           "type": "null"
@@ -9548,7 +10729,8 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         {
                           "type": "null"
@@ -9599,7 +10781,8 @@
                           },
                           "date": {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           "rating": {
                             "anyOf": [
@@ -9665,7 +10848,8 @@
                             "anyOf": [
                               {
                                 "type": "string",
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "format": "date"
                               },
                               {
                                 "type": "null"
@@ -10082,6 +11266,87 @@
         ],
         "additionalProperties": false
       },
+      "OrganizationSchoolDateResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "organizationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "timezone": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "schoolDate": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
+              }
+            },
+            "required": [
+              "organizationId",
+              "timezone",
+              "schoolDate"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "OrganizationSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "organizationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "timezone": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "organizationId",
+              "name",
+              "timezone"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "OrganizationSettingsUpdateCommand": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "timezone"
+        ],
+        "additionalProperties": false
+      },
       "OrganizationAccountCreateCommand": {
         "type": "object",
         "properties": {
@@ -10430,7 +11695,8 @@
                 },
                 "dateOfBirth": {
                   "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "format": "date"
                 },
                 "specialNeedsFlag": {},
                 "status": {
@@ -10499,13 +11765,15 @@
                       },
                       "startsOn": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "format": "date"
                       },
                       "endsOn": {
                         "anyOf": [
                           {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           {
                             "type": "null"
@@ -10567,13 +11835,15 @@
                         },
                         "startsOn": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         "endsOn": {
                           "anyOf": [
                             {
                               "type": "string",
-                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                              "format": "date"
                             },
                             {
                               "type": "null"
@@ -10622,13 +11892,15 @@
                         },
                         "startsOn": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         "endsOn": {
                           "anyOf": [
                             {
                               "type": "string",
-                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                              "format": "date"
                             },
                             {
                               "type": "null"
@@ -10798,7 +12070,8 @@
               },
               "dateOfBirth": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "specialNeedsFlag": {},
               "status": {
@@ -10867,13 +12140,15 @@
                     },
                     "startsOn": {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     },
                     "endsOn": {
                       "anyOf": [
                         {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         {
                           "type": "null"
@@ -10935,13 +12210,15 @@
                       },
                       "startsOn": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "format": "date"
                       },
                       "endsOn": {
                         "anyOf": [
                           {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           {
                             "type": "null"
@@ -10990,13 +12267,15 @@
                       },
                       "startsOn": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "format": "date"
                       },
                       "endsOn": {
                         "anyOf": [
                           {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           {
                             "type": "null"
@@ -11207,7 +12486,8 @@
           },
           "dateOfBirth": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "address": {
             "anyOf": [
@@ -11277,13 +12557,15 @@
               },
               "startsOn": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "endsOn": {
                 "anyOf": [
                   {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   {
                     "type": "null"
@@ -11343,7 +12625,8 @@
           },
           "dateOfBirth": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "address": {
             "anyOf": [
@@ -11413,13 +12696,15 @@
               },
               "startsOn": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "endsOn": {
                 "anyOf": [
                   {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   {
                     "type": "null"
@@ -11491,7 +12776,8 @@
               },
               "dateOfBirth": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "specialNeedsFlag": {},
               "status": {
@@ -11560,13 +12846,15 @@
                     },
                     "startsOn": {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     },
                     "endsOn": {
                       "anyOf": [
                         {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "format": "date"
                         },
                         {
                           "type": "null"
@@ -11628,13 +12916,15 @@
                       },
                       "startsOn": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "format": "date"
                       },
                       "endsOn": {
                         "anyOf": [
                           {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           {
                             "type": "null"
@@ -11683,13 +12973,15 @@
                       },
                       "startsOn": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "format": "date"
                       },
                       "endsOn": {
                         "anyOf": [
                           {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "format": "date"
                           },
                           {
                             "type": "null"
@@ -11889,13 +13181,15 @@
                 },
                 "startsOn": {
                   "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "format": "date"
                 },
                 "endsOn": {
                   "anyOf": [
                     {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     },
                     {
                       "type": "null"
@@ -12047,13 +13341,15 @@
           },
           "startsOn": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "endsOn": {
             "anyOf": [
               {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               {
                 "type": "null"
@@ -12072,7 +13368,8 @@
         "properties": {
           "endsOn": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           }
         },
         "required": [
@@ -12103,13 +13400,15 @@
               },
               "startsOn": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "endsOn": {
                 "anyOf": [
                   {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   {
                     "type": "null"
@@ -12287,7 +13586,8 @@
               },
               "schoolDate": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "version": {
                 "type": "string",
@@ -12444,7 +13744,8 @@
         "properties": {
           "schoolDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "expectedVersion": {
             "type": "string",
@@ -12519,7 +13820,8 @@
             "properties": {
               "schoolDate": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "version": {
                 "type": "string",
@@ -12966,7 +14268,8 @@
                 },
                 "dueDate": {
                   "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "format": "date"
                 },
                 "priority": {
                   "anyOf": [
@@ -13287,7 +14590,8 @@
           },
           "dueDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "priority": {
             "anyOf": [
@@ -13345,7 +14649,8 @@
           },
           "dueDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "priority": {
             "anyOf": [
@@ -13417,7 +14722,8 @@
               },
               "dueDate": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "priority": {
                 "anyOf": [
@@ -13706,7 +15012,8 @@
         "properties": {
           "observationDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "responses": {
             "type": "object",
@@ -13763,7 +15070,8 @@
         "properties": {
           "observationDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "responses": {
             "type": "object",
@@ -13821,7 +15129,8 @@
         "properties": {
           "observationDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "responses": {
             "type": "object",
@@ -13906,7 +15215,8 @@
               },
               "observationDate": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "status": {
                 "type": "string",
@@ -14309,7 +15619,8 @@
                 },
                 "observationDate": {
                   "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "format": "date"
                 },
                 "status": {
                   "type": "string",
@@ -14727,7 +16038,8 @@
                   },
                   "observationDate": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   "status": {
                     "type": "string",
@@ -15106,7 +16418,8 @@
         "properties": {
           "observationDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "teacherContactFrequency": {
             "anyOf": [
@@ -15163,7 +16476,8 @@
         "properties": {
           "observationDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "teacherContactFrequency": {
             "anyOf": [
@@ -15221,7 +16535,8 @@
         "properties": {
           "observationDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "teacherContactFrequency": {
             "anyOf": [
@@ -15306,7 +16621,8 @@
               },
               "observationDate": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "status": {
                 "type": "string",
@@ -15776,7 +17092,8 @@
                 },
                 "observationDate": {
                   "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "format": "date"
                 },
                 "status": {
                   "type": "string",
@@ -16261,7 +17578,8 @@
                   },
                   "observationDate": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   "status": {
                     "type": "string",
@@ -16707,11 +18025,13 @@
         "properties": {
           "assessmentDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "observationDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "programRecommendation": {
             "type": "string",
@@ -16852,11 +18172,13 @@
         "properties": {
           "assessmentDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "observationDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "programRecommendation": {
             "type": "string",
@@ -17002,11 +18324,13 @@
         "properties": {
           "assessmentDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "observationDate": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "programRecommendation": {
             "type": "string",
@@ -17179,13 +18503,15 @@
               },
               "assessmentDate": {
                 "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "format": "date"
               },
               "observationDate": {
                 "anyOf": [
                   {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   {
                     "type": "null"
@@ -17709,13 +19035,15 @@
                 },
                 "assessmentDate": {
                   "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "format": "date"
                 },
                 "observationDate": {
                   "anyOf": [
                     {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
                     },
                     {
                       "type": "null"
@@ -18254,13 +19582,15 @@
                   },
                   "assessmentDate": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
                   },
                   "observationDate": {
                     "anyOf": [
                       {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "format": "date"
                       },
                       {
                         "type": "null"

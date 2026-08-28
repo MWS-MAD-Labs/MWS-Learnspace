@@ -225,13 +225,14 @@ async function workflowCommand(
 export const weeklyReportService = {
   async getWeeklyReports(
     organizationId: string,
-    filters: { studentId?: string; weekNumber?: number } = {},
+    filters: { studentId?: string; weekNumber?: number; year?: number } = {},
     signal?: AbortSignal,
   ): Promise<WeeklyReport[]> {
     const query = new URLSearchParams();
     if (filters.studentId) query.set('studentId', filters.studentId);
     if (filters.weekNumber !== undefined)
       query.set('weekNumber', String(filters.weekNumber));
+    if (filters.year !== undefined) query.set('year', String(filters.year));
     const response = await apiClient.request(
       `${organizationPath(organizationId)}/weekly-reports${query.size ? `?${query}` : ''}`,
       { schema: reportsResponseSchema, signal },

@@ -17,8 +17,8 @@ const apiReport = {
   iepId: '44444444-4444-4444-8444-444444444444',
   year: 2026,
   weekNumber: 8,
-  weekStart: '2026-10-19',
-  weekEnd: '2026-10-23',
+  weekStart: '2026-02-16',
+  weekEnd: '2026-02-20',
   teacher: {
     id: '55555555-5555-4555-8555-555555555555',
     displayName: 'Teacher One',
@@ -63,11 +63,12 @@ describe('weeklyReportService', () => {
 
     const reports = await weeklyReportService.getWeeklyReports(organizationId, {
       studentId: apiReport.studentId,
+      year: 2026,
       weekNumber: 8,
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `/api/v1/organizations/${organizationId}/weekly-reports?studentId=${apiReport.studentId}&weekNumber=8`,
+      `/api/v1/organizations/${organizationId}/weekly-reports?studentId=${apiReport.studentId}&weekNumber=8&year=2026`,
       expect.objectContaining({ method: 'GET' }),
     );
     expect(reports[0]).toMatchObject({
@@ -92,7 +93,7 @@ describe('weeklyReportService', () => {
       {
         ...apiReport,
         year: '2026',
-        weekRange: 'Oct 19–23, 2026',
+        weekRange: 'Feb 16 – Feb 20, 2026',
         teacherId: apiReport.teacher.id,
         teacherName: apiReport.teacher.displayName,
         status: 'Draft',
@@ -134,7 +135,7 @@ describe('weeklyReportService', () => {
     const report = {
       ...apiReport,
       year: '2026',
-      weekRange: 'Oct 19–23, 2026',
+      weekRange: 'Feb 16 – Feb 20, 2026',
       teacherId: apiReport.teacher.id,
       teacherName: apiReport.teacher.displayName,
       status: 'Draft' as const,

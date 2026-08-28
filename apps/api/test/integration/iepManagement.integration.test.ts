@@ -138,7 +138,7 @@ function command(studentId = assignedStudentId) {
   };
 }
 
-function postIep(body: unknown, sessionCookie: string) {
+function postIep(body: object, sessionCookie: string) {
   return request(app)
     .post(`/api/v1/organizations/${organizationId}/ieps`)
     .set('cookie', `${sessionCookie}; learnspace_csrf=${csrf}`)
@@ -146,7 +146,7 @@ function postIep(body: unknown, sessionCookie: string) {
     .send(body);
 }
 
-function putIep(iepId: string, body: unknown, sessionCookie: string) {
+function putIep(iepId: string, body: object, sessionCookie: string) {
   return request(app)
     .put(`/api/v1/organizations/${organizationId}/ieps/${iepId}`)
     .set('cookie', `${sessionCookie}; learnspace_csrf=${csrf}`)
@@ -157,7 +157,7 @@ function putIep(iepId: string, body: unknown, sessionCookie: string) {
 function workflow(
   iepId: string,
   commandName: string,
-  body: unknown,
+  body: object,
   sessionCookie: string,
   targetOrganizationId = organizationId,
 ) {
@@ -636,6 +636,7 @@ integration('IEP aggregate management', () => {
       assignedStudentIds: [assignedStudentId],
       assignedStudentScopes: [
         {
+          organizationId,
           studentId: assignedStudentId,
           startsOn: new Date('2026-08-01T00:00:00.000Z'),
           endsOn: null,
@@ -652,6 +653,7 @@ integration('IEP aggregate management', () => {
           expectedVersion: 1,
           actorId: teacherId,
           membership,
+          onDate: new Date('2026-08-28T00:00:00.000Z'),
           requestId: 'rollback-request',
           transition: {
             fromState: 'DRAFT',

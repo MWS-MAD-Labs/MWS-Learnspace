@@ -4,6 +4,7 @@ export * from './resources.js';
 export * from './exportFormat.js';
 export * from './iep.js';
 export * from './weeklyReport.js';
+export * from './aggregates.js';
 
 export const apiErrorSchema = z.object({
   error: z.object({

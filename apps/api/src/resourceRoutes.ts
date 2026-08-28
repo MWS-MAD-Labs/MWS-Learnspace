@@ -24,6 +24,9 @@ import {
   organizationAccountMutationResponseSchema,
   organizationAccountsResponseSchema,
   organizationAccountUpdateCommandSchema,
+  organizationSchoolDateResponseSchema,
+  organizationSettingsResponseSchema,
+  organizationSettingsUpdateCommandSchema,
   organizationsResponseSchema,
   semestersResponseSchema,
   staffDirectoryResponseSchema,
@@ -51,6 +54,7 @@ import {
 } from './authRoutes.js';
 import { HttpError, parseRequest } from './httpErrors.js';
 import type { SessionService } from './sessionService.js';
+import { organizationSchoolDate } from './organizationTime.js';
 
 const leadershipRoles: readonly MembershipRole[] = ['DIRECTOR', 'PRINCIPAL'];
 const assignedStudentRoles: readonly MembershipRole[] = [
@@ -228,6 +232,7 @@ function studentScopeWhere(
       ? membership.assignedStudentScopes
           .filter(
             (scope) =>
+              scope.organizationId === membership.organizationId &&
               scope.startsOn <= schoolDate &&
               (scope.endsOn === null || scope.endsOn >= schoolDate),
           )
@@ -751,6 +756,120 @@ export function createResourceRouter(
       next(error);
     }
   });
+
+  router.get(
+    '/organizations/:organizationId/school-date',
+    async (request, response, next) => {
+      try {
+        const { organizationId } = parseRequest(
+          z.object({ organizationId: uuidSchema }).strict(),
+          request.params,
+        );
+        membershipFor(request, organizationId);
+        const { timezone, schoolDate } = await organizationSchoolDate(
+          prisma,
+          organizationId,
+        );
+        response.json(
+          organizationSchoolDateResponseSchema.parse({
+            data: {
+              organizationId,
+              timezone,
+              schoolDate: schoolDate.toISOString().slice(0, 10),
+            },
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
+    '/organizations/:organizationId/settings',
+    async (request, response, next) => {
+      try {
+        const { organizationId } = parseRequest(
+          z.object({ organizationId: uuidSchema }).strict(),
+          request.params,
+        );
+        const membership = membershipFor(request, organizationId);
+        requireResourcePermission(membership, 'organization:admin');
+        const organization = await prisma.organization.findFirstOrThrow({
+          where: {
+            id: organizationId,
+            status: 'ACTIVE',
+          },
+          select: { id: true, name: true, timezone: true },
+        });
+        response.json(
+          organizationSettingsResponseSchema.parse({
+            data: {
+              organizationId: organization.id,
+              name: organization.name,
+              timezone: organization.timezone,
+            },
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.patch(
+    '/organizations/:organizationId/settings',
+    createCsrfProtection(),
+    async (request, response, next) => {
+      try {
+        const path = parseRequest(
+          z.object({ organizationId: uuidSchema }).strict(),
+          request.params,
+        );
+        const command = parseRequest(
+          organizationSettingsUpdateCommandSchema,
+          request.body,
+        );
+        const auth = requireAuth(request);
+        const membership = membershipFor(request, path.organizationId);
+        requireResourcePermission(membership, 'organization:admin');
+        const organization = await prisma.$transaction(async (transaction) => {
+          const existing = await transaction.organization.findUniqueOrThrow({
+            where: { id: path.organizationId },
+            select: { id: true, name: true, timezone: true },
+          });
+          if (existing.timezone === command.timezone) return existing;
+          const updated = await transaction.organization.update({
+            where: { id: path.organizationId },
+            data: { timezone: command.timezone },
+            select: { id: true, name: true, timezone: true },
+          });
+          await createAuditRepository(transaction as PrismaClient).append({
+            organizationId: path.organizationId,
+            actorId: auth.userId,
+            action: 'organization.settings.update',
+            targetType: 'Organization',
+            targetId: path.organizationId,
+            requestId: String(response.locals.requestId),
+            result: 'SUCCEEDED',
+            metadata: { changedFields: ['timezone'] },
+          });
+          return updated;
+        });
+        response.json(
+          organizationSettingsResponseSchema.parse({
+            data: {
+              organizationId: organization.id,
+              name: organization.name,
+              timezone: organization.timezone,
+            },
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   router.get(
     '/organizations/:organizationId/academic-years',

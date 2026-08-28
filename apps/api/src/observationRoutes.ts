@@ -358,6 +358,7 @@ function canReadObservationStudent(
   if (membership.role === 'SPECIAL_ED_COORDINATOR') return true;
   return (membership.assignedStudentScopes ?? []).some(
     (scope) =>
+      scope.organizationId === membership.organizationId &&
       scope.studentId === studentId &&
       scope.startsOn <= observationDate &&
       (scope.endsOn === null || scope.endsOn >= observationDate),
@@ -1551,7 +1552,9 @@ export function createObservationRouter(
         const canReadEmptyStudent =
           membership.role === 'SPECIAL_ED_COORDINATOR' ||
           (membership.assignedStudentScopes ?? []).some(
-            (scope) => scope.studentId === path.studentId,
+            (scope) =>
+              scope.organizationId === membership.organizationId &&
+              scope.studentId === path.studentId,
           ) ||
           (membership.observationAssignedStudentIds ?? []).includes(
             path.studentId,
@@ -1618,7 +1621,9 @@ export function createObservationRouter(
         const canReadEmptyStudent =
           membership.role === 'SPECIAL_ED_COORDINATOR' ||
           (membership.assignedStudentScopes ?? []).some(
-            (scope) => scope.studentId === path.studentId,
+            (scope) =>
+              scope.organizationId === membership.organizationId &&
+              scope.studentId === path.studentId,
           ) ||
           (membership.observationAssignedStudentIds ?? []).includes(
             path.studentId,
@@ -2083,7 +2088,9 @@ export function createObservationRouter(
         const canReadEmptyStudent =
           membership.role === 'SPECIAL_ED_COORDINATOR' ||
           (membership.assignedStudentScopes ?? []).some(
-            (scope) => scope.studentId === path.studentId,
+            (scope) =>
+              scope.organizationId === membership.organizationId &&
+              scope.studentId === path.studentId,
           ) ||
           (membership.observationAssignedStudentIds ?? []).includes(
             path.studentId,
@@ -2150,7 +2157,9 @@ export function createObservationRouter(
         const canReadEmptyStudent =
           membership.role === 'SPECIAL_ED_COORDINATOR' ||
           (membership.assignedStudentScopes ?? []).some(
-            (scope) => scope.studentId === path.studentId,
+            (scope) =>
+              scope.organizationId === membership.organizationId &&
+              scope.studentId === path.studentId,
           ) ||
           (membership.observationAssignedStudentIds ?? []).includes(
             path.studentId,
@@ -2704,7 +2713,9 @@ export function createObservationRouter(
         const canReadEmptyStudent =
           membership.role === 'SPECIAL_ED_COORDINATOR' ||
           (membership.assignedStudentScopes ?? []).some(
-            (scope) => scope.studentId === path.studentId,
+            (scope) =>
+              scope.organizationId === membership.organizationId &&
+              scope.studentId === path.studentId,
           ) ||
           (membership.observationAssignedStudentIds ?? []).includes(
             path.studentId,
@@ -2771,7 +2782,9 @@ export function createObservationRouter(
         const canReadEmptyStudent =
           membership.role === 'SPECIAL_ED_COORDINATOR' ||
           (membership.assignedStudentScopes ?? []).some(
-            (scope) => scope.studentId === path.studentId,
+            (scope) =>
+              scope.organizationId === membership.organizationId &&
+              scope.studentId === path.studentId,
           ) ||
           (membership.observationAssignedStudentIds ?? []).includes(
             path.studentId,

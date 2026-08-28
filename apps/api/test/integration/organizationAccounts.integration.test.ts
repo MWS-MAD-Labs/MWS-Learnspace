@@ -58,7 +58,7 @@ function get(path: string, cookie: string) {
   return request(app).get(path).set('cookie', cookie);
 }
 
-function post(path: string, body: unknown, cookie: string) {
+function post(path: string, body: object, cookie: string) {
   return request(app)
     .post(path)
     .set('cookie', `${cookie}; learnspace_csrf=${csrf}`)
@@ -66,7 +66,7 @@ function post(path: string, body: unknown, cookie: string) {
     .send(body);
 }
 
-function patch(path: string, body: unknown, cookie: string) {
+function patch(path: string, body: object, cookie: string) {
   return request(app)
     .patch(path)
     .set('cookie', `${cookie}; learnspace_csrf=${csrf}`)
@@ -303,6 +303,57 @@ integration('organization user and membership administration', () => {
         }),
       },
     ]);
+  });
+
+  it('validates organization IDs on school-date and settings GET routes', async () => {
+    const [schoolDate, settings] = await Promise.all([
+      get('/api/v1/organizations/not-a-uuid/school-date', directorCookie),
+      get('/api/v1/organizations/not-a-uuid/settings', directorCookie),
+    ]);
+    expect(schoolDate.status).toBe(400);
+    expect(schoolDate.body.error.code).toBe('VALIDATION_ERROR');
+    expect(settings.status).toBe(400);
+    expect(settings.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('validates and audits organization timezone configuration', async () => {
+    const initial = await get(
+      `/api/v1/organizations/${organizationId}/settings`,
+      directorCookie,
+    );
+    expect(initial.status).toBe(200);
+    expect(initial.body.data.timezone).toBe('UTC');
+
+    const invalid = await patch(
+      `/api/v1/organizations/${organizationId}/settings`,
+      { timezone: 'Not/A_Timezone' },
+      directorCookie,
+    );
+    expect(invalid.status).toBe(400);
+
+    const updated = await patch(
+      `/api/v1/organizations/${organizationId}/settings`,
+      { timezone: 'America/Los_Angeles' },
+      directorCookie,
+    );
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.timezone).toBe('America/Los_Angeles');
+    const noOp = await patch(
+      `/api/v1/organizations/${organizationId}/settings`,
+      { timezone: 'America/Los_Angeles' },
+      directorCookie,
+    );
+    expect(noOp.status).toBe(200);
+    expect(
+      await prisma.auditEvent.count({
+        where: {
+          organizationId,
+          action: 'organization.settings.update',
+          targetId: organizationId,
+          result: 'SUCCEEDED',
+        },
+      }),
+    ).toBe(1);
   });
 
   it('enforces organization-admin authorization, tenant scope, role-scope consistency, and self-lockout protection', async () => {

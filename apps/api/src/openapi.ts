@@ -3,11 +3,14 @@ import { resolve } from 'node:path';
 import type { ZodTypeAny } from 'zod';
 import {
   academicYearsResponseSchema,
+  aggregateNotificationsResponseSchema,
+  aggregateSearchResponseSchema,
   apiErrorSchema,
   attendanceBulkSaveCommandSchema,
   attendanceBulkSaveResponseSchema,
   attendanceRosterResponseSchema,
   classesResponseSchema,
+  dashboardSummaryResponseSchema,
   currentSessionResponseSchema,
   fedcObservationCompleteCommandSchema,
   fedcObservationCreateDraftCommandSchema,
@@ -27,10 +30,14 @@ import {
   iepUpdateCommandSchema,
   iepWorkflowCommandSchema,
   iepsResponseSchema,
+  reportingAggregateResponseSchema,
   organizationAccountCreateCommandSchema,
   organizationAccountMutationResponseSchema,
   organizationAccountsResponseSchema,
   organizationAccountUpdateCommandSchema,
+  organizationSchoolDateResponseSchema,
+  organizationSettingsResponseSchema,
+  organizationSettingsUpdateCommandSchema,
   organizationsResponseSchema,
   observationAssignmentCancelCommandSchema,
   observationAssignmentCreateCommandSchema,
@@ -74,6 +81,10 @@ const components: Record<string, ZodTypeAny> = {
   ApiError: apiErrorSchema,
   VersionResponse: versionResponseSchema,
   CurrentSessionResponse: currentSessionResponseSchema,
+  DashboardSummaryResponse: dashboardSummaryResponseSchema,
+  AggregateSearchResponse: aggregateSearchResponseSchema,
+  AggregateNotificationsResponse: aggregateNotificationsResponseSchema,
+  ReportingAggregateResponse: reportingAggregateResponseSchema,
   OrganizationsResponse: organizationsResponseSchema,
   AcademicYearsResponse: academicYearsResponseSchema,
   UnitsResponse: unitsResponseSchema,
@@ -89,6 +100,9 @@ const components: Record<string, ZodTypeAny> = {
   SubjectsResponse: subjectsResponseSchema,
   StaffDirectoryResponse: staffDirectoryResponseSchema,
   OrganizationAccountsResponse: organizationAccountsResponseSchema,
+  OrganizationSchoolDateResponse: organizationSchoolDateResponseSchema,
+  OrganizationSettingsResponse: organizationSettingsResponseSchema,
+  OrganizationSettingsUpdateCommand: organizationSettingsUpdateCommandSchema,
   OrganizationAccountCreateCommand: organizationAccountCreateCommandSchema,
   OrganizationAccountUpdateCommand: organizationAccountUpdateCommandSchema,
   OrganizationAccountMutationResponse:
@@ -157,6 +171,7 @@ function stringSchema(definition: Record<string, unknown>): JsonSchema {
     if (check.kind === 'email') result.format = 'email';
     if (check.kind === 'url') result.format = 'uri';
     if (check.kind === 'datetime') result.format = 'date-time';
+    if (check.kind === 'date') result.format = 'date';
     if (check.kind === 'regex' && check.regex instanceof RegExp) {
       result.pattern = check.regex.source;
     }
@@ -439,6 +454,93 @@ export function generateOpenApiDocument() {
             '500': errorResponses['500'],
           },
         },
+      },
+      '/organizations/{organizationId}/school-date': {
+        get: collectionOperation(
+          'Academic data',
+          'getOrganizationSchoolDate',
+          'OrganizationSchoolDateResponse',
+        ),
+      },
+      '/organizations/{organizationId}/settings': {
+        get: collectionOperation(
+          'Organization administration',
+          'getOrganizationSettings',
+          'OrganizationSettingsResponse',
+        ),
+        patch: {
+          tags: ['Organization administration'],
+          operationId: 'updateOrganizationSettings',
+          parameters: [organizationParameter, csrfParameter],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/OrganizationSettingsUpdateCommand',
+                },
+              },
+            },
+          },
+          responses: {
+            '200': jsonResponse('OrganizationSettingsResponse'),
+            ...errorResponses,
+          },
+        },
+      },
+      '/organizations/{organizationId}/dashboard-summary': {
+        get: collectionOperation(
+          'Aggregates',
+          'getDashboardSummary',
+          'DashboardSummaryResponse',
+        ),
+      },
+      '/organizations/{organizationId}/search': {
+        get: {
+          ...collectionOperation(
+            'Aggregates',
+            'searchAuthorizedRecords',
+            'AggregateSearchResponse',
+          ),
+          parameters: [
+            organizationParameter,
+            {
+              name: 'q',
+              in: 'query',
+              required: true,
+              schema: { type: 'string', minLength: 2, maxLength: 100 },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: {
+                type: 'integer',
+                minimum: 0,
+                maximum: 1000,
+                default: 0,
+              },
+            },
+          ],
+        },
+      },
+      '/organizations/{organizationId}/notifications': {
+        get: collectionOperation(
+          'Aggregates',
+          'listAuthorizedNotifications',
+          'AggregateNotificationsResponse',
+        ),
+      },
+      '/organizations/{organizationId}/reporting-aggregate': {
+        get: collectionOperation(
+          'Aggregates',
+          'getReportingAggregate',
+          'ReportingAggregateResponse',
+        ),
       },
       '/organizations/{organizationId}/academic-years': {
         get: collectionOperation(

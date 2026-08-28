@@ -132,10 +132,53 @@ export const PeopleAccessView: React.FC = () => {
   const [grades, setGrades] = useState<Option[]>([]);
   const [subjects, setSubjects] = useState<Option[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [organizationName, setOrganizationName] = useState('');
+  const [timezone, setTimezone] = useState('UTC');
+  const timezoneDraft = useRef('UTC');
+  const [savingTimezone, setSavingTimezone] = useState(false);
+  const [timezoneState, setTimezoneState] = useState<
+    'loading' | 'ready' | 'error'
+  >('loading');
+  const [timezoneError, setTimezoneError] = useState<string>();
+  const [timezoneFeedback, setTimezoneFeedback] = useState<Feedback>();
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>();
   const loadController = useRef<AbortController>();
+  const settingsController = useRef<AbortController>();
+
+  const loadSettings = useCallback(async () => {
+    if (!organizationId || !canAdmin) return;
+    settingsController.current?.abort();
+    const controller = new AbortController();
+    settingsController.current = controller;
+    setTimezoneState('loading');
+    setTimezoneError(undefined);
+    setTimezoneFeedback(undefined);
+    try {
+      const settingsResponse =
+        await organizationAdministrationService.getSettings(
+          organizationId,
+          controller.signal,
+        );
+      setOrganizationName(settingsResponse.data.name);
+      timezoneDraft.current = settingsResponse.data.timezone;
+      setTimezone(settingsResponse.data.timezone);
+      setTimezoneState('ready');
+    } catch (error) {
+      if (isRequestCancelled(error)) return;
+      setTimezoneState('error');
+      setTimezoneError(
+        error instanceof Error
+          ? error.message
+          : 'Organization timezone could not be loaded.',
+      );
+    } finally {
+      if (settingsController.current === controller) {
+        settingsController.current = undefined;
+      }
+    }
+  }, [canAdmin, organizationId]);
 
   const load = useCallback(async () => {
     if (!organizationId || !canAdmin) return;
@@ -188,8 +231,48 @@ export const PeopleAccessView: React.FC = () => {
 
   useEffect(() => {
     void load();
-    return () => loadController.current?.abort();
-  }, [load]);
+    void loadSettings();
+    return () => {
+      loadController.current?.abort();
+      settingsController.current?.abort();
+    };
+  }, [load, loadSettings]);
+
+  const saveTimezone = async () => {
+    if (!organizationId || savingTimezone) return;
+    const submittedTimezone = timezone;
+    setSavingTimezone(true);
+    setTimezoneFeedback(undefined);
+    try {
+      const response = await organizationAdministrationService.updateSettings(
+        organizationId,
+        { timezone: submittedTimezone },
+      );
+      if (timezoneDraft.current === submittedTimezone) {
+        timezoneDraft.current = response.data.timezone;
+        setTimezone(response.data.timezone);
+        setTimezoneFeedback({
+          kind: 'success',
+          text: 'Organization timezone updated.',
+        });
+      } else {
+        setTimezoneFeedback({
+          kind: 'success',
+          text: `${response.data.timezone} was saved. Your current draft (${timezoneDraft.current}) still needs saving.`,
+        });
+      }
+    } catch (error) {
+      setTimezoneFeedback({
+        kind: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Organization timezone could not be saved.',
+      });
+    } finally {
+      setSavingTimezone(false);
+    }
+  };
 
   const isEditing = Boolean(form.membershipId);
   const scopeMode = useMemo(() => {
@@ -319,6 +402,66 @@ export const PeopleAccessView: React.FC = () => {
           and scopes.
         </p>
       </div>
+
+      <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+        <h2 className="font-black">School timezone</h2>
+        <p className="mt-1 text-xs text-stone-600">
+          Dashboard dates, attendance scope, and assignment authorization use
+          the IANA timezone configured for {organizationName}.
+        </p>
+        {timezoneState === 'error' && (
+          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+            {timezoneError}
+            <button
+              type="button"
+              onClick={() => void loadSettings()}
+              className="ml-2 font-bold underline"
+            >
+              Retry timezone
+            </button>
+          </div>
+        )}
+        {timezoneFeedback && (
+          <div
+            role={timezoneFeedback.kind === 'error' ? 'alert' : 'status'}
+            className={`mt-3 rounded-xl px-3 py-2 text-xs font-semibold ${
+              timezoneFeedback.kind === 'error'
+                ? 'bg-rose-50 text-rose-800'
+                : 'bg-emerald-50 text-emerald-800'
+            }`}
+          >
+            {timezoneFeedback.text}
+          </div>
+        )}
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+          <label className="flex-1 text-xs font-bold text-stone-700">
+            IANA timezone
+            <input
+              value={timezone}
+              onChange={(event) => {
+                timezoneDraft.current = event.target.value;
+                setTimezone(event.target.value);
+                setTimezoneFeedback(undefined);
+              }}
+              placeholder="America/Los_Angeles"
+              className="mt-1 w-full rounded-xl border border-stone-200 px-3 py-2 text-sm font-normal"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => void saveTimezone()}
+            disabled={savingTimezone || timezoneState !== 'ready'}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#6E161E] px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+          >
+            {savingTimezone ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            Save timezone
+          </button>
+        </div>
+      </section>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)]">
         <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">

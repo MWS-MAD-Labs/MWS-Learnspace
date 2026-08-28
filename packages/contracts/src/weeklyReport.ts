@@ -8,6 +8,67 @@ import {
 } from './resources.js';
 
 const text = (maximum: number) => z.string().trim().min(1).max(maximum);
+
+function isoWeekMonday(year: number, weekNumber: number) {
+  const januaryFourth = new Date(Date.UTC(year, 0, 4));
+  const weekday = januaryFourth.getUTCDay() || 7;
+  const firstMonday = new Date(
+    januaryFourth.getTime() - (weekday - 1) * 86_400_000,
+  );
+  return new Date(firstMonday.getTime() + (weekNumber - 1) * 7 * 86_400_000);
+}
+
+export function isoWeekForDate(value: Date | string) {
+  const date =
+    typeof value === 'string' ? new Date(`${value}T00:00:00.000Z`) : value;
+  if (Number.isNaN(date.getTime())) {
+    throw new RangeError('Expected a valid ISO calendar date.');
+  }
+  const thursday = new Date(date);
+  const weekday = thursday.getUTCDay() || 7;
+  thursday.setUTCDate(thursday.getUTCDate() + 4 - weekday);
+  const year = thursday.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(year, 0, 1));
+  const week = Math.ceil(
+    ((thursday.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
+  );
+  return { year, week };
+}
+
+export function isoWeeksInYear(year: number) {
+  return isoWeekForDate(new Date(Date.UTC(year, 11, 28))).week;
+}
+
+export function weeklyReportDateRange(year: number, weekNumber: number) {
+  const maximumWeek = isoWeeksInYear(year);
+  if (
+    !Number.isInteger(weekNumber) ||
+    weekNumber < 1 ||
+    weekNumber > maximumWeek
+  ) {
+    throw new RangeError(
+      `Week number must be between 1 and ${maximumWeek} for ISO year ${year}.`,
+    );
+  }
+  const start = isoWeekMonday(year, weekNumber);
+  const end = new Date(start.getTime() + 4 * 86_400_000);
+  const dateOnly = (value: Date) => value.toISOString().slice(0, 10);
+  const display = (value: Date, includeYear: boolean) =>
+    new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      ...(includeYear ? { year: 'numeric' } : {}),
+      timeZone: 'UTC',
+    }).format(value);
+  const crossesYear = start.getUTCFullYear() !== end.getUTCFullYear();
+  return {
+    start: dateOnly(start),
+    end: dateOnly(end),
+    range: crossesYear
+      ? `${display(start, true)} – ${display(end, true)}`
+      : `${display(start, false)} – ${display(end, false)}, ${end.getUTCFullYear()}`,
+  };
+}
 const optionalText = (maximum: number) => text(maximum).optional();
 
 const weeklyGoalProgressFields = {
@@ -48,11 +109,34 @@ function validateWeeklyReport(
   value: z.infer<z.ZodObject<typeof weeklyReportFields>>,
   context: z.RefinementCtx,
 ) {
-  if (value.weekEnd < value.weekStart) {
+  const isoWeek = isoWeekForDate(value.weekStart);
+  if (value.year !== isoWeek.year) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['year'],
+      message: `year must be ${isoWeek.year}, the ISO week-year for weekStart.`,
+    });
+  }
+  if (value.weekNumber !== isoWeek.week) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['weekNumber'],
+      message: `weekNumber must be ${isoWeek.week}, the ISO week for weekStart.`,
+    });
+  }
+  const expectedRange = weeklyReportDateRange(isoWeek.year, isoWeek.week);
+  if (value.weekStart !== expectedRange.start) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['weekStart'],
+      message: `weekStart must be ${expectedRange.start}, the Monday of the ISO week.`,
+    });
+  }
+  if (value.weekEnd !== expectedRange.end) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['weekEnd'],
-      message: 'weekEnd must be on or after weekStart.',
+      message: `weekEnd must be ${expectedRange.end}, the Friday of the ISO week.`,
     });
   }
   const ids = new Set<string>();
@@ -172,7 +256,20 @@ export const weeklyReportListQuerySchema = z
     weekNumber: z.coerce.number().int().min(1).max(53).optional(),
     year: z.coerce.number().int().min(2000).max(2100).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.year !== undefined &&
+      value.weekNumber !== undefined &&
+      value.weekNumber > isoWeeksInYear(value.year)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['weekNumber'],
+        message: `ISO year ${value.year} does not have week ${value.weekNumber}.`,
+      });
+    }
+  });
 
 export type WeeklyReportCreateCommand = z.infer<
   typeof weeklyReportCreateCommandSchema

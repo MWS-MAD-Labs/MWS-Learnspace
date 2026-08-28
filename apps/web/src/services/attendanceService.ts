@@ -2,12 +2,14 @@ import {
   attendanceBulkSaveResponseSchema,
   attendanceRosterResponseSchema,
   classesResponseSchema,
+  organizationSchoolDateResponseSchema,
 } from '@learnspace/contracts';
 import type {
   AttendanceBulkSaveCommand,
   AttendanceBulkSaveResponse,
   AttendanceRosterResponse,
   ClassesResponse,
+  OrganizationSchoolDateResponse,
 } from '@learnspace/contracts';
 import { apiClient } from './apiClient';
 
@@ -16,6 +18,18 @@ function organizationPath(organizationId: string): string {
 }
 
 export const attendanceService = {
+  getSchoolDate(
+    organizationId: string,
+    signal?: AbortSignal,
+  ): Promise<OrganizationSchoolDateResponse> {
+    return apiClient.request(
+      `${organizationPath(organizationId)}/school-date`,
+      {
+        schema: organizationSchoolDateResponseSchema,
+        signal,
+      },
+    );
+  },
   getClasses(
     organizationId: string,
     signal?: AbortSignal,

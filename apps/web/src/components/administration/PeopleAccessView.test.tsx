@@ -7,6 +7,8 @@ import { PeopleAccessView } from './PeopleAccessView';
 vi.mock('../../context/AuthContext', () => ({ useAuth: vi.fn() }));
 vi.mock('../../services/organizationAdministrationService', () => ({
   organizationAdministrationService: {
+    getSettings: vi.fn(),
+    updateSettings: vi.fn(),
     getAccounts: vi.fn(),
     getUnits: vi.fn(),
     getGrades: vi.fn(),
@@ -81,6 +83,20 @@ beforeEach(() => {
     logout: vi.fn(),
     retry: vi.fn(),
   });
+  service.getSettings.mockResolvedValue({
+    data: {
+      organizationId,
+      name: 'Learnspace School',
+      timezone: 'UTC',
+    },
+  });
+  service.updateSettings.mockResolvedValue({
+    data: {
+      organizationId,
+      name: 'Learnspace School',
+      timezone: 'America/Los_Angeles',
+    },
+  });
   service.getAccounts.mockResolvedValue({
     data: [account],
     meta: { count: 1 },
@@ -108,6 +124,87 @@ beforeEach(() => {
 });
 
 describe('PeopleAccessView', () => {
+  it('keeps account administration available when timezone settings fail', async () => {
+    service.getSettings.mockRejectedValue(new Error('Timezone unavailable'));
+    render(<PeopleAccessView />);
+
+    expect(await screen.findByText(account.displayName)).toBeVisible();
+    expect(screen.getByText(/timezone unavailable/i)).toBeVisible();
+    expect(screen.getByRole('button', { name: /new account/i })).toBeEnabled();
+
+    service.getSettings.mockResolvedValue({
+      data: {
+        organizationId,
+        name: 'Learnspace School',
+        timezone: 'UTC',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /retry timezone/i }));
+
+    await waitFor(() => expect(service.getSettings).toHaveBeenCalledTimes(2));
+    expect(service.getAccounts).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: /new account/i })).toBeEnabled();
+  });
+
+  it('updates the validated organization timezone', async () => {
+    render(<PeopleAccessView />);
+    const timezone = await screen.findByLabelText(/iana timezone/i);
+    fireEvent.change(timezone, {
+      target: { value: 'America/Los_Angeles' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save timezone/i }));
+
+    await waitFor(() =>
+      expect(service.updateSettings).toHaveBeenCalledWith(organizationId, {
+        timezone: 'America/Los_Angeles',
+      }),
+    );
+    expect(
+      await screen.findByText(/organization timezone updated/i),
+    ).toBeVisible();
+  });
+
+  it('preserves and marks a newer timezone draft as unsaved when an older save resolves', async () => {
+    let resolveSave:
+      | ((value: Awaited<ReturnType<typeof service.updateSettings>>) => void)
+      | undefined;
+    service.updateSettings.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+    render(<PeopleAccessView />);
+    const timezone = await screen.findByLabelText(/iana timezone/i);
+    fireEvent.change(timezone, {
+      target: { value: 'America/Los_Angeles' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save timezone/i }));
+    fireEvent.change(timezone, {
+      target: { value: 'Asia/Tokyo' },
+    });
+
+    resolveSave?.({
+      data: {
+        organizationId,
+        name: 'Learnspace School',
+        timezone: 'America/Los_Angeles',
+      },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/iana timezone/i)).toHaveValue('Asia/Tokyo'),
+    );
+    expect(
+      await screen.findByText(
+        /America\/Los_Angeles was saved\. Your current draft \(Asia\/Tokyo\) still needs saving\./i,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/^organization timezone updated\.$/i),
+    ).not.toBeInTheDocument();
+  });
+
   it('loads accounts and creates a scoped grade-teacher membership', async () => {
     const created = {
       ...account,

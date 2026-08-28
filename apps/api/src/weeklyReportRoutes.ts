@@ -32,6 +32,7 @@ import {
 } from './iepGoalProjection.js';
 import { activeAssignedStudentIds } from './iepRoutes.js';
 import type { SessionService } from './sessionService.js';
+import { organizationSchoolDate } from './organizationTime.js';
 
 const teacherRoles = new Set<MembershipRole>([
   'SPECIAL_ED_TEACHER',
@@ -122,8 +123,8 @@ function permission(
     throw error;
   }
 }
-function scoped(scope: MembershipScope, studentId: string) {
-  const ids = activeAssignedStudentIds(scope);
+function scoped(scope: MembershipScope, studentId: string, onDate: Date) {
+  const ids = activeAssignedStudentIds(scope, onDate);
   if (ids !== undefined && !ids.includes(studentId)) deny();
 }
 async function events(
@@ -280,7 +281,11 @@ export function createWeeklyReportRouter(
         const query = parseRequest(weeklyReportListQuerySchema, req.query);
         const scope = membership(req, path.organizationId);
         permission(scope, 'special-ed:read');
-        const ids = activeAssignedStudentIds(scope);
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
+        const ids = activeAssignedStudentIds(scope, schoolDate);
         const rows = await prisma.weeklyReport.findMany({
           where: {
             organizationId: path.organizationId,
@@ -321,7 +326,11 @@ export function createWeeklyReportRouter(
         const scope = membership(req, path.organizationId);
         permission(scope, 'special-ed:read');
         const row = await read(prisma, path.organizationId, path.reportId);
-        scoped(scope, row.studentId);
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
+        scoped(scope, row.studentId, schoolDate);
         res.json(
           weeklyReportDetailResponseSchema.parse({
             data: map(row, await events(prisma, path.organizationId, [row.id])),
@@ -346,7 +355,11 @@ export function createWeeklyReportRouter(
         const scope = membership(req, path.organizationId);
         permission(scope, 'special-ed:write');
         if (!teacherRoles.has(scope.role)) deny();
-        scoped(scope, command.studentId);
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
+        scoped(scope, command.studentId, schoolDate);
         const row = await prisma.$transaction(async (tx) => {
           await verifyReferences(tx, path.organizationId, command);
           const report = await tx.weeklyReport.create({
@@ -431,9 +444,13 @@ export function createWeeklyReportRouter(
         const session = auth(req);
         const scope = membership(req, path.organizationId);
         permission(scope, 'special-ed:write');
+        const { schoolDate } = await organizationSchoolDate(
+          prisma,
+          path.organizationId,
+        );
         const row = await prisma.$transaction(async (tx) => {
           const existing = await read(tx, path.organizationId, path.reportId);
-          scoped(scope, existing.studentId);
+          scoped(scope, existing.studentId, schoolDate);
           if (
             !teacherRoles.has(scope.role) ||
             existing.teacherId !== session.userId
@@ -565,9 +582,13 @@ export function createWeeklyReportRouter(
         ? undefined
         : (command as unknown as { decision: 'APPROVE' | 'RETURN' }).decision;
     const expected = command.expectedVersion;
+    const { schoolDate } = await organizationSchoolDate(
+      prisma,
+      path.organizationId,
+    );
     const row = await prisma.$transaction(async (tx) => {
       const existing = await read(tx, path.organizationId, path.reportId);
-      scoped(scope, existing.studentId);
+      scoped(scope, existing.studentId, schoolDate);
       const teacher =
         kind === 'submit' &&
         teacherRoles.has(scope.role) &&

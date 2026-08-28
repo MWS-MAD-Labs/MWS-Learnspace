@@ -1,6 +1,7 @@
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -22,6 +23,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext';
 import { ApiClientError, isRequestCancelled } from '../../services/apiClient';
 import { attendanceService } from '../../services/attendanceService';
 
@@ -52,14 +54,6 @@ type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'denied';
 type SaveState =
   'idle' | 'saving' | 'success' | 'validation' | 'conflict' | 'error';
 
-function localToday(): string {
-  const today = new Date();
-  return formatDateParts(
-    today.getFullYear(),
-    today.getMonth() + 1,
-    today.getDate(),
-  );
-}
 
 function formatDateParts(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -119,13 +113,17 @@ function errorMessage(error: unknown): string {
 
 export const AttendanceView: React.FC = () => {
   const { session, currentUser } = useAuth();
+  const { attendanceTarget, setAttendanceTarget } = useApp();
   const membership = session?.memberships[0];
   const organizationId = membership?.organizationId;
   const canRead = membership?.permissions.includes('attendance:read') ?? false;
   const canWrite =
     membership?.permissions.includes('attendance:write') ?? false;
 
-  const [schoolDate, setSchoolDate] = useState(localToday);
+  const [schoolDate, setSchoolDate] = useState('');
+  const [schoolDateReady, setSchoolDateReady] = useState(false);
+  const [schoolDateError, setSchoolDateError] = useState('');
+  const [schoolDateReloadKey, setSchoolDateReloadKey] = useState(0);
   const [classes, setClasses] = useState<ClassesResponse['data']>([]);
   const [selectedClassId, setSelectedClassId] = useState('');
   const [classesState, setClassesState] = useState<LoadState>('idle');
@@ -146,6 +144,41 @@ export const AttendanceView: React.FC = () => {
   const [classesReloadKey, setClassesReloadKey] = useState(0);
   const [rosterReloadKey, setRosterReloadKey] = useState(0);
   const preserveDraftsOnNextLoad = useRef(false);
+  const attendanceContextKey = `${organizationId ?? ''}:${selectedClassId}:${schoolDate}`;
+  const attendanceContextKeyRef = useRef(attendanceContextKey);
+  attendanceContextKeyRef.current = attendanceContextKey;
+  const saveSequenceRef = useRef(0);
+  const attendanceTargetRef = useRef(attendanceTarget);
+  const consumedAttendanceTargetRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    attendanceTargetRef.current = attendanceTarget;
+  }, [attendanceTarget]);
+
+  useEffect(() => {
+    if (!organizationId || !canRead) return;
+    const controller = new AbortController();
+    setSchoolDateReady(false);
+    setSchoolDate('');
+    setSchoolDateError('');
+    setRosterResponse(undefined);
+    setRosterState('idle');
+    void attendanceService
+      .getSchoolDate(organizationId, controller.signal)
+      .then((response) => {
+        setSchoolDate(response.data.schoolDate);
+        setSchoolDateReady(true);
+      })
+      .catch((error: unknown) => {
+        if (isRequestCancelled(error)) return;
+        setSchoolDateError(
+          error instanceof Error
+            ? error.message
+            : 'The organization school date could not be loaded.',
+        );
+      });
+    return () => controller.abort();
+  }, [organizationId, canRead, schoolDateReloadKey]);
 
   useEffect(() => {
     if (!organizationId || !canRead) {
@@ -159,11 +192,15 @@ export const AttendanceView: React.FC = () => {
       .getClasses(organizationId, controller.signal)
       .then((response) => {
         setClasses(response.data);
-        setSelectedClassId((current) =>
-          response.data.some((item) => item.id === current)
+        setSelectedClassId((current) => {
+          const targetClassId = attendanceTargetRef.current?.classId;
+          if (response.data.some((item) => item.id === targetClassId)) {
+            return targetClassId ?? '';
+          }
+          return response.data.some((item) => item.id === current)
             ? current
-            : (response.data[0]?.id ?? ''),
-        );
+            : (response.data[0]?.id ?? '');
+        });
         setClassesState('ready');
       })
       .catch((error: unknown) => {
@@ -178,9 +215,60 @@ export const AttendanceView: React.FC = () => {
     return () => controller.abort();
   }, [organizationId, canRead, classesReloadKey]);
 
+  useEffect(() => {
+    if (!attendanceTarget) {
+      consumedAttendanceTargetRef.current = null;
+      return;
+    }
+    const targetKey = `${attendanceTarget.classId}:${attendanceTarget.studentId}`;
+    if (consumedAttendanceTargetRef.current === targetKey) return;
+    if (!classes.some((item) => item.id === attendanceTarget.classId)) return;
+    if (selectedClassId !== attendanceTarget.classId) {
+      setSelectedClassId(attendanceTarget.classId);
+      return;
+    }
+    if (
+      rosterState !== 'ready' ||
+      rosterResponse?.data.class.id !== attendanceTarget.classId ||
+      rosterResponse.data.schoolDate !== schoolDate
+    ) {
+      return;
+    }
+
+    const target = rosterResponse.data.roster.find(
+      ({ student }) => student.id === attendanceTarget.studentId,
+    );
+    consumedAttendanceTargetRef.current = targetKey;
+    attendanceTargetRef.current = null;
+    setAttendanceTarget(null);
+    if (!target) return;
+
+    setSearch(target.student.studentNumber);
+    window.setTimeout(() => {
+      document
+        .getElementById(`attendance-student-${attendanceTarget.studentId}`)
+        ?.focus();
+    }, 0);
+  }, [
+    attendanceTarget,
+    classes,
+    rosterResponse,
+    rosterState,
+    schoolDate,
+    selectedClassId,
+    setAttendanceTarget,
+  ]);
+
+  useLayoutEffect(() => {
+    saveSequenceRef.current += 1;
+    setSaveState('idle');
+    setSaveMessage('');
+    setValidationErrors({});
+  }, [attendanceContextKey]);
+
   const loadRoster = useCallback(
     (keepDrafts: boolean) => {
-      if (!organizationId || !selectedClassId || !canRead)
+      if (!organizationId || !selectedClassId || !canRead || !schoolDateReady)
         return () => undefined;
       const controller = new AbortController();
       setRosterState('loading');
@@ -226,7 +314,13 @@ export const AttendanceView: React.FC = () => {
         });
       return () => controller.abort();
     },
-    [canRead, organizationId, schoolDate, selectedClassId],
+    [
+      canRead,
+      organizationId,
+      schoolDate,
+      schoolDateReady,
+      selectedClassId,
+    ],
   );
 
   useEffect(() => {
@@ -300,7 +394,13 @@ export const AttendanceView: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!organizationId || !selectedClassId || !canWrite || roster.length === 0)
+    if (
+      !organizationId ||
+      !selectedClassId ||
+      !canWrite ||
+      !schoolDateReady ||
+      roster.length === 0
+    )
       return;
     if (!validateDrafts()) return;
 
@@ -322,6 +422,12 @@ export const AttendanceView: React.FC = () => {
       }),
     ) satisfies DraftMap;
 
+    const saveContextKey = attendanceContextKey;
+    const saveSequence = ++saveSequenceRef.current;
+    const saveStillCurrent = () =>
+      attendanceContextKeyRef.current === saveContextKey &&
+      saveSequenceRef.current === saveSequence;
+
     setSaveState('saving');
     setSaveMessage('Saving attendance…');
     try {
@@ -342,6 +448,7 @@ export const AttendanceView: React.FC = () => {
           }),
         },
       );
+      if (!saveStillCurrent()) return;
       const savedAt = new Date().toISOString();
       setRosterResponse((current) =>
         current
@@ -374,6 +481,7 @@ export const AttendanceView: React.FC = () => {
         `Saved attendance for ${response.data.savedCount} students.`,
       );
     } catch (error) {
+      if (!saveStillCurrent()) return;
       if (error instanceof ApiClientError && error.category === 'conflict') {
         setSaveState('conflict');
         setSaveMessage(
@@ -412,6 +520,30 @@ export const AttendanceView: React.FC = () => {
     );
   }
 
+  if (!schoolDateReady) {
+    return (
+      <StateCard
+        icon={schoolDateError ? AlertCircle : RefreshCw}
+        title={
+          schoolDateError
+            ? 'Could not load the school date'
+            : 'Loading the school date…'
+        }
+      >
+        {schoolDateError ? (
+          <>
+            <p>{schoolDateError}</p>
+            <RetryButton
+              onClick={() => setSchoolDateReloadKey((value) => value + 1)}
+            />
+          </>
+        ) : (
+          'Attendance will remain unavailable until the organization school date is confirmed.'
+        )}
+      </StateCard>
+    );
+  }
+
   if (classesState === 'loading' || classesState === 'idle') {
     return (
       <StateCard icon={RefreshCw} title="Loading authorized classes…">
@@ -444,6 +576,7 @@ export const AttendanceView: React.FC = () => {
       className="mx-auto max-w-7xl space-y-5 pb-12"
       id="attendance-view-container"
     >
+
       <header className="rounded-3xl border border-[#EFE7DC] bg-white p-5 shadow-xs">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div>
@@ -508,6 +641,7 @@ export const AttendanceView: React.FC = () => {
               className="flex items-center gap-2 rounded-xl bg-[#6E161E] px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
               disabled={
                 !canWrite ||
+                !schoolDateReady ||
                 rosterState !== 'ready' ||
                 roster.length === 0 ||
                 saveState === 'saving'
@@ -618,6 +752,8 @@ export const AttendanceView: React.FC = () => {
                 return (
                   <article
                     key={student.id}
+                    id={`attendance-student-${student.id}`}
+                    tabIndex={-1}
                     className="rounded-2xl border border-[#EFE7DC] bg-white p-4 shadow-xs"
                   >
                     <div className="flex items-start gap-3">

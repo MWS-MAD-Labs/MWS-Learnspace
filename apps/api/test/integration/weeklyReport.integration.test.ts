@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/app.js';
 import type { AppConfig } from '../../src/config.js';
 import { projectIepGoals } from '../../src/iepGoalProjection.js';
+import { schoolDateInTimezone } from '../../src/organizationTime.js';
 import { SessionService } from '../../src/sessionService.js';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -297,6 +298,16 @@ integration('Weekly report management', () => {
     await prisma?.$disconnect();
   });
 
+  it('rejects nonexistent ISO week 53 list queries', async () => {
+    const response = await request(app)
+      .get(
+        `/api/v1/organizations/${organizationId}/weekly-reports?year=2021&weekNumber=53`,
+      )
+      .set('cookie', teacherCookie);
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
   it('creates a report with the session teacher and rejects spoofed actor fields', async () => {
     const spoofed = await postReport(
       command({ teacherId: directorId }),
@@ -313,6 +324,107 @@ integration('Weekly report management', () => {
       version: 1,
       goalProgress: [{ goalId }],
     });
+  });
+
+  it('uses the organization school date for assignment authorization across report operations', async () => {
+    const now = new Date();
+    const utcDate = new Date(`${now.toISOString().slice(0, 10)}T00:00:00.000Z`);
+    const candidateTimezones = ['Pacific/Kiritimati', 'Pacific/Pago_Pago'];
+    const timezone = candidateTimezones.find(
+      (candidate) =>
+        schoolDateInTimezone(candidate, now).getTime() !== utcDate.getTime(),
+    );
+    if (!timezone) throw new Error('Expected a timezone with a non-UTC date.');
+    const schoolDate = schoolDateInTimezone(timezone, now);
+    const assignment = await prisma.staffStudentAssignment.findFirstOrThrow({
+      where: { organizationId, studentId },
+      select: { id: true, startsOn: true, endsOn: true },
+    });
+    const organization = await prisma.organization.findUniqueOrThrow({
+      where: { id: organizationId },
+      select: { timezone: true },
+    });
+
+    await prisma.$transaction([
+      prisma.organization.update({
+        where: { id: organizationId },
+        data: { timezone },
+      }),
+      prisma.staffStudentAssignment.update({
+        where: { id: assignment.id },
+        data: { startsOn: schoolDate, endsOn: schoolDate },
+      }),
+    ]);
+
+    try {
+      const created = await postReport(
+        command({
+          year: 2026,
+          weekNumber: 34,
+          weekStart: '2026-08-17',
+          weekEnd: '2026-08-21',
+        }),
+        teacherCookie,
+      );
+      expect(created.status).toBe(201);
+      const reportId = created.body.data.id as string;
+
+      const list = await request(app)
+        .get(
+          `/api/v1/organizations/${organizationId}/weekly-reports?studentId=${studentId}`,
+        )
+        .set('cookie', teacherCookie);
+      expect(list.status).toBe(200);
+      expect(
+        list.body.data.map((report: { id: string }) => report.id),
+      ).toContain(reportId);
+
+      const detail = await request(app)
+        .get(
+          `/api/v1/organizations/${organizationId}/weekly-reports/${reportId}`,
+        )
+        .set('cookie', teacherCookie);
+      expect(detail.status).toBe(200);
+
+      const updated = await putReport(
+        reportId,
+        {
+          expectedVersion: 1,
+          ...command({
+            year: 2026,
+            weekNumber: 34,
+            weekStart: '2026-08-17',
+            weekEnd: '2026-08-21',
+            descriptiveObservation:
+              'The organization-local school date authorizes this update.',
+          }),
+        },
+        teacherCookie,
+      );
+      expect(updated.status).toBe(200);
+
+      const submitted = await workflow(
+        reportId,
+        'submit',
+        { expectedVersion: 2 },
+        teacherCookie,
+      );
+      expect(submitted.status).toBe(200);
+    } finally {
+      await prisma.$transaction([
+        prisma.organization.update({
+          where: { id: organizationId },
+          data: { timezone: organization.timezone },
+        }),
+        prisma.staffStudentAssignment.update({
+          where: { id: assignment.id },
+          data: {
+            startsOn: assignment.startsOn,
+            endsOn: assignment.endsOn,
+          },
+        }),
+      ]);
+    }
   });
 
   it('rejects goals from a different IEP and duplicate student weeks', async () => {

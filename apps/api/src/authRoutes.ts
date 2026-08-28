@@ -113,6 +113,7 @@ export function createRequiredAuthentication(
           ),
           assignedStudentScopes: membership.staffAssignments.map(
             (assignment) => ({
+              organizationId: assignment.organizationId,
               studentId: assignment.studentId,
               startsOn: assignment.startsOn,
               endsOn: assignment.endsOn,

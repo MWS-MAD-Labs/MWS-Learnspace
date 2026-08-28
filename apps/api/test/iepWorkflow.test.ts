@@ -127,6 +127,7 @@ function run(
     expectedVersion: 1,
     actorId,
     membership,
+    onDate: new Date('2026-08-28T00:00:00.000Z'),
     requestId: 'request-id',
     transition,
     ...overrides,

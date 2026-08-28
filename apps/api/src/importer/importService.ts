@@ -8,7 +8,11 @@ import {
   type ServiceType,
   type WorkflowState,
 } from '@prisma/client';
-import type { LearnspaceExportV1 } from '@learnspace/contracts';
+import {
+  isoWeekForDate,
+  weeklyReportDateRange,
+  type LearnspaceExportV1,
+} from '@learnspace/contracts';
 import {
   appendReportAchievementEvents,
   projectIepGoals,
@@ -46,7 +50,14 @@ const dateOnly = (value: unknown, label: string) => {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new Error(`${label} must be a YYYY-MM-DD date.`);
   }
-  return new Date(`${value}T00:00:00.000Z`);
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== value
+  ) {
+    throw new Error(`${label} must be a valid YYYY-MM-DD date.`);
+  }
+  return parsed;
 };
 const dateTime = (value: unknown, label: string) => {
   if (typeof value !== 'string')
@@ -137,6 +148,50 @@ const totalCounts = (collections: Record<string, ImportCounts>) =>
     total.rejected += value.rejected;
     return total;
   }, emptyCounts());
+
+function preflightWeeklyReportKeys(document: LearnspaceExportV1) {
+  const reportsByKey = new Map<
+    string,
+    {
+      studentId: string;
+      year: number;
+      weekNumber: number;
+      reportIds: string[];
+    }
+  >();
+  for (const report of document.records.weeklyReports as LegacyRecord[]) {
+    const studentId = requiredString(report, 'studentId');
+    const sourceWeekStart = dateOnly(
+      report.weekStart,
+      `${report.id}.weekStart`,
+    );
+    const isoWeek = isoWeekForDate(sourceWeekStart);
+    const key = JSON.stringify([studentId, isoWeek.year, isoWeek.week]);
+    const collisionKey = reportsByKey.get(key) ?? {
+      studentId,
+      year: isoWeek.year,
+      weekNumber: isoWeek.week,
+      reportIds: [],
+    };
+    collisionKey.reportIds.push(report.id);
+    reportsByKey.set(key, collisionKey);
+  }
+
+  const collisions = [...reportsByKey.values()].filter(
+    ({ reportIds }) => reportIds.length > 1,
+  );
+  if (collisions.length === 0) return;
+
+  const details = collisions
+    .map(
+      ({ studentId, year, weekNumber, reportIds }) =>
+        `student "${studentId}", ISO week ${year}-W${weekNumber}: ${reportIds.map((id) => `"${id}"`).join(', ')}`,
+    )
+    .join('; ');
+  throw new Error(
+    `Weekly report ISO normalization creates conflicting source reports: ${details}. Resolve or merge the named source report IDs before importing.`,
+  );
+}
 
 async function validateTargets(
   prisma: PrismaClient | Tx,
@@ -917,16 +972,22 @@ async function persistExport(
     const targetIepId = iepIds.get(sourceIepId);
     if (!targetIepId) throw new Error(`Unknown IEP "${sourceIepId}".`);
     const teacherId = userId(requiredString(report, 'teacherId'));
+    const sourceWeekStart = dateOnly(
+      report.weekStart,
+      `${report.id}.weekStart`,
+    );
+    const isoWeek = isoWeekForDate(sourceWeekStart);
+    const normalizedDates = weeklyReportDateRange(isoWeek.year, isoWeek.week);
     await tx.weeklyReport.create({
       data: {
         id,
         organizationId,
         studentId: studentIds.get(requiredString(report, 'studentId'))!,
         iepId: targetIepId,
-        year: requiredYear(report, 'year'),
-        weekNumber: Number(report.weekNumber),
-        weekStart: dateOnly(report.weekStart, `${report.id}.weekStart`),
-        weekEnd: dateOnly(report.weekEnd, `${report.id}.weekEnd`),
+        year: isoWeek.year,
+        weekNumber: isoWeek.week,
+        weekStart: dateOnly(normalizedDates.start, `${report.id}.weekStart`),
+        weekEnd: dateOnly(normalizedDates.end, `${report.id}.weekEnd`),
         teacherId,
         state: workflowState(report.status),
         descriptiveObservation: requiredString(
@@ -1038,6 +1099,8 @@ export async function importExport(options: {
 }): Promise<ImportReport> {
   const { prisma, document, exportSha256, manifest, mode } = options;
   const collections: Record<string, ImportCounts> = {};
+
+  preflightWeeklyReportKeys(document);
 
   if (mode === 'dry-run') {
     let existingImportRunId: string | undefined;

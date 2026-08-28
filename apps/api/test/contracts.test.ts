@@ -6,6 +6,7 @@ import {
   gpkAssignmentUpsertCommandSchema,
   organizationAccountCreateCommandSchema,
   organizationAccountUpdateCommandSchema,
+  organizationSettingsUpdateCommandSchema,
   learningJourneyCreateCommandSchema,
   learningJourneyDirectorReviewCommandSchema,
   learningJourneyListQuerySchema,
@@ -16,6 +17,10 @@ import {
   studentCreateCommandSchema,
   studentListItemSchema,
   studentUpdateCommandSchema,
+  weeklyReportCreateCommandSchema,
+  weeklyReportDateRange,
+  weeklyReportListQuerySchema,
+  weeklyReportUpdateCommandSchema,
 } from '@learnspace/contracts';
 
 const studentId = '11111111-1111-4111-8111-111111111111';
@@ -35,6 +40,74 @@ describe('resource contracts', () => {
     expect(schoolDateSchema.safeParse('2026-08-24').success).toBe(true);
     expect(schoolDateSchema.safeParse('2026-02-30').success).toBe(false);
     expect(schoolDateSchema.safeParse('').success).toBe(false);
+  });
+
+  it('validates organization IANA timezone updates', () => {
+    expect(
+      organizationSettingsUpdateCommandSchema.safeParse({
+        timezone: 'America/Los_Angeles',
+      }).success,
+    ).toBe(true);
+    expect(
+      organizationSettingsUpdateCommandSchema.safeParse({
+        timezone: 'Not/A_Timezone',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('enforces ISO weekly-report keys and Monday-Friday ranges', () => {
+    const dates = weeklyReportDateRange(2020, 53);
+    const base = {
+      studentId,
+      iepId: '22222222-2222-4222-8222-222222222222',
+      year: 2026,
+      weekNumber: 34,
+      weekStart: '2026-08-17',
+      weekEnd: '2026-08-21',
+      descriptiveObservation: 'Observation',
+      homeConnection: 'Home connection',
+      goalProgress: [],
+    };
+    expect(dates).toMatchObject({
+      start: '2020-12-28',
+      end: '2021-01-01',
+    });
+    expect(weeklyReportCreateCommandSchema.safeParse(base).success).toBe(true);
+    expect(
+      weeklyReportUpdateCommandSchema.safeParse({
+        expectedVersion: 1,
+        ...base,
+      }).success,
+    ).toBe(true);
+
+    for (const invalid of [
+      { ...base, year: 2025 },
+      { ...base, weekNumber: 33 },
+      { ...base, weekStart: '2026-08-18' },
+      { ...base, weekEnd: '2026-08-22' },
+    ]) {
+      expect(weeklyReportCreateCommandSchema.safeParse(invalid).success).toBe(
+        false,
+      );
+    }
+
+    const yearBoundary = {
+      ...base,
+      year: 2020,
+      weekNumber: 53,
+      weekStart: '2020-12-28',
+      weekEnd: '2021-01-01',
+    };
+    expect(
+      weeklyReportCreateCommandSchema.safeParse(yearBoundary).success,
+    ).toBe(true);
+    expect(() => weeklyReportDateRange(2021, 53)).toThrow(
+      'between 1 and 52 for ISO year 2021',
+    );
+    expect(
+      weeklyReportListQuerySchema.safeParse({ year: 2021, weekNumber: 53 })
+        .success,
+    ).toBe(false);
   });
 
   it('rejects duplicate students, invalid late minutes, and actor spoofing', () => {

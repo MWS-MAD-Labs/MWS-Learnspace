@@ -27,6 +27,39 @@ describe('OpenAPI contract', () => {
     expect(document.openapi).toBe('3.1.0');
   });
 
+  it('emits aggregate school dates using the OpenAPI date format', () => {
+    const document = generateOpenApiDocument();
+    const dashboard = document.components.schemas.DashboardSummaryResponse as {
+      properties: {
+        data: {
+          properties: {
+            attendance: { properties: { schoolDate: unknown } };
+          };
+        };
+      };
+    };
+    expect(
+      dashboard.properties.data.properties.attendance.properties.schoolDate,
+    ).toEqual({
+      type: 'string',
+      format: 'date',
+    });
+  });
+
+  it('emits organization school dates using the OpenAPI date format', () => {
+    const document = generateOpenApiDocument();
+    const response = document.components.schemas
+      .OrganizationSchoolDateResponse as {
+      properties: {
+        data: { properties: { schoolDate: unknown } };
+      };
+    };
+    expect(response.properties.data.properties.schoolDate).toMatchObject({
+      type: 'string',
+      format: 'date',
+    });
+  });
+
   it('registers the observation definition and assignment contracts and routes', () => {
     const document = generateOpenApiDocument();
     const schemas = document.components.schemas;

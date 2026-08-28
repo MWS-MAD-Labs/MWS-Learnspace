@@ -86,10 +86,15 @@ const sfaAssignmentA: ObservationAssignment = {
 const mockedUseApp = vi.mocked(useApp);
 const mockedUseObservationData = vi.mocked(useObservationData);
 let activeSpecialEdSubTab: 'FEDC' | 'SENSORY_PROFILE' | 'SFA';
+let selectedObservationAssignmentId: string | null;
+const setSelectedObservationAssignmentId = vi.fn((value: string | null) => {
+  selectedObservationAssignmentId = value;
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
   activeSpecialEdSubTab = 'FEDC';
+  selectedObservationAssignmentId = null;
   mockedUseApp.mockImplementation(
     () =>
       ({
@@ -120,6 +125,8 @@ beforeEach(() => {
         setSpecialEdSubTab: vi.fn((tab) => {
           activeSpecialEdSubTab = tab;
         }),
+        selectedObservationAssignmentId,
+        setSelectedObservationAssignmentId,
         navigateToIEP: vi.fn(),
         setActiveTab: vi.fn(),
       }) as unknown as ReturnType<typeof useApp>,
@@ -134,6 +141,38 @@ beforeEach(() => {
 });
 
 describe('ObservationView', () => {
+  it('rejects a stale targeted assignment and remains in results mode', async () => {
+    selectedObservationAssignmentId = assignmentA.id;
+    mockedUseObservationData.mockReturnValue({
+      definitions: [],
+      assignments: [{ ...assignmentA, status: 'COMPLETED' }],
+      status: 'ready',
+      error: undefined,
+      retry: vi.fn(),
+    });
+
+    render(<ObservationView />);
+
+    expect(
+      await screen.findByText(/no longer pending or in progress/i),
+    ).toBeVisible();
+    expect(screen.getByText('Observation history')).toBeVisible();
+    expect(screen.queryByTestId('fedc-form')).not.toBeInTheDocument();
+    expect(setSelectedObservationAssignmentId).toHaveBeenCalledWith(null);
+  });
+
+  it('rejects a missing targeted assignment with feedback', async () => {
+    selectedObservationAssignmentId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+    render(<ObservationView />);
+
+    expect(
+      await screen.findByText(/assignment is no longer available/i),
+    ).toBeVisible();
+    expect(screen.getByText('Observation history')).toBeVisible();
+    expect(setSelectedObservationAssignmentId).toHaveBeenCalledWith(null);
+  });
+
   it('does not retain another student’s active FEDC assignment after switching students', () => {
     render(<ObservationView />);
 

@@ -69,16 +69,25 @@ describe('IEP student scope', () => {
         role,
         assignedStudentScopes: [
           {
+            organizationId: 'organization-a',
             studentId: 'active',
             startsOn: new Date('2026-08-01T00:00:00.000Z'),
             endsOn: null,
           },
           {
+            organizationId: 'organization-b',
+            studentId: 'foreign-active',
+            startsOn: new Date('2026-08-01T00:00:00.000Z'),
+            endsOn: null,
+          },
+          {
+            organizationId: 'organization-a',
             studentId: 'future',
             startsOn: new Date('2026-09-01T00:00:00.000Z'),
             endsOn: null,
           },
           {
+            organizationId: 'organization-a',
             studentId: 'ended',
             startsOn: new Date('2026-01-01T00:00:00.000Z'),
             endsOn: new Date('2026-08-26T00:00:00.000Z'),
@@ -88,6 +97,9 @@ describe('IEP student scope', () => {
       expect(activeAssignedStudentIds(membership, onDate)).toEqual(['active']);
       expect(activeAssignedStudentIds(membership, onDate)).not.toContain(
         'observation-only',
+      );
+      expect(activeAssignedStudentIds(membership, onDate)).not.toContain(
+        'foreign-active',
       );
     },
   );

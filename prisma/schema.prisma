@@ -98,6 +98,7 @@ model Organization {
   id                  String                      @id @default(uuid()) @db.Uuid
   slug                String                      @unique
   name                String
+  timezone            String                      @default("UTC")
   status              AccountStatus               @default(ACTIVE)
   createdAt           DateTime                    @default(now())
   updatedAt           DateTime                    @updatedAt
@@ -391,6 +392,9 @@ model Student {
 
   @@unique([organizationId, studentNumber])
   @@index([organizationId, status, fullName])
+  @@index([fullName(ops: raw("gin_trgm_ops"))], type: Gin, map: "Student_fullName_trgm_idx")
+  @@index([nickname(ops: raw("gin_trgm_ops"))], type: Gin, map: "Student_nickname_trgm_idx")
+  @@index([studentNumber(ops: raw("gin_trgm_ops"))], type: Gin, map: "Student_studentNumber_trgm_idx")
 }
 
 model Enrollment {
@@ -501,6 +505,11 @@ model LearningJourney {
 
   @@unique([organizationId, academicYearId, semesterId, gradeId, subjectId, title])
   @@index([organizationId, state])
+  @@index([organizationId, updatedAt(sort: Desc), id])
+  @@index([organizationId, unitId, state])
+  @@index([organizationId, gradeId, state])
+  @@index([organizationId, subjectId, state])
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "LearningJourney_title_trgm_idx")
 }
 
 model LearningJourneyOwner {
@@ -620,6 +629,7 @@ model ObservationAssignment {
 
   @@index([organizationId, studentId, status])
   @@index([organizationId, assignedToId, status, dueDate])
+  @@index([organizationId, status, dueDate, id])
   @@index([cancelledById])
 }
 
@@ -751,6 +761,9 @@ model IEP {
 
   @@index([organizationId, studentId, state])
   @@index([organizationId, academicYearId])
+  @@index([organizationId, state, updatedAt(sort: Desc)])
+  @@index([primaryClassification(ops: raw("gin_trgm_ops"))], type: Gin, map: "IEP_primaryClassification_trgm_idx")
+  @@index([currentPlacement(ops: raw("gin_trgm_ops"))], type: Gin, map: "IEP_currentPlacement_trgm_idx")
 }
 
 model IEPTeamMember {
@@ -831,6 +844,9 @@ model IEPGoal {
   @@unique([iepId, code])
   @@unique([iepId, position])
   @@unique([id, iepId])
+  @@index([code(ops: raw("gin_trgm_ops"))], type: Gin, map: "IEPGoal_code_trgm_idx")
+  @@index([measurableGoal(ops: raw("gin_trgm_ops"))], type: Gin, map: "IEPGoal_measurableGoal_trgm_idx")
+  @@index([performanceArea(ops: raw("gin_trgm_ops"))], type: Gin, map: "IEPGoal_performanceArea_trgm_idx")
 }
 
 model IEPServiceSchedule {
@@ -875,6 +891,10 @@ model WeeklyReport {
   @@unique([organizationId, studentId, year, weekNumber])
   @@unique([id, iepId])
   @@index([organizationId, iepId, weekStart])
+  @@index([organizationId, state, updatedAt(sort: Desc)])
+  @@index([organizationId, teacherId, state, updatedAt(sort: Desc)])
+  @@index([descriptiveObservation(ops: raw("gin_trgm_ops"))], type: Gin, map: "WeeklyReport_descriptiveObservation_trgm_idx")
+  @@index([homeConnection(ops: raw("gin_trgm_ops"))], type: Gin, map: "WeeklyReport_homeConnection_trgm_idx")
 }
 
 model WeeklyGoalProgress {

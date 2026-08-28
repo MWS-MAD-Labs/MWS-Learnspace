@@ -22,6 +22,11 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
+function isActionableAssignmentStatus(status: string) {
+  const normalized = status.toUpperCase().replaceAll(' ', '_');
+  return normalized === 'PENDING' || normalized === 'IN_PROGRESS';
+}
+
 export const ObservationView: React.FC = () => {
   const {
     organizationId,
@@ -31,6 +36,8 @@ export const ObservationView: React.FC = () => {
     setSelectedStudentId,
     specialEdSubTab,
     setSpecialEdSubTab,
+    selectedObservationAssignmentId,
+    setSelectedObservationAssignmentId,
     navigateToIEP,
     setActiveTab,
   } = useApp();
@@ -72,7 +79,10 @@ export const ObservationView: React.FC = () => {
   const [viewMode, setViewMode] = useState<'RESULTS' | 'ACTIVE_FORM'>(
     'RESULTS',
   );
-  const [activeAssignmentId, setActiveAssignmentId] = useState<string>();
+  const [activeAssignmentId, setActiveAssignmentId] = useState<
+    string | undefined
+  >(undefined);
+  const [assignmentFeedback, setAssignmentFeedback] = useState('');
 
   // Auto-sync if student changes
   useEffect(() => {
@@ -85,6 +95,60 @@ export const ObservationView: React.FC = () => {
       setActiveAssignmentId(undefined);
     }
   }, [currentUser.id, assignedStudents.length]);
+
+  useEffect(() => {
+    if (
+      !selectedObservationAssignmentId ||
+      observationData.status !== 'ready'
+    ) {
+      return;
+    }
+    const assignment = observationData.assignments.find(
+      (candidate) => candidate.id === selectedObservationAssignmentId,
+    );
+    if (!assignment || !isActionableAssignmentStatus(assignment.status)) {
+      setSelectedObservationAssignmentId(null);
+      setActiveAssignmentId(undefined);
+      setViewMode('RESULTS');
+      setAssignmentFeedback(
+        assignment
+          ? 'This observation assignment is no longer pending or in progress. Showing results instead.'
+          : 'This observation assignment is no longer available. Showing results instead.',
+      );
+      return;
+    }
+    setAssignmentFeedback('');
+    setChosenStudentId(assignment.studentId);
+    setSelectedStudentId(assignment.studentId);
+    setSpecialEdSubTab(assignment.instrumentType);
+    setActiveAssignmentId(assignment.id);
+    setViewMode('ACTIVE_FORM');
+    setSelectedObservationAssignmentId(null);
+  }, [
+    observationData.status,
+    selectedObservationAssignmentId,
+    observationData.assignments,
+  ]);
+
+  useEffect(() => {
+    if (!activeAssignmentId || observationData.status !== 'ready') return;
+    const activeAssignment = observationData.assignments.find(
+      (candidate) => candidate.id === activeAssignmentId,
+    );
+    if (
+      activeAssignment &&
+      isActionableAssignmentStatus(activeAssignment.status)
+    ) {
+      return;
+    }
+    setActiveAssignmentId(undefined);
+    setViewMode('RESULTS');
+    setAssignmentFeedback(
+      activeAssignment
+        ? 'This observation assignment is no longer pending or in progress. Showing results instead.'
+        : 'This observation assignment is no longer available. Showing results instead.',
+    );
+  }, [activeAssignmentId, observationData.assignments, observationData.status]);
 
   // Hooks must run consistently before selecting the role-specific view.
   if (isObservationManager) {
@@ -104,16 +168,16 @@ export const ObservationView: React.FC = () => {
       (currentStudent && a.studentId === currentStudent.id),
   );
 
-  const pendingAssignments = myAssignments.filter((assignment) => {
-    const status = assignment.status.toUpperCase().replaceAll(' ', '_');
-    return status === 'PENDING' || status === 'IN_PROGRESS';
-  });
+  const pendingAssignments = myAssignments.filter((assignment) =>
+    isActionableAssignmentStatus(assignment.status),
+  );
   const activeFEDCAssignment =
     myAssignments.find(
       (assignment) =>
         assignment.id === activeAssignmentId &&
         assignment.studentId === currentStudent?.id &&
-        assignment.instrumentType === 'FEDC',
+        assignment.instrumentType === 'FEDC' &&
+        isActionableAssignmentStatus(assignment.status),
     ) ??
     (!activeAssignmentId
       ? pendingAssignments.find(
@@ -127,7 +191,8 @@ export const ObservationView: React.FC = () => {
       (assignment) =>
         assignment.id === activeAssignmentId &&
         assignment.studentId === currentStudent?.id &&
-        assignment.instrumentType === 'SENSORY_PROFILE',
+        assignment.instrumentType === 'SENSORY_PROFILE' &&
+        isActionableAssignmentStatus(assignment.status),
     ) ??
     (!activeAssignmentId
       ? pendingAssignments.find(
@@ -141,7 +206,8 @@ export const ObservationView: React.FC = () => {
       (assignment) =>
         assignment.id === activeAssignmentId &&
         assignment.studentId === currentStudent?.id &&
-        assignment.instrumentType === 'SFA',
+        assignment.instrumentType === 'SFA' &&
+        isActionableAssignmentStatus(assignment.status),
     ) ??
     (!activeAssignmentId
       ? pendingAssignments.find(
@@ -212,6 +278,16 @@ export const ObservationView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {assignmentFeedback && (
+        <div
+          role="status"
+          className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-2 text-xs text-amber-900"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{assignmentFeedback}</span>
+        </div>
+      )}
 
       {/* Coordinator Assigned Tasks Alert */}
       {observationData.status === 'loading' && (

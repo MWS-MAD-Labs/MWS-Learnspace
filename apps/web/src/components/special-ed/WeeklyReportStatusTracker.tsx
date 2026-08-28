@@ -5,6 +5,13 @@ import {
   type WeeklyReport,
 } from '../../services/weeklyReportService';
 import { IEPReport, LJReviewStatus, LJApprovalStatus } from '../../types';
+import {
+  isoWeekForDate,
+  isoWeeksInYear,
+  weeklyReportDateRange,
+} from '../../services/weeklyReportDates';
+import { attendanceService } from '../../services/attendanceService';
+import { isRequestCancelled } from '../../services/apiClient';
 import { StatusBadge } from '../common/StatusBadge';
 import {
   Search,
@@ -18,8 +25,47 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
+export function clampIsoWeekForYear(year: number, weekNumber: number) {
+  return Math.min(weekNumber, isoWeeksInYear(year));
+}
+
+export function weeklyReportHeading(year: number, weekNumber: number) {
+  return `Week ${weekNumber} (${weeklyReportDateRange(year, weekNumber).range})`;
+}
+
+export function reportYearOptions(
+  currentIsoYear: number,
+  selectedYear: number,
+  radius = 5,
+) {
+  const start = currentIsoYear - radius;
+  const end = currentIsoYear + radius;
+  const years = Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  if (!years.includes(selectedYear)) years.push(selectedYear);
+  return years.sort((a, b) => b - a);
+}
+
+export function findWeeklyReportForStudent(
+  reports: readonly WeeklyReport[],
+  studentId: string,
+  weekNumber: number,
+  year: number,
+) {
+  return reports.find(
+    (report) =>
+      report.studentId === studentId &&
+      report.weekNumber === weekNumber &&
+      Number(report.year) === year,
+  );
+}
+
 interface WeeklyReportStatusTrackerProps {
-  onSelectReportForEdit?: (studentId: string, weekNumber: number) => void;
+  onSelectReportForEdit?: (
+    studentId: string,
+    weekNumber: number,
+    reportId?: string,
+    year?: number,
+  ) => void;
 }
 
 export const WeeklyReportStatusTracker: React.FC<
@@ -34,7 +80,14 @@ export const WeeklyReportStatusTracker: React.FC<
     refreshData,
   } = useApp();
 
-  const [selectedWeek, setSelectedWeek] = useState<number>(8);
+  const [calendarStatus, setCalendarStatus] = useState<
+    'loading' | 'ready' | 'error'
+  >('loading');
+  const [calendarError, setCalendarError] = useState<string>();
+  const [calendarRetry, setCalendarRetry] = useState(0);
+  const [currentIsoYear, setCurrentIsoYear] = useState(2026);
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [searchFilter, setSearchFilter] = useState('');
   const [gradeFilter, setGradeFilter] = useState('All Grades');
   const [stageFilter, setStageFilter] = useState('All Stages');
@@ -81,12 +134,39 @@ export const WeeklyReportStatusTracker: React.FC<
   useEffect(() => {
     if (!organizationId) return;
     const controller = new AbortController();
+    setCalendarStatus('loading');
+    setCalendarError(undefined);
+    setAllReports([]);
+    void attendanceService
+      .getSchoolDate(organizationId, controller.signal)
+      .then((response) => {
+        const current = isoWeekForDate(response.data.schoolDate);
+        setCurrentIsoYear(current.year);
+        setSelectedYear(current.year);
+        setSelectedWeek(current.week);
+        setCalendarStatus('ready');
+      })
+      .catch((error: unknown) => {
+        if (isRequestCancelled(error)) return;
+        setCalendarStatus('error');
+        setCalendarError(
+          error instanceof Error
+            ? error.message
+            : 'The organization school date could not be loaded.',
+        );
+      });
+    return () => controller.abort();
+  }, [organizationId, calendarRetry]);
+
+  useEffect(() => {
+    if (!organizationId || calendarStatus !== 'ready') return;
+    const controller = new AbortController();
     setReportStatus('loading');
     setReportError(undefined);
     weeklyReportService
       .getWeeklyReports(
         organizationId,
-        { weekNumber: selectedWeek },
+        { year: selectedYear, weekNumber: selectedWeek },
         controller.signal,
       )
       .then((reports) => {
@@ -103,23 +183,37 @@ export const WeeklyReportStatusTracker: React.FC<
         );
       });
     return () => controller.abort();
-  }, [organizationId, selectedWeek, retry]);
+  }, [calendarStatus, organizationId, selectedYear, selectedWeek, retry]);
+
+  const selectedHeading = useMemo(
+    () => weeklyReportHeading(selectedYear, selectedWeek),
+    [selectedYear, selectedWeek],
+  );
+  const selectableYears = useMemo(
+    () => reportYearOptions(currentIsoYear, selectedYear),
+    [currentIsoYear, selectedYear],
+  );
 
   // Build rows for the selected week
   const studentReportRows = useMemo(() => {
+    if (reportStatus !== 'ready') return [];
     return specialStudents.map((student) => {
-      const match = allReports.find(
-        (r) => r.studentId === student.id && r.weekNumber === selectedWeek,
-      ) || {
-        id: `wr-${student.id}-w${selectedWeek}`,
+      const persistedReport = findWeeklyReportForStudent(
+        allReports,
+        student.id,
+        selectedWeek,
+        selectedYear,
+      );
+      const dates = weeklyReportDateRange(selectedYear, selectedWeek);
+      const match = persistedReport || {
+        id: `new-${student.id}-${selectedYear}-w${selectedWeek}`,
         studentId: student.id,
-        iepId: `iep-${student.id}-2026`,
-        year: '2026',
+        iepId: `iep-${student.id}-${selectedYear}`,
+        year: String(selectedYear),
         weekNumber: selectedWeek,
-        weekRange:
-          selectedWeek === 8 ? 'Oct 19 – 23, 2026' : `Week ${selectedWeek}`,
-        weekStart: '2026-10-19',
-        weekEnd: '2026-10-23',
+        weekRange: dates.range,
+        weekStart: dates.start,
+        weekEnd: dates.end,
         teacherId: student.assignedGPKTeacherId || currentUser.id,
         teacherName: student.assignedGPKTeacherName || currentUser.name,
         status: 'Draft' as const,
@@ -131,9 +225,20 @@ export const WeeklyReportStatusTracker: React.FC<
         homeConnection: '',
         workflowHistory: [],
       };
-      return { student, report: match };
+      return {
+        student,
+        report: match,
+        hasPersistedReport: Boolean(persistedReport),
+      };
     });
-  }, [specialStudents, allReports, selectedWeek, currentUser]);
+  }, [
+    reportStatus,
+    specialStudents,
+    allReports,
+    selectedYear,
+    selectedWeek,
+    currentUser,
+  ]);
 
   // Filtered rows
   const filteredRows = useMemo(() => {
@@ -278,25 +383,50 @@ export const WeeklyReportStatusTracker: React.FC<
     }
   };
 
-  return (
-    <div id="weekly-report-status-tracker-container" className="space-y-6">
-      {reportStatus === 'loading' && (
-        <div className="rounded-xl border border-[#E8DFC8] bg-[#FAF5EF] px-4 py-3 text-xs font-semibold text-stone-600">
-          Loading weekly report statuses…
-        </div>
-      )}
-      {reportStatus === 'error' && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 flex items-center justify-between gap-3">
-          <span>{reportError}</span>
+  if (calendarStatus !== 'ready') {
+    return (
+      <div className="rounded-xl border border-[#E8DFC8] bg-[#FAF5EF] px-4 py-5 text-sm text-stone-700 space-y-3">
+        <p className="font-semibold">
+          {calendarStatus === 'loading'
+            ? 'Loading the organization school date…'
+            : calendarError}
+        </p>
+        {calendarStatus === 'error' && (
           <button
             type="button"
-            onClick={() => setRetry((attempt) => attempt + 1)}
-            className="font-bold underline"
+            onClick={() => setCalendarRetry((attempt) => attempt + 1)}
+            className="rounded-lg bg-[#6E161E] px-3 py-1.5 text-xs font-bold text-white"
           >
             Retry
           </button>
-        </div>
-      )}
+        )}
+      </div>
+    );
+  }
+
+  if (reportStatus !== 'ready') {
+    return (
+      <div className="rounded-xl border border-[#E8DFC8] bg-[#FAF5EF] px-4 py-5 text-sm text-stone-700 space-y-3">
+        <p className="font-semibold">
+          {reportStatus === 'loading'
+            ? 'Loading weekly report statuses…'
+            : reportError}
+        </p>
+        {reportStatus === 'error' && (
+          <button
+            type="button"
+            onClick={() => setRetry((attempt) => attempt + 1)}
+            className="rounded-lg bg-[#6E161E] px-3 py-1.5 text-xs font-bold text-white"
+          >
+            Retry
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div id="weekly-report-status-tracker-container" className="space-y-6">
       {/* Week Selector Bar */}
       <div className="bg-white border border-[#EFE7DC] rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -306,17 +436,35 @@ export const WeeklyReportStatusTracker: React.FC<
               Select Target Academic Week
             </span>
             <h3 className="font-heading font-bold text-sm text-stone-900">
-              Week {selectedWeek} (
-              {selectedWeek === 8
-                ? 'Oct 19 – 23, 2026'
-                : `Term 1 - Week ${selectedWeek}`}
-              )
+              {selectedHeading}
             </h3>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-          {[6, 7, 8, 9, 10].map((w) => (
+        <div className="flex max-w-full items-center gap-2 overflow-x-auto pb-1">
+          <label className="sr-only" htmlFor="weekly-report-year-select">
+            Report year
+          </label>
+          <select
+            id="weekly-report-year-select"
+            value={selectedYear}
+            onChange={(event) => {
+              const nextYear = Number(event.target.value);
+              setSelectedYear(nextYear);
+              setSelectedWeek((week) => clampIsoWeekForYear(nextYear, week));
+            }}
+            className="shrink-0 rounded-xl border border-[#E8DFC8] bg-[#FAF5EF] px-3 py-1.5 text-xs font-bold text-stone-700"
+          >
+            {selectableYears.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+          {Array.from(
+            { length: isoWeeksInYear(selectedYear) },
+            (_, index) => index + 1,
+          ).map((w) => (
             <button
               key={w}
               id={`select-week-btn-${w}`}
@@ -492,7 +640,7 @@ export const WeeklyReportStatusTracker: React.FC<
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EFE7DC] text-stone-800">
-              {filteredRows.map(({ student, report }) => {
+              {filteredRows.map(({ student, report, hasPersistedReport }) => {
                 const isAssignedGPK =
                   (student.assignedGPKTeacherId === currentUser.id ||
                     currentUser.assignedSpecialNeedsStudentIds?.includes(
@@ -596,7 +744,12 @@ export const WeeklyReportStatusTracker: React.FC<
                           onClick={() => {
                             setSelectedStudentId(student.id);
                             if (onSelectReportForEdit)
-                              onSelectReportForEdit(student.id, selectedWeek);
+                              onSelectReportForEdit(
+                                student.id,
+                                report.weekNumber,
+                                hasPersistedReport ? report.id : undefined,
+                                Number(report.year),
+                              );
                           }}
                           className="flex items-center gap-1 px-2.5 py-1.5 bg-[#FAF5EF] hover:bg-[#6E161E] hover:text-white border border-[#E8DFC8] rounded-xl font-bold text-stone-700 transition-all text-xs shadow-2xs"
                         >
@@ -697,7 +850,16 @@ export const WeeklyReportStatusTracker: React.FC<
                       setReviewingReport(null);
                       setSelectedStudentId(studId);
                       if (onSelectReportForEdit)
-                        onSelectReportForEdit(studId, wNum);
+                        onSelectReportForEdit(
+                          studId,
+                          wNum,
+                          allReports.some(
+                            (candidate) => candidate.id === reviewingReport.id,
+                          )
+                            ? reviewingReport.id
+                            : undefined,
+                          Number(reviewingReport.year),
+                        );
                     }}
                     className="text-[11px] font-bold text-[#6E161E] hover:underline flex items-center gap-1"
                   >

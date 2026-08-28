@@ -18,6 +18,7 @@ import { createResourceRouter } from './resourceRoutes.js';
 import { createObservationRouter } from './observationRoutes.js';
 import { createIepRouter } from './iepRoutes.js';
 import { createWeeklyReportRouter } from './weeklyReportRoutes.js';
+import { createAggregateRouter } from './aggregateRoutes.js';
 import { createTestAuthRouter } from './testAuthRoutes.js';
 
 export type AppDependencies = {
@@ -149,6 +150,10 @@ export function createApp({
       app.use(
         '/api/v1',
         createWeeklyReportRouter(database.client, authServices.sessions),
+      );
+      app.use(
+        '/api/v1',
+        createAggregateRouter(database.client, authServices.sessions),
       );
     }
   }
