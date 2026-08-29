@@ -58,9 +58,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Replaced the direct `pg` readiness pool with a singleton Prisma client that verifies the required committed migration before reporting ready and enforces PostgreSQL-side readiness query/lock timeouts.
 - Required SHA-256 sidecars for every database restore, failing before Docker access when integrity metadata is absent; backup archives and checksums are now published as a failure-safe pair only after verification and checksum generation succeed, with distinct infrastructure and missing-database errors.
 - Hardened tenant integrity with database triggers covering organization-owned relations and immutable tenant ownership; tenant actor references now require an active user and active organization membership when assigned, while unchanged historical attribution remains update-safe after an actor leaves. Membership user identity and audit actor attribution are immutable; audit actor deletion is restricted. Added composite IEP lineage for goal-achievement events, strict audit metadata schemas, and database immutability for completed observations and used definitions.
-- Replaced browser-selected startup identity with the API current-session response. The fake-data role switcher now requires both explicit development-only build flags and cannot change server identity.
+- Replaced browser-selected startup identity with the API current-session response; the prototype role switcher has now been removed entirely.
 - Migrated the attendance workspace from browser seed/storage data to authorized API class rosters and PostgreSQL records, including loading, empty, retry, validation, read-only, conflict, and save-success states.
-- Migrated production user identity, membership, student directory, and GPK assignment administration away from browser storage; development fake-data behavior remains available only behind the explicit demo flags.
+- Migrated user identity, membership, student directory, and GPK assignment administration away from browser storage and removed the obsolete development fake-data path.
 - Migrated Sensory Profile authoring, completion, history, detailed reporting, and reference data away from browser persistence; completed records now retain their exact server-pinned definition and authoritative scores.
 - Migrated IEP plan authoring and plan-backed dashboard, analytics, status, and weekly-report reads away from browser persistence; leadership readers are read-only, assigned special-education authors are server-scoped, and explicit workflow transitions remain deferred to P5-009.
 - Replaced weekly-report-to-IEP mutation with transactionally recalculated goal projections from weekly progress and append-only achievement events, including correction-safe provenance, per-goal concurrency locking, historical-plan targeting, migration backfill, timestamp-preserving importer parity, explicit client-side IEP selection, bounded list summaries, and detail-only addressed/achievement history hydration.
@@ -79,7 +79,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Unused direct Google GenAI, dotenv, and esbuild dependencies from the prototype manifest.
 - Attendance keys, methods, seed initialization, legacy browser attendance types, and all production attendance `localStorage` paths.
 - The final Learning Journey `storageService.updateWorkflowStage()` browser-persistence path.
-- Production IEP plan `localStorage` initialization, CRUD, workflow mutation, and weekly-report-to-plan synchronization methods; weekly report persistence remains pending P5-010.
+- Production IEP plan `localStorage` initialization, CRUD, workflow mutation, and weekly-report-to-plan synchronization methods.
+- The final browser-backed `storageService`, sensitive web seed fixtures, automatic startup seeding, fake-data role switcher, reset-data control, seed-backed observation repository, and obsolete browser-only domain types.
 
 ## [0.0.0] - Prototype
 

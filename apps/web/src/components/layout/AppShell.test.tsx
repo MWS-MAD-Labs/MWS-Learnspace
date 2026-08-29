@@ -32,7 +32,6 @@ vi.mock('../../context/AppContext', () => ({
       gradeIds: currentGradeIds,
     },
     allUsers: [],
-    switchRole: vi.fn(),
     activeTab: 'DASHBOARD',
     setActiveTab: vi.fn(),
     specialEdSubTab: 'FEDC',
@@ -42,7 +41,6 @@ vi.mock('../../context/AppContext', () => ({
       searchQuery = value;
       setSearchQuery(value);
     },
-    resetAllDataToDefault: vi.fn(),
     navigateToJourneyEditor: vi.fn(),
     navigateToIEP,
     navigateToWeeklyReport,
@@ -50,7 +48,6 @@ vi.mock('../../context/AppContext', () => ({
     navigateToAttendanceStudent,
     setSelectedStudentId: vi.fn(),
   }),
-  demoRoleSwitcherEnabled: false,
 }));
 
 afterEach(() => {

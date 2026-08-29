@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { demoRoleSwitcherEnabled, useApp } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
 import { useObservationData } from '../../hooks/useObservationData';
 import { ApiClientError, isRequestCancelled } from '../../services/apiClient';
 import {
   definitionCreateCommand,
   definitionVersionCommand,
-  demoObservationRepository,
   observationService,
 } from '../../services/observationService';
 import { attendanceService } from '../../services/attendanceService';
-import { storageService } from '../../services/storageService';
 import { studentAdministrationService } from '../../services/studentAdministrationService';
 import {
   Student,
@@ -178,8 +176,7 @@ export const CoordinatorObservationManager: React.FC = () => {
   ]);
   const selectableAssignees = allUsers.filter(
     (user) =>
-      eligibleAssigneeRoles.has(user.role) &&
-      (demoRoleSwitcherEnabled || Boolean(user.membershipId)),
+      eligibleAssigneeRoles.has(user.role) && Boolean(user.membershipId),
   );
   const latestDefinitionVersionByKey = forms.reduce<Map<string, number>>(
     (latest, form) => {
@@ -211,9 +208,7 @@ export const CoordinatorObservationManager: React.FC = () => {
     setIsSavingForm(true);
     setMutationError(undefined);
     try {
-      if (demoRoleSwitcherEnabled) {
-        demoObservationRepository.saveDefinition(form, currentUser);
-      } else if (form.isNew) {
+      if (form.isNew) {
         await observationService.createDefinition(
           organizationId,
           definitionCreateCommand(form),
@@ -265,7 +260,7 @@ export const CoordinatorObservationManager: React.FC = () => {
       );
       return;
     }
-    if (!assignedUser.membershipId && !demoRoleSwitcherEnabled) {
+    if (!assignedUser.membershipId) {
       showToast(
         'error',
         'Assessor Unavailable',
@@ -277,28 +272,15 @@ export const CoordinatorObservationManager: React.FC = () => {
     setIsCreatingAssignment(true);
     setMutationError(undefined);
     try {
-      if (demoRoleSwitcherEnabled) {
-        demoObservationRepository.createAssignment({
-          student,
-          assignee: assignedUser,
-          definition,
-          academicYear: newAssignment.academicYear,
-          dueDate: newAssignment.dueDate,
-          priority: newAssignment.priority,
-          notes: newAssignment.notes,
-          coordinator: currentUser,
-        });
-      } else {
-        await observationService.createAssignment(organizationId, {
-          assignedToMembershipId: assignedUser.membershipId!,
-          studentId: student.id,
-          definitionId: definition.id,
-          academicYear: newAssignment.academicYear,
-          dueDate: newAssignment.dueDate,
-          priority: newAssignment.priority,
-          notes: newAssignment.notes || null,
-        });
-      }
+      await observationService.createAssignment(organizationId, {
+        assignedToMembershipId: assignedUser.membershipId!,
+        studentId: student.id,
+        definitionId: definition.id,
+        academicYear: newAssignment.academicYear,
+        dueDate: newAssignment.dueDate,
+        priority: newAssignment.priority,
+        notes: newAssignment.notes || null,
+      });
       setIsAssignModalOpen(false);
       observationData.retry();
       showToast(
@@ -323,11 +305,7 @@ export const CoordinatorObservationManager: React.FC = () => {
     setMutatingAssignmentId(id);
     setMutationError(undefined);
     try {
-      if (demoRoleSwitcherEnabled) {
-        demoObservationRepository.deleteAssignment(id);
-      } else {
-        await observationService.deleteAssignment(organizationId, id);
-      }
+      await observationService.deleteAssignment(organizationId, id);
       observationData.retry();
       showToast(
         'info',
@@ -351,13 +329,9 @@ export const CoordinatorObservationManager: React.FC = () => {
     setMutatingAssignmentId(id);
     setMutationError(undefined);
     try {
-      if (demoRoleSwitcherEnabled) {
-        demoObservationRepository.cancelAssignment(id);
-      } else {
-        await observationService.cancelAssignment(organizationId, id, {
-          reason: 'Cancelled by Special Education Coordinator.',
-        });
-      }
+      await observationService.cancelAssignment(organizationId, id, {
+        reason: 'Cancelled by Special Education Coordinator.',
+      });
       observationData.retry();
       showToast(
         'info',
@@ -377,7 +351,7 @@ export const CoordinatorObservationManager: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!isAssignGPKModalOpen || demoRoleSwitcherEnabled) return;
+    if (!isAssignGPKModalOpen) return;
     const controller = new AbortController();
     setSchoolDate('');
     setSchoolDateStatus('loading');
@@ -406,7 +380,7 @@ export const CoordinatorObservationManager: React.FC = () => {
       !selectedStudentForGPK ||
       !selectedGPKTeacherId ||
       isAssigningGPK ||
-      (!demoRoleSwitcherEnabled && schoolDateStatus !== 'ready')
+      schoolDateStatus !== 'ready'
     )
       return;
 
@@ -415,35 +389,19 @@ export const CoordinatorObservationManager: React.FC = () => {
 
     setIsAssigningGPK(true);
     try {
-      if (demoRoleSwitcherEnabled) {
-        const success = storageService.assignGPKTeacherToStudent(
-          selectedStudentForGPK.id,
-          teacher.id,
-          teacher.name,
+      if (!teacher.membershipId) {
+        showToast(
+          'error',
+          'Assignment Failed',
+          'This staff entry is missing the membership required for assignment.',
         );
-        if (!success) {
-          showToast(
-            'error',
-            'Capacity Limit Reached',
-            'The fake-data GPK teacher has reached the demo caseload limit.',
-          );
-          return;
-        }
-      } else {
-        if (!teacher.membershipId) {
-          showToast(
-            'error',
-            'Assignment Failed',
-            'This staff entry is missing the membership required for assignment.',
-          );
-          return;
-        }
-        await studentAdministrationService.assignGpkTeacher(
-          organizationId,
-          selectedStudentForGPK.id,
-          { membershipId: teacher.membershipId, startsOn: schoolDate },
-        );
+        return;
       }
+      await studentAdministrationService.assignGpkTeacher(
+        organizationId,
+        selectedStudentForGPK.id,
+        { membershipId: teacher.membershipId, startsOn: schoolDate },
+      );
 
       await refreshData();
       setIsAssignGPKModalOpen(false);
@@ -1221,13 +1179,13 @@ export const CoordinatorObservationManager: React.FC = () => {
                 </div>
               </div>
 
-              {!demoRoleSwitcherEnabled && schoolDateStatus === 'loading' && (
+              {schoolDateStatus === 'loading' && (
                 <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-stone-600 text-[11px]">
                   Loading the authoritative school date…
                 </div>
               )}
 
-              {!demoRoleSwitcherEnabled && schoolDateStatus === 'error' && (
+              {schoolDateStatus === 'error' && (
                 <div className="p-3 bg-rose-50 rounded-xl border border-rose-200 text-rose-800 text-[11px] space-y-2">
                   <p>{schoolDateError}</p>
                   <button
@@ -1240,9 +1198,10 @@ export const CoordinatorObservationManager: React.FC = () => {
                 </div>
               )}
 
-              {!demoRoleSwitcherEnabled && schoolDateStatus === 'ready' && (
+              {schoolDateStatus === 'ready' && (
                 <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-stone-700 text-[11px]">
-                  Assignment starts on the school date: <strong>{schoolDate}</strong>
+                  Assignment starts on the school date:{' '}
+                  <strong>{schoolDate}</strong>
                 </div>
               )}
 
@@ -1272,7 +1231,7 @@ export const CoordinatorObservationManager: React.FC = () => {
                   disabled={
                     !selectedGPKTeacherId ||
                     isAssigningGPK ||
-                    (!demoRoleSwitcherEnabled && schoolDateStatus !== 'ready')
+                    schoolDateStatus !== 'ready'
                   }
                   className="px-4 py-2 bg-[#6E161E] hover:bg-[#581118] text-white rounded-xl font-bold shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
                 >

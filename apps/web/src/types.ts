@@ -120,22 +120,6 @@ export interface ObservationDefinition {
   isNew?: boolean;
 }
 
-export interface ObservationFormDefinition {
-  id: string;
-  type: 'FEDC' | 'SENSORY_PROFILE' | 'SFA';
-  title: string;
-  framework: string;
-  description: string;
-  targetAges: string;
-  defaultFrequency: string;
-  version: string;
-  itemCount: number;
-  lastUpdated: string;
-  updatedBy: string;
-  isActive: boolean;
-  body?: Record<string, unknown>;
-}
-
 export interface SpecialNeedsAssignment {
   id: string;
   studentId: string;
@@ -274,15 +258,6 @@ export interface FEDCItem {
   number: string;
   text: string;
   milestoneId: number;
-}
-
-export interface FEDCMilestone {
-  id: number;
-  title: string;
-  subtitle?: string;
-  description?: string;
-  maxScore: number;
-  items: FEDCItem[];
 }
 
 export interface FEDCItemResponse {

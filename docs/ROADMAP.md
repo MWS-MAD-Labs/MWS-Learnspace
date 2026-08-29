@@ -64,12 +64,12 @@ These decisions reduce ambiguity for implementation agents. Change them only thr
 The current application has a useful React UI and domain inventory, but its educator workflows remain a prototype:
 
 - the npm workspace contains `apps/web`, `apps/api`, and `packages/contracts`;
-- FEDC, Sensory Profile, and SFA observation workflows and IEP plan authoring are API/PostgreSQL-backed; weekly reports and related remaining prototype domains are still initialized from `apps/web/src/data/seedData.ts` and persisted by `apps/web/src/services/storageService.ts` in browser `localStorage`; Learning Journey authoring and approval workflows are also API/PostgreSQL-backed;
-- authenticated identity, memberships, permissions, and record scopes come from Google OAuth and PostgreSQL-backed server sessions; the role switcher is isolated to explicit development fake-data builds;
-- authorization is enforced by the API for implemented protected resources; remaining prototype domains still contain presentation-only frontend role checks until they migrate;
+- all sensitive product domains, including Learning Journeys, observations, IEPs, weekly reports, dashboards, reporting, search, and notifications, are API/PostgreSQL-backed; production web paths do not persist domain records in browser storage;
+- authenticated identity, memberships, permissions, and record scopes come from Google OAuth and PostgreSQL-backed server sessions; the prototype role switcher, automatic web seed initialization, and reset control have been removed;
+- authorization is enforced by the API for protected resources; frontend role checks are presentation behavior only;
 - the Express API, shared response contracts, PostgreSQL Compose service, Prisma lifecycle, production-oriented images, OAuth, sessions, and authorization foundation are implemented;
-- PostgreSQL is authoritative for attendance, complete Learning Journey authoring and approval workflows, observation definitions and assignments, FEDC, Sensory Profile, SFA, and IEP plan records; IEP workflow transitions and weekly reports remain incomplete Milestone 5 slices;
-- `apps/web/src/types.ts` still contains overlapping status representations for remaining prototype domains that must be normalized;
+- PostgreSQL is authoritative for attendance, Learning Journeys, observation definitions and assignments, FEDC, Sensory Profile, SFA, IEP plans and transitions, weekly reports, dashboards, reporting, search, and notifications;
+- `apps/web/src/types.ts` retains compatibility view models for UI mapping while shared contracts validate API wire data;
 - no active Gemini integration exists; Google AI Studio provenance remains only in `metadata.json`;
 - Milestone 0 provides a dependency lockfile, CI pipeline, formatting and linting, type checking, and frontend smoke tests.
 
@@ -850,7 +850,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P5-013 — Remove sensitive browser persistence
 
-- [ ] **Dependencies:** P5-012
+- [x] **Dependencies:** P5-012
 - **Change:**
   - Delete `storageService.ts` or reduce it to non-sensitive UI preferences.
   - Remove automatic seed initialization from web startup.
@@ -858,6 +858,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
   - Remove obsolete domain types replaced by shared API contracts.
 - **Acceptance:** no student, attendance, observation, IEP, workflow, or user identity record is stored in `localStorage` or `sessionStorage`.
 - **Validate:** source search, browser storage inspection, full tests, and production build.
+- **Completed (2026-08-28):** Deleted the browser-backed `storageService` and sensitive web seed fixtures; removed automatic startup initialization, fake-data role switching, reset controls, and the seed-backed observation repository; converted remaining observation and GPK branches to typed API calls; removed obsolete browser-only definition types; retained only the explicitly gated, read-only development legacy export route for pre-existing migration data; and added source-level regression coverage proving student, IEP, observation, report, workflow, attendance, and identity storage keys cannot re-enter production application paths.
 
 ---
 

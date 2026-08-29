@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { demoRoleSwitcherEnabled } from '../context/AppContext';
 import { isRequestCancelled } from '../services/apiClient';
 import {
-  demoObservationRepository,
   mapObservationAssignment,
   mapObservationDefinition,
   observationService,
@@ -35,16 +33,6 @@ export function useObservationData(
     if (!enabled) {
       setDefinitions([]);
       setAssignments([]);
-      setError(undefined);
-      setStatus('ready');
-      return;
-    }
-
-    if (demoRoleSwitcherEnabled) {
-      setDefinitions(
-        includeDefinitions ? demoObservationRepository.getDefinitions() : [],
-      );
-      setAssignments(demoObservationRepository.getAssignments());
       setError(undefined);
       setStatus('ready');
       return;

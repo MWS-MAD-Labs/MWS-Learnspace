@@ -1,34 +1,46 @@
 import { describe, expect, it } from 'vitest';
 import {
-  SEED_ALL_FEDC_OBSERVATIONS,
-  SEED_ALL_SENSORY_PROFILES,
-  SEED_IEP_RECORDS,
-  SEED_LEARNING_JOURNEYS,
-  SEED_OBSERVATION_ASSIGNMENTS,
-  SEED_OBSERVATION_FORMS,
-  SEED_SFA_OBSERVATION,
-  SEED_STUDENTS,
-  SEED_USERS,
-  SEED_WEEKLY_REPORTS,
-} from '../../data/seedData';
-import {
   LEGACY_STORAGE_KEYS,
   LegacyExportError,
   buildLegacyExport,
 } from './legacyStorageReader';
 
+const user = {
+  id: 'user-1',
+  name: 'Legacy Coordinator',
+  email: 'coordinator@example.test',
+  role: 'SPECIAL_ED_COORDINATOR',
+  unitIds: ['Elementary'],
+  gradeIds: ['Grade 1'],
+  subjectIds: [],
+  permissions: ['VIEW_ALL'],
+};
+const student = {
+  id: 'student-1',
+  studentNumber: 'LEGACY-001',
+  fullName: 'Legacy Student',
+  gender: 'Unspecified',
+  dateOfBirth: '2018-01-01',
+  grade: 'Grade 1',
+  className: '1-A',
+  unit: 'Elementary',
+  specialNeedsFlag: true,
+  active: true,
+  assignedGPKTeacherId: user.id,
+};
+
 const seedStorage = () => {
   const values = {
-    users: SEED_USERS,
-    students: SEED_STUDENTS,
-    learningJourneys: SEED_LEARNING_JOURNEYS,
-    fedcObservations: SEED_ALL_FEDC_OBSERVATIONS,
-    sensoryProfileObservations: SEED_ALL_SENSORY_PROFILES,
-    sfaObservations: [SEED_SFA_OBSERVATION],
-    ieps: SEED_IEP_RECORDS,
-    weeklyReports: SEED_WEEKLY_REPORTS,
-    observationAssignments: SEED_OBSERVATION_ASSIGNMENTS,
-    observationDefinitions: SEED_OBSERVATION_FORMS,
+    users: [user],
+    students: [student],
+    learningJourneys: [],
+    fedcObservations: [],
+    sensoryProfileObservations: [],
+    sfaObservations: [],
+    ieps: [],
+    weeklyReports: [],
+    observationAssignments: [],
+    observationDefinitions: [],
   };
   for (const [name, value] of Object.entries(values)) {
     localStorage.setItem(
@@ -36,11 +48,11 @@ const seedStorage = () => {
       JSON.stringify(value),
     );
   }
-  localStorage.setItem(LEGACY_STORAGE_KEYS.currentUserId, SEED_USERS[0].id);
+  localStorage.setItem(LEGACY_STORAGE_KEYS.currentUserId, user.id);
 };
 
 describe('buildLegacyExport', () => {
-  it('creates a validated version 1 export from current seed storage', () => {
+  it('creates a validated version 1 export from legacy browser storage', () => {
     seedStorage();
 
     const result = buildLegacyExport(localStorage, {
@@ -50,7 +62,7 @@ describe('buildLegacyExport', () => {
 
     expect(result.format).toBe('learnspace-export');
     expect(result.version).toBe(1);
-    expect(result.records.students).toHaveLength(SEED_STUDENTS.length);
+    expect(result.records.students).toHaveLength(1);
     expect(result.organization.units).toContain('Elementary');
     expect(result.organization.targetOrganizationId).toBeNull();
   });
@@ -72,9 +84,7 @@ describe('buildLegacyExport', () => {
     seedStorage();
     localStorage.setItem(
       LEGACY_STORAGE_KEYS.students,
-      JSON.stringify([
-        { ...SEED_STUDENTS[0], assignedGPKTeacherId: 'missing-user' },
-      ]),
+      JSON.stringify([{ ...student, assignedGPKTeacherId: 'missing-user' }]),
     );
 
     expect(() =>

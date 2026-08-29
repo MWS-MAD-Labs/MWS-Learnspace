@@ -6,10 +6,7 @@ import { useObservationData } from '../../hooks/useObservationData';
 import { attendanceService } from '../../services/attendanceService';
 import { studentAdministrationService } from '../../services/studentAdministrationService';
 
-vi.mock('../../context/AppContext', () => ({
-  demoRoleSwitcherEnabled: false,
-  useApp: vi.fn(),
-}));
+vi.mock('../../context/AppContext', () => ({ useApp: vi.fn() }));
 vi.mock('../../hooks/useObservationData', () => ({
   useObservationData: vi.fn(),
 }));
@@ -59,8 +56,7 @@ describe('CoordinatorObservationManager targeted assignment navigation', () => {
       refreshData: vi.fn(),
       selectedStudentId: '',
       setSelectedStudentId,
-      selectedObservationAssignmentId:
-        '33333333-3333-4333-8333-333333333333',
+      selectedObservationAssignmentId: '33333333-3333-4333-8333-333333333333',
       setSelectedObservationAssignmentId,
       observationResultsStudentId: null,
       setObservationResultsStudentId,
@@ -180,11 +176,15 @@ describe('CoordinatorObservationManager targeted assignment navigation', () => {
     expect(
       screen.getByRole('button', { name: /confirm assignment/i }),
     ).toBeDisabled();
-    expect(mockedStudentAdministrationService.assignGpkTeacher).not.toHaveBeenCalled();
+    expect(
+      mockedStudentAdministrationService.assignGpkTeacher,
+    ).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: /retry school date/i }));
     await screen.findByText(/2026-08-29/);
-    fireEvent.click(screen.getByRole('button', { name: /confirm assignment/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /confirm assignment/i }),
+    );
 
     await waitFor(() =>
       expect(

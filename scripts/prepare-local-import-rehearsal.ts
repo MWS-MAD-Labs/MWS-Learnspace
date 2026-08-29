@@ -6,17 +6,17 @@ import {
   LEGACY_STORAGE_KEYS,
 } from '../apps/web/src/dev/legacy-export/legacyStorageReader.js';
 import {
-  SEED_ALL_FEDC_OBSERVATIONS,
-  SEED_ALL_SENSORY_PROFILES,
-  SEED_IEP_RECORDS,
-  SEED_LEARNING_JOURNEYS,
-  SEED_OBSERVATION_ASSIGNMENTS,
-  SEED_OBSERVATION_FORMS,
-  SEED_SFA_OBSERVATION,
-  SEED_STUDENTS,
-  SEED_USERS,
-  SEED_WEEKLY_REPORTS,
-} from '../apps/web/src/data/seedData.js';
+  REHEARSAL_FEDC_OBSERVATIONS,
+  REHEARSAL_IEPS,
+  REHEARSAL_LEARNING_JOURNEYS,
+  REHEARSAL_OBSERVATION_ASSIGNMENTS,
+  REHEARSAL_OBSERVATION_DEFINITIONS,
+  REHEARSAL_SENSORY_PROFILE_OBSERVATIONS,
+  REHEARSAL_SFA_OBSERVATIONS,
+  REHEARSAL_STUDENTS,
+  REHEARSAL_USERS,
+  REHEARSAL_WEEKLY_REPORTS,
+} from './fixtures/localImportRehearsalData.js';
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -67,7 +67,7 @@ async function main() {
       string,
       { targetUserId: string; targetMembershipId: string }
     > = {};
-    for (const source of SEED_USERS) {
+    for (const source of REHEARSAL_USERS) {
       const user = await prisma.user.create({
         data: {
           email: `local.${source.id}.${organization.id}@example.test`,
@@ -90,8 +90,8 @@ async function main() {
 
     const academicYearNames = [
       ...new Set([
-        ...SEED_LEARNING_JOURNEYS.map(({ academicYear }) => academicYear),
-        ...SEED_IEP_RECORDS.map(({ academicYear }) => academicYear),
+        ...REHEARSAL_LEARNING_JOURNEYS.map(({ academicYear }) => academicYear),
+        ...REHEARSAL_IEPS.map(({ academicYear }) => academicYear),
       ]),
     ];
     const academicYears: Record<string, string> = {};
@@ -128,9 +128,9 @@ async function main() {
     const units: Record<string, string> = {};
     for (const name of [
       ...new Set([
-        ...SEED_STUDENTS.map(({ unit }) => unit),
-        ...SEED_LEARNING_JOURNEYS.map(({ unit }) => unit),
-        ...SEED_IEP_RECORDS.map(({ unit }) => unit),
+        ...REHEARSAL_STUDENTS.map(({ unit }) => unit),
+        ...REHEARSAL_LEARNING_JOURNEYS.map(({ unit }) => unit),
+        ...REHEARSAL_IEPS.map(({ unit }) => unit),
       ]),
     ]) {
       const unit = await prisma.unit.create({
@@ -144,9 +144,9 @@ async function main() {
     }
 
     const gradeUnit = new Map<string, string>();
-    for (const student of SEED_STUDENTS)
+    for (const student of REHEARSAL_STUDENTS)
       gradeUnit.set(student.grade, student.unit);
-    for (const journey of SEED_LEARNING_JOURNEYS)
+    for (const journey of REHEARSAL_LEARNING_JOURNEYS)
       gradeUnit.set(journey.grade, journey.unit);
     const grades: Record<string, string> = {};
     let position = 1;
@@ -164,7 +164,7 @@ async function main() {
     }
 
     const classes: Record<string, string> = {};
-    for (const student of SEED_STUDENTS) {
+    for (const student of REHEARSAL_STUDENTS) {
       if (classes[student.className]) continue;
       const schoolClass = await prisma.schoolClass.create({
         data: {
@@ -180,7 +180,7 @@ async function main() {
 
     const subjects: Record<string, string> = {};
     for (const name of [
-      ...new Set(SEED_LEARNING_JOURNEYS.map(({ subject }) => subject)),
+      ...new Set(REHEARSAL_LEARNING_JOURNEYS.map(({ subject }) => subject)),
     ]) {
       const subject = await prisma.subject.create({
         data: {
@@ -194,16 +194,16 @@ async function main() {
 
     const storage = new MemoryStorage();
     const values = {
-      users: SEED_USERS,
-      students: SEED_STUDENTS,
-      learningJourneys: SEED_LEARNING_JOURNEYS,
-      fedcObservations: SEED_ALL_FEDC_OBSERVATIONS,
-      sensoryProfileObservations: SEED_ALL_SENSORY_PROFILES,
-      sfaObservations: [SEED_SFA_OBSERVATION],
-      ieps: SEED_IEP_RECORDS,
-      weeklyReports: SEED_WEEKLY_REPORTS,
-      observationAssignments: SEED_OBSERVATION_ASSIGNMENTS,
-      observationDefinitions: SEED_OBSERVATION_FORMS,
+      users: REHEARSAL_USERS,
+      students: REHEARSAL_STUDENTS,
+      learningJourneys: REHEARSAL_LEARNING_JOURNEYS,
+      fedcObservations: REHEARSAL_FEDC_OBSERVATIONS,
+      sensoryProfileObservations: REHEARSAL_SENSORY_PROFILE_OBSERVATIONS,
+      sfaObservations: REHEARSAL_SFA_OBSERVATIONS,
+      ieps: REHEARSAL_IEPS,
+      weeklyReports: REHEARSAL_WEEKLY_REPORTS,
+      observationAssignments: REHEARSAL_OBSERVATION_ASSIGNMENTS,
+      observationDefinitions: REHEARSAL_OBSERVATION_DEFINITIONS,
     };
     for (const [name, value] of Object.entries(values)) {
       storage.setItem(
@@ -211,7 +211,7 @@ async function main() {
         JSON.stringify(value),
       );
     }
-    storage.setItem(LEGACY_STORAGE_KEYS.currentUserId, SEED_USERS[0].id);
+    storage.setItem(LEGACY_STORAGE_KEYS.currentUserId, REHEARSAL_USERS[0].id);
     const exportDocument = buildLegacyExport(storage, {
       applicationVersion: '0.2.0-local-rehearsal',
       targetOrganizationId: organization.id,
@@ -219,7 +219,7 @@ async function main() {
     const manifest = {
       targetOrganizationId: organization.id,
       sourceKey: exportDocument.organization.sourceKey,
-      operatorUserId: userMappings[SEED_USERS[0].id].targetUserId,
+      operatorUserId: userMappings[REHEARSAL_USERS[0].id].targetUserId,
       enrollmentAcademicYear: academicYearNames[0],
       users: userMappings,
       academicYears,

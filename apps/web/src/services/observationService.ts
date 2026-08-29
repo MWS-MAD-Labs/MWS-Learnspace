@@ -11,22 +11,16 @@ import {
   observationDefinitionsResponseSchema,
 } from '@learnspace/contracts';
 import { z } from 'zod';
-import {
-  SEED_OBSERVATION_ASSIGNMENTS,
-  SEED_OBSERVATION_FORMS,
-} from '../data/seedData';
+
 import type {
   ObservationAssignment,
   ObservationDefinition,
-  ObservationFormDefinition,
   FEDCObservationRecord,
   FEDCItemResponse,
   SensoryProfileRecord,
   SensoryRating,
   SFAObservationRecord,
   SFARespondent,
-  User,
-  Student,
 } from '../types';
 import { apiClient } from './apiClient';
 
@@ -1268,145 +1262,5 @@ export const observationService = {
       { schema: sfaObservationReferenceResponseSchema, signal },
     );
     return mapSFAObservationReference(response.data);
-  },
-};
-
-function demoDefinition(
-  form: ObservationFormDefinition,
-): ObservationDefinition {
-  const version = Number.parseInt(form.version, 10) || 1;
-  const body = form.body ?? { itemCount: form.itemCount };
-  const sfaSections =
-    form.type === 'SFA'
-      ? [
-          'participationItems',
-          'taskSupportItems',
-          'activityPerformanceItems',
-          'adaptationOptions',
-        ].filter((key) => Array.isArray(body[key])).length
-      : 0;
-  return {
-    id: form.id,
-    definitionKey: form.id,
-    type: form.type,
-    title: form.title,
-    framework: form.framework,
-    description: form.description,
-    targetAges: form.targetAges,
-    defaultFrequency: form.defaultFrequency,
-    version,
-    itemCount: numberValue(body.itemCount, form.itemCount),
-    sectionsCount: numberValue(body.sectionsCount, sfaSections),
-    maxScore: numberValue(body.maxScore, form.type === 'SFA' ? 98 : 0),
-    lastUpdated: form.lastUpdated,
-    updatedBy: form.updatedBy,
-    isActive: form.isActive,
-    body,
-  };
-}
-
-let demoDefinitions = SEED_OBSERVATION_FORMS.map(demoDefinition);
-let demoAssignments = SEED_OBSERVATION_ASSIGNMENTS.map((assignment) => ({
-  ...assignment,
-  definitionId:
-    assignment.definitionId ||
-    demoDefinitions.find(
-      (definition) => definition.type === assignment.instrumentType,
-    )?.id ||
-    '',
-  definitionVersion:
-    assignment.definitionVersion ||
-    demoDefinitions.find(
-      (definition) => definition.type === assignment.instrumentType,
-    )?.version ||
-    1,
-}));
-
-export const demoObservationRepository = {
-  getDefinitions(): ObservationDefinition[] {
-    return demoDefinitions.map((definition) => ({ ...definition }));
-  },
-  getAssignments(): ObservationAssignment[] {
-    return demoAssignments.map((assignment) => ({ ...assignment }));
-  },
-  saveDefinition(definition: ObservationDefinition, user: User): void {
-    if (definition.isNew) {
-      demoDefinitions = [
-        {
-          ...definition,
-          id: `demo-definition-${Date.now()}`,
-          definitionKey: definition.definitionKey || `custom-${Date.now()}`,
-          version: 1,
-          isNew: false,
-          updatedBy: user.name,
-          lastUpdated: new Date().toISOString().slice(0, 10),
-        },
-        ...demoDefinitions,
-      ];
-      return;
-    }
-    demoDefinitions = demoDefinitions.map((current) =>
-      current.id === definition.id
-        ? {
-            ...definition,
-            version: current.version + 1,
-            updatedBy: user.name,
-            lastUpdated: new Date().toISOString().slice(0, 10),
-          }
-        : current,
-    );
-  },
-  createAssignment(input: {
-    student: Student;
-    assignee: User;
-    definition: ObservationDefinition;
-    academicYear: string;
-    dueDate: string;
-    priority: string;
-    notes: string;
-    coordinator: User;
-  }): void {
-    demoAssignments = [
-      {
-        id: `demo-assignment-${Date.now()}`,
-        studentId: input.student.id,
-        studentName: input.student.name ?? input.student.fullName,
-        studentGrade: input.student.grade,
-        definitionId: input.definition.id,
-        definitionVersion: input.definition.version,
-        instrumentType: input.definition.type,
-        instrumentTitle: input.definition.title,
-        academicYear: input.academicYear,
-        assignedToUserId: input.assignee.id,
-        assignedToMembershipId: input.assignee.membershipId,
-        assignedToUserName: input.assignee.name,
-        assignedToUserRole: input.assignee.roleTitle,
-        assignedByCoordinatorId: input.coordinator.id,
-        assignedByCoordinatorName: input.coordinator.name,
-        assignedDate: new Date().toISOString().slice(0, 10),
-        dueDate: input.dueDate,
-        status: 'PENDING',
-        priority: input.priority,
-        notes: input.notes,
-        createdAt: new Date().toISOString(),
-      },
-      ...demoAssignments,
-    ];
-  },
-  deleteAssignment(assignmentId: string): void {
-    demoAssignments = demoAssignments.filter(
-      (assignment) => assignment.id !== assignmentId,
-    );
-  },
-  cancelAssignment(assignmentId: string): void {
-    demoAssignments = demoAssignments.map((assignment) =>
-      assignment.id === assignmentId
-        ? {
-            ...assignment,
-            status: 'CANCELLED',
-            cancelledAt: new Date().toISOString(),
-          }
-        : assignment,
-    );
   },
 };

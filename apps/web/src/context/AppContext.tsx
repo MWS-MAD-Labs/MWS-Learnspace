@@ -10,7 +10,6 @@ import React, {
 import { RefreshCw, TriangleAlert } from 'lucide-react';
 import { User, Student } from '../types';
 import { isRequestCancelled } from '../services/apiClient';
-import { storageService } from '../services/storageService';
 import {
   mapStaffDirectoryItemToUser,
   mapStudentListItemToStudent,
@@ -61,7 +60,6 @@ interface AppContextType {
   toasts: ToastMessage[];
   isObservationDrawerOpen: boolean;
 
-  switchRole: (userId: string) => void;
   setActiveTab: (tab: NavigationTab) => void;
   setSpecialEdSubTab: (subTab: SpecialEdSubTab) => void;
   setSelectedStudentId: (id: string) => void;
@@ -84,7 +82,6 @@ interface AppContextType {
   ) => void;
   dismissToast: (id: string) => void;
   refreshData: () => Promise<void>;
-  resetAllDataToDefault: () => void;
 
   navigateToJourneyEditor: (journeyId?: string) => void;
   navigateToObservation: (
@@ -101,11 +98,6 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const demoRoleSwitcherEnabled =
-  import.meta.env.DEV &&
-  import.meta.env.VITE_ENABLE_DEMO_ROLE_SWITCHER === 'true' &&
-  import.meta.env.VITE_FAKE_DATA_MODE === 'true';
-
 function administrationErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
@@ -118,34 +110,22 @@ export const AppProvider: React.FC<{
   organizationId: string;
 }> = ({ children, authenticatedUser, organizationId }) => {
   const [currentUser, setCurrentUser] = useState<User>(authenticatedUser);
-  const [allUsers, setAllUsers] = useState<User[]>(() =>
-    demoRoleSwitcherEnabled ? storageService.getUsers() : [authenticatedUser],
-  );
-  const [students, setStudents] = useState<Student[]>(() =>
-    demoRoleSwitcherEnabled ? storageService.getStudents() : [],
-  );
-  const [assignedStudents, setAssignedStudents] = useState<Student[]>(() =>
-    demoRoleSwitcherEnabled
-      ? storageService.getStudentsForUser(authenticatedUser)
-      : [],
-  );
+  const [allUsers, setAllUsers] = useState<User[]>([authenticatedUser]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [assignedStudents, setAssignedStudents] = useState<Student[]>([]);
   const [administrationDataStatus, setAdministrationDataStatus] =
-    useState<AdministrationDataStatus>(
-      demoRoleSwitcherEnabled ? 'ready' : 'loading',
-    );
+    useState<AdministrationDataStatus>('loading');
   const [administrationDataError, setAdministrationDataError] = useState<
     string | undefined
   >();
-  const hasLoadedAdministrationData = useRef(demoRoleSwitcherEnabled);
+  const hasLoadedAdministrationData = useRef(false);
   const administrationRequestSequenceRef = useRef(0);
   const administrationRequestControllerRef = useRef<AbortController>();
 
   const [activeTab, setActiveTab] = useState<NavigationTab>('DASHBOARD');
   const [specialEdSubTab, setSpecialEdSubTab] =
     useState<SpecialEdSubTab>('FEDC');
-  const [selectedStudentId, setSelectedStudentId] = useState<string>(
-    demoRoleSwitcherEnabled ? 'stu-001' : '',
-  );
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(
     null,
   );
@@ -176,18 +156,6 @@ export const AppProvider: React.FC<{
     const requestStillCurrent = () =>
       administrationRequestSequenceRef.current === requestSequence &&
       administrationRequestControllerRef.current === controller;
-
-    if (demoRoleSwitcherEnabled) {
-      const user = storageService.getCurrentUser();
-      const loadedStudents = storageService.getStudents();
-      setCurrentUser(user);
-      setAllUsers(storageService.getUsers());
-      setStudents(loadedStudents);
-      setAssignedStudents(storageService.getStudentsForUser(user));
-      setAdministrationDataError(undefined);
-      setAdministrationDataStatus('ready');
-      return;
-    }
 
     const isInitialLoad = !hasLoadedAdministrationData.current;
     if (isInitialLoad) setAdministrationDataStatus('loading');
@@ -255,26 +223,6 @@ export const AppProvider: React.FC<{
     setIsObservationDrawerOpen((prev) => !prev);
   };
 
-  const switchRole = (userId: string) => {
-    if (!demoRoleSwitcherEnabled) return;
-    const updated = storageService.setCurrentUser(userId);
-    setCurrentUser(updated);
-    const userAssigned = storageService.getStudentsForUser(updated);
-    setAssignedStudents(userAssigned);
-
-    if (
-      updated.isGPK ||
-      (updated.role === 'SPECIAL_ED_TEACHER' && !updated.isSpecialEdCoordinator)
-    ) {
-      if (userAssigned.length > 0) setSelectedStudentId(userAssigned[0].id);
-    }
-    showToast(
-      'info',
-      `Switched Role to ${updated.roleTitle}`,
-      `Now operating as ${updated.name}`,
-    );
-  };
-
   const showToast = (
     type: 'success' | 'info' | 'warning' | 'error',
     title: string,
@@ -287,17 +235,6 @@ export const AppProvider: React.FC<{
 
   const dismissToast = (id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
-
-  const resetAllDataToDefault = () => {
-    if (!demoRoleSwitcherEnabled) return;
-    if (
-      confirm(
-        'Are you sure you want to reset all portal data to initial default state?',
-      )
-    ) {
-      storageService.resetAllData();
-    }
   };
 
   const navigateToJourneyEditor = (journeyId?: string) => {
@@ -314,9 +251,7 @@ export const AppProvider: React.FC<{
     setSelectedStudentId(studentId);
     setSpecialEdSubTab(type);
     setSelectedObservationAssignmentId(assignmentId ?? null);
-    setObservationResultsStudentId(
-      target === 'ALL_RESULTS' ? studentId : null,
-    );
+    setObservationResultsStudentId(target === 'ALL_RESULTS' ? studentId : null);
     setActiveTab('SPECIAL_ED_OBSERVATION');
   };
 
@@ -365,7 +300,6 @@ export const AppProvider: React.FC<{
     searchQuery,
     toasts,
     isObservationDrawerOpen,
-    switchRole,
     setActiveTab,
     setSpecialEdSubTab,
     setSelectedStudentId,
@@ -382,7 +316,6 @@ export const AppProvider: React.FC<{
     showToast,
     dismissToast,
     refreshData,
-    resetAllDataToDefault,
     navigateToJourneyEditor,
     navigateToObservation,
     navigateToIEP,
@@ -393,7 +326,7 @@ export const AppProvider: React.FC<{
 
   return (
     <AppContext.Provider value={value}>
-      {!demoRoleSwitcherEnabled && administrationDataStatus === 'loading' ? (
+      {administrationDataStatus === 'loading' ? (
         <main
           className="grid min-h-screen place-items-center bg-[#FAF6F0] px-6"
           aria-live="polite"
@@ -403,7 +336,7 @@ export const AppProvider: React.FC<{
             Loading authorized students…
           </div>
         </main>
-      ) : !demoRoleSwitcherEnabled && administrationDataStatus === 'error' ? (
+      ) : administrationDataStatus === 'error' ? (
         <main className="grid min-h-screen place-items-center bg-[#FAF6F0] px-6">
           <div className="max-w-lg rounded-3xl border border-rose-200 bg-white p-8 text-center shadow-sm">
             <TriangleAlert className="mx-auto h-9 w-9 text-rose-700" />
@@ -424,7 +357,7 @@ export const AppProvider: React.FC<{
         </main>
       ) : (
         <>
-          {!demoRoleSwitcherEnabled && administrationDataError ? (
+          {administrationDataError ? (
             <div
               role="alert"
               className="fixed right-4 top-4 z-[100] flex max-w-md items-start gap-3 rounded-2xl border border-rose-200 bg-white p-4 text-sm shadow-lg"

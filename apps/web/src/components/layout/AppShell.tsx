@@ -20,17 +20,11 @@ import {
   Brain,
   FileSignature,
   ClipboardList,
-  RefreshCw,
   LogOut,
   UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useGlobalSearch, useNotifications } from '../../hooks/useAggregates';
-
-const demoRoleSwitcherEnabled =
-  import.meta.env.DEV &&
-  import.meta.env.VITE_ENABLE_DEMO_ROLE_SWITCHER === 'true' &&
-  import.meta.env.VITE_FAKE_DATA_MODE === 'true';
 
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -38,15 +32,12 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
   const {
     currentUser,
     organizationId,
-    allUsers,
-    switchRole,
     activeTab,
     setActiveTab,
     specialEdSubTab,
     setSpecialEdSubTab,
     searchQuery,
     setSearchQuery,
-    resetAllDataToDefault,
     navigateToJourneyEditor,
     navigateToIEP,
     navigateToWeeklyReport,
@@ -60,7 +51,6 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
     false;
   const [learningJourneyMenuOpen, setLearningJourneyMenuOpen] = useState(true);
   const [specialEdMenuOpen, setSpecialEdMenuOpen] = useState(true);
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activeSearchIndex, setActiveSearchIndex] = useState(-1);
   const search = useGlobalSearch(organizationId, searchQuery);
@@ -93,7 +83,12 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
         navigateToAttendanceStudent(item.studentId, item.classId);
       } else if (currentUser.permissions.includes('special-ed:read')) {
         if (currentUser.role === 'SPECIAL_ED_COORDINATOR') {
-          navigateToObservation(item.studentId, 'FEDC', undefined, 'ALL_RESULTS');
+          navigateToObservation(
+            item.studentId,
+            'FEDC',
+            undefined,
+            'ALL_RESULTS',
+          );
         } else {
           navigateToObservation(item.studentId);
         }
@@ -252,95 +247,6 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
 
         {/* Right Side Controls */}
         <div className="flex items-center gap-3">
-          {demoRoleSwitcherEnabled && (
-            <div className="relative">
-              <button
-                id="role-switcher-dropdown-button"
-                onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-[#FAF5EF] hover:bg-[#F2EAE0] border border-[#E8DEC7] rounded-xl text-xs font-semibold text-stone-800 transition-colors shadow-2xs"
-              >
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="hidden sm:inline text-stone-500 font-medium">
-                  Role:
-                </span>
-                <span className="font-bold text-[#6E161E]">
-                  {currentUser.roleTitle}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-stone-500" />
-              </button>
-
-              {roleDropdownOpen && (
-                <div
-                  id="role-switcher-menu"
-                  className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-stone-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
-                >
-                  <div className="px-4 py-2 border-b border-stone-100">
-                    <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider">
-                      Simulate Role (Testing)
-                    </p>
-                    <p className="text-xs text-stone-600 mt-0.5">
-                      Switch user to test authoring, reviews & approvals
-                    </p>
-                  </div>
-                  <div className="py-1">
-                    {allUsers.map((user) => (
-                      <button
-                        key={user.id}
-                        id={`switch-user-btn-${user.id}`}
-                        onClick={() => {
-                          switchRole(user.id);
-                          setRoleDropdownOpen(false);
-                        }}
-                        className={`w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-[#FAF5EF] transition-colors ${
-                          currentUser.id === user.id
-                            ? 'bg-[#FAF5EF] border-l-3 border-[#6E161E]'
-                            : ''
-                        }`}
-                      >
-                        <img
-                          src={
-                            user.avatarUrl ||
-                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80'
-                          }
-                          alt={user.name}
-                          className="w-8 h-8 rounded-full object-cover border border-stone-200 shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-bold text-stone-900 truncate">
-                              {user.name}
-                            </p>
-                            {currentUser.id === user.id && (
-                              <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.2 rounded">
-                                Active
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-stone-500 truncate">
-                            {user.roleTitle}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="px-3 pt-2 pb-1 border-t border-stone-100">
-                    <button
-                      id="reset-demo-data-button"
-                      onClick={() => {
-                        setRoleDropdownOpen(false);
-                        resetAllDataToDefault();
-                      }}
-                      className="w-full py-1.5 px-3 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      Reset Learnspace Data to Defaults
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Notification Bell */}
           <div className="relative">
             <button

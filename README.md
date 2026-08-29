@@ -5,7 +5,7 @@ Learnspace is an educator portal for academic planning, attendance, special-educ
 The repository is currently at **`0.2.0`**. Milestone 4 delivered the first fully migrated product vertical, and Milestone 5 now includes API-backed organization account and membership administration, authorized student directories, privileged student administration, transactional GPK staff assignments, and Learning Journey authoring and approval workflows in addition to PostgreSQL attendance.
 
 > [!IMPORTANT]
-> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, attendance, complete Learning Journey authoring and approval workflows, observation definitions and assignments, FEDC observations, Sensory Profiles, SFA assessments, IEP plan authoring and workflow transitions, weekly IEP reports, and the controlled prototype import tooling are server-backed. Related remaining prototype domains still include incomplete or browser-backed behavior. P6 tooling is implemented locally, but its release gate remains blocked until P5-013 removes sensitive browser persistence. Do not use real student, family, educational, or disability-related information until the remaining domains and operational controls are migrated.
+> Learnspace remains **pre-production**. Authentication, authorization, academic/student lookup and administration, GPK staff assignments, attendance, Learning Journeys, observation workflows, IEP plans, weekly reports, dashboards, reporting, search, notifications, and controlled prototype import tooling are server-backed. Sensitive domain records are no longer persisted in browser storage, but staging rehearsal and the remaining production-hardening controls must still be completed before handling real student, family, educational, or disability-related information.
 
 ## Current capabilities
 
@@ -22,7 +22,7 @@ The repository is currently at **`0.2.0`**. Milestone 4 delivered the first full
 - PostgreSQL-backed annual IEP draft plans, goals, accommodations, services, parent approval metadata, scoped authoring, and immutable historical content; approval transitions remain scheduled for P5-009
 - Weekly IEP progress reports with goal synchronization
 - Role-oriented views for teachers, coordinators, principals, and directors
-- Seeded demo records for evaluating the workflows
+- Guarded development/test PostgreSQL seed records for evaluating workflows
 - Express API foundation with liveness, PostgreSQL readiness, version, structured logging, request IDs, and safe error responses
 - Docker Compose services for the web application, API, PostgreSQL, and a one-shot Prisma migration job
 - Normalized Prisma models for tenant ownership, academics, attendance, planning, observations, IEPs, weekly reports, workflows, sessions, audit events, and prototype import runs
@@ -33,8 +33,7 @@ The repository is currently at **`0.2.0`**. Milestone 4 delivered the first full
 ```mermaid
 flowchart TB
     Browser[Browser] --> Web[React/Vite web application]
-    Web --> LocalStorage[(Browser localStorage for remaining prototype domains)]
-    Web -->|typed account, academic, student, assignment, attendance, journey, observation, and IEP requests| Proxy
+    Web -->|typed account, academic, student, attendance, journey, observation, IEP, report, and aggregate requests| Proxy
     Browser -->|same-origin /api traffic in Compose| Proxy[Non-root nginx web container]
     Proxy --> API[Express TypeScript API]
     API --> DB[(PostgreSQL 16)]
@@ -42,14 +41,14 @@ flowchart TB
     API -. shared wire schemas .-> Contracts
 ```
 
-The workspace and service boundary are implemented, but the migration is intentionally incremental:
+The workspace and service boundary are implemented:
 
-- `apps/web` contains the React/Vite application. Organization account administration, attendance, authorized student loading, staff directory reads, GPK assignment, Learning Journey authoring and approval workflows, observation definitions and assignments, FEDC observations, Sensory Profiles, SFA assessments, IEP plan reads/authoring, and weekly IEP reports use typed API services; remaining prototype domains still use `apps/web/src/services/storageService.ts` and `localStorage`.
+- `apps/web` contains the React/Vite application. All sensitive domain screens use typed API services and PostgreSQL-backed data; production application paths do not read or write `localStorage` or `sessionStorage`.
 - `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, organization account administration, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, scoped Learning Journey workflows, assignment-bound FEDC, Sensory Profile, and SFA observation lifecycles, and role/student-scoped transactional IEP plan authoring with optimistic concurrency and historical immutability, plus runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
 - `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, organization accounts, academic resources, students, staff directories, GPK assignments, attendance, Learning Journeys, observation definitions and assignments, FEDC, Sensory Profile, SFA, and IEP records and commands.
 - `compose.yaml` defines production-oriented `web`, `api`, `migrate`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation. API startup waits for the one-shot migration job.
 - `compose.dev.yaml` is an optional override that publishes PostgreSQL on host port `5432` for database tools or a host-run API.
-- PostgreSQL is authoritative for authentication, user identity and membership administration, authorization scope, academic/student lookup and administration, GPK assignments, attendance, complete Learning Journey workflows, observation definitions and assignments, FEDC, Sensory Profile, SFA, IEP plan records and workflow transitions, and weekly IEP reports; other remaining prototype domains continue through Milestone 5.
+- PostgreSQL is authoritative for authentication, user identity and membership administration, authorization scope, academic/student lookup and administration, GPK assignments, attendance, Learning Journey workflows, observation definitions and assignments, FEDC, Sensory Profile, SFA, IEP plans and transitions, weekly reports, dashboards, reports, search, and notifications.
 
 Frontend role checks are presentation behavior only and are not authorization. The API is the intended security boundary for protected operations as those operations are implemented.
 
@@ -328,20 +327,11 @@ Do not use this override for a production-oriented deployment; `compose.yaml` in
 
 On 2026-08-19, the complete Compose stack was built and runtime-validated with the required environment values supplied. Web, API, and PostgreSQL reached healthy status; direct and proxied endpoints, SPA fallback, cache headers, non-root users, PostgreSQL volume persistence, database-dependent readiness failure and recovery, and graceful API `SIGTERM` shutdown all passed. The stack was then stopped with `docker compose down` while preserving the named database volume.
 
-## Prototype data and security caveats
+## Data and security caveats
 
-For the remaining prototype domains, `apps/web/src/services/storageService.ts` copies seeded records into browser `localStorage`. This caveat applies to remaining not-yet-migrated domains—not to attendance, Learning Journeys, IEP plans and weekly reports, or the FEDC, Sensory Profile, and SFA observation workflows. Browser-backed data:
+Production application paths do not persist student, attendance, observation, IEP, workflow, report, or user identity records in `localStorage` or `sessionStorage`. The browser role switcher, automatic web seed initialization, reset-data control, browser-backed repositories, and sensitive web seed fixtures have been removed. A separately gated development-only legacy export route may read pre-existing version 2 browser data solely to create a local migration artifact; it does not initialize, mutate, or transmit that data.
 
-- exists only in one browser profile;
-- is not synchronized between users or devices;
-- can be read or modified by anyone with browser developer tools;
-- has no transaction, concurrency, backup, audit, or server-side authorization guarantees;
-- is not written to the current PostgreSQL service;
-- must not be treated as a secure store for real student information.
-
-The role switcher is available only in explicit development fake-data builds and is not production authentication. Google OAuth, opaque server-side sessions, Prisma persistence, audit events, and server-enforced role/record authorization are implemented for the migrated domains; the remaining browser-backed domains still require their Milestone 5 migrations.
-
-Learnspace handles categories of data that can be highly sensitive. Deployment owners must assess applicable privacy, education, accessibility, retention, breach-response, and data-residency obligations with qualified advisers. This repository does not itself guarantee compliance with FERPA, GDPR/UK GDPR, COPPA, Indonesia's Personal Data Protection Law, or any local education policy.
+Google OAuth, opaque server-side sessions, Prisma persistence, audit events, and server-enforced role/record authorization are implemented for the migrated domains. Learnspace handles categories of data that can be highly sensitive. Deployment owners must assess applicable privacy, education, accessibility, retention, breach-response, and data-residency obligations with qualified advisers. This repository does not itself guarantee compliance with FERPA, GDPR/UK GDPR, COPPA, Indonesia's Personal Data Protection Law, or any local education policy.
 
 ## Project documentation
 
