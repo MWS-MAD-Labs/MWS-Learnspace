@@ -2,11 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
   pull_request:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
@@ -61,14 +65,34 @@ jobs:
       - name: Run database integration tests
         run: npm run test:integration -w @learnspace/api
 
+      - name: Check OpenAPI contract
+        run: npm run openapi:check
+
       - name: Build
         run: npm run build
 
+      - name: Validate production Compose configuration
+        env:
+          POSTGRES_DB: learnspace_ci
+          POSTGRES_USER: learnspace
+          POSTGRES_PASSWORD: ci-password
+          DATABASE_URL: postgresql://learnspace:ci-password@db:5432/learnspace_ci
+          APP_URL: https://staging.example.invalid
+          SESSION_SECRET: ci-session-secret-with-at-least-32-characters
+          GOOGLE_CLIENT_ID: ci-google-client-id
+          GOOGLE_CLIENT_SECRET: ci-google-client-secret
+          GOOGLE_REDIRECT_URI: https://staging.example.invalid/api/v1/auth/callback
+          AUTH_ADMISSION_MODE: INVITE_ONLY
+        run: docker compose -f compose.yaml config --quiet
+
       - name: Build API runtime image
-        run: docker build --file apps/api/Dockerfile --target runtime --tag learnspace-api:ci .
+        run: docker build --file apps/api/Dockerfile --target runtime --tag learnspace-api:${{ github.sha }} .
 
       - name: Build migration image
-        run: docker build --file apps/api/Dockerfile --target migration --tag learnspace-migrate:ci .
+        run: docker build --file apps/api/Dockerfile --target migration --tag learnspace-migrate:${{ github.sha }} .
+
+      - name: Build web runtime image
+        run: docker build --file apps/web/Dockerfile --target runtime --tag learnspace-web:${{ github.sha }} .
 
   attendance-e2e:
     runs-on: ubuntu-latest
@@ -106,3 +130,109 @@ jobs:
       - name: Tear down attendance E2E stack
         if: always()
         run: npm run e2e:attendance:stop
+
+  p5-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Compose-backed P5 E2E suite
+        run: npm run e2e:p5
+
+      - name: Upload P5 E2E artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p5-e2e-artifacts
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Tear down P5 E2E stack
+        if: always()
+        run: npm run e2e:p5:stop
+
+  deploy-staging:
+    name: Deploy staging through Komodo
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    needs: [validate, attendance-e2e, p5-e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: staging
+      url: https://learnspace-stg.mws.web.id
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure this commit is still the staging branch tip
+        run: |
+          remote_sha="$(git ls-remote origin refs/heads/staging | cut -f1)"
+          test "$remote_sha" = "$GITHUB_SHA"
+
+      - name: Trigger signed Komodo deployment webhook
+        env:
+          KOMODO_WEBHOOK_URL: ${{ secrets.KOMODO_WEBHOOK_URL }}
+          KOMODO_WEBHOOK_SECRET: ${{ secrets.KOMODO_WEBHOOK_SECRET }}
+        run: |
+          if [ -z "$KOMODO_WEBHOOK_URL" ] || [ -z "$KOMODO_WEBHOOK_SECRET" ]; then
+            echo "Missing KOMODO_WEBHOOK_URL or KOMODO_WEBHOOK_SECRET."
+            exit 1
+          fi
+
+          body='{"ref":"refs/heads/staging","repository":{"name":"MWS-Learnspace"},"environment":"staging"}'
+          signature="$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$KOMODO_WEBHOOK_SECRET" | awk '{print "sha256="$2}')"
+          http_status="$(curl --silent --show-error --output /tmp/komodo-response.txt --write-out '%{http_code}' \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --header "X-Hub-Signature-256: $signature" \
+            --data "$body" \
+            "$KOMODO_WEBHOOK_URL")"
+
+          echo "Komodo response: HTTP $http_status"
+          cat /tmp/komodo-response.txt
+          [ "$http_status" -ge 200 ] && [ "$http_status" -lt 300 ]
+
+      - name: Wait for staging web and API readiness
+        env:
+          STAGING_APP_URL: https://learnspace-stg.mws.web.id
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 10 "$STAGING_APP_URL/health" >/dev/null && \
+              curl --fail --silent --show-error --max-time 10 "$STAGING_APP_URL/api/v1/version" >/dev/null; then
+              echo "Staging is ready."
+              exit 0
+            fi
+            echo "Waiting for staging deployment (attempt $attempt/60)..."
+            sleep 5
+          done
+          echo "Staging did not become ready within 5 minutes."
+          exit 1
+
+      - name: Verify legacy exporter is disabled
+        env:
+          STAGING_APP_URL: https://learnspace-stg.mws.web.id
+        run: |
+          response="$(curl --fail --silent --show-error --max-time 10 "$STAGING_APP_URL/__dev/legacy-export")"
+          if printf '%s' "$response" | grep -F "Legacy browser data export"; then
+            echo "Legacy browser data export must not be available in staging."
+            exit 1
+          fi
