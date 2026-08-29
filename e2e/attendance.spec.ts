@@ -38,6 +38,7 @@ test('attendance persists across refresh and sessions while authz, validation, a
   await openAttendance(firstPage);
 
   await firstPage.getByLabel('Status for Alex Attendance').selectOption('LATE');
+  await firstPage.getByLabel('Minutes late for Alex Attendance').fill('');
   await firstPage.getByRole('button', { name: 'Save attendance' }).click();
   await expect(
     firstPage.getByText('Enter whole minutes from 1 to 1440 for Late.'),
@@ -57,7 +58,7 @@ test('attendance persists across refresh and sessions while authz, validation, a
     .selectOption('SICK');
   await firstPage.getByRole('button', { name: 'Save attendance' }).click();
   await expect(
-    firstPage.getByText('Saved attendance for 3 students.'),
+    firstPage.getByText('Saved attendance for 5 students.'),
   ).toBeVisible();
 
   await firstPage.reload();
