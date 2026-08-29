@@ -186,8 +186,9 @@ beforeEach(() => {
 
 describe('WeeklyReportView exact-report navigation', () => {
   it('waits for the authoritative school date before querying or enabling the editor', async () => {
-    let resolveSchoolDate: (value: { data: { schoolDate: string } }) => void =
-      () => undefined;
+    let resolveSchoolDate: (value: {
+      data: { schoolDate: string };
+    }) => void = () => undefined;
     testState.getSchoolDate.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -232,8 +233,9 @@ describe('WeeklyReportView exact-report navigation', () => {
   });
 
   it('lets an exact deep link win over an in-flight normal school-date initialization', async () => {
-    let resolveSchoolDate: (value: { data: { schoolDate: string } }) => void =
-      () => undefined;
+    let resolveSchoolDate: (value: {
+      data: { schoolDate: string };
+    }) => void = () => undefined;
     testState.getSchoolDate.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -299,9 +301,7 @@ describe('WeeklyReportView exact-report navigation', () => {
 
     const yearSelect = await screen.findByLabelText(/report year/i);
     expect(yearSelect).toHaveValue('2035');
-    expect(
-      screen.getByRole('option', { name: '2035' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '2035' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '2030' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '2040' })).toBeInTheDocument();
   });

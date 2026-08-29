@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AttendanceView } from './AttendanceView';
 import { useAuth } from '../../context/AuthContext';
@@ -24,7 +30,6 @@ vi.mock('../../context/AuthContext', () => ({
     },
   })),
 }));
-
 
 vi.mock('../../services/attendanceService', () => ({
   attendanceService: {

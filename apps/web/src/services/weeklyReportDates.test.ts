@@ -18,9 +18,7 @@ describe('weeklyReportDateRange', () => {
   it('rejects week 53 for ISO years that contain only 52 weeks', () => {
     expect(isoWeeksInYear(2020)).toBe(53);
     expect(isoWeeksInYear(2021)).toBe(52);
-    expect(() => weeklyReportDateRange(2021, 53)).toThrow(
-      /between 1 and 52/i,
-    );
+    expect(() => weeklyReportDateRange(2021, 53)).toThrow(/between 1 and 52/i);
   });
 
   it('labels both years when an ISO week crosses a calendar-year boundary', () => {

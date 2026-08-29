@@ -54,7 +54,6 @@ type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'denied';
 type SaveState =
   'idle' | 'saving' | 'success' | 'validation' | 'conflict' | 'error';
 
-
 function formatDateParts(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
@@ -314,13 +313,7 @@ export const AttendanceView: React.FC = () => {
         });
       return () => controller.abort();
     },
-    [
-      canRead,
-      organizationId,
-      schoolDate,
-      schoolDateReady,
-      selectedClassId,
-    ],
+    [canRead, organizationId, schoolDate, schoolDateReady, selectedClassId],
   );
 
   useEffect(() => {
@@ -576,7 +569,6 @@ export const AttendanceView: React.FC = () => {
       className="mx-auto max-w-7xl space-y-5 pb-12"
       id="attendance-view-container"
     >
-
       <header className="rounded-3xl border border-[#EFE7DC] bg-white p-5 shadow-xs">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div>

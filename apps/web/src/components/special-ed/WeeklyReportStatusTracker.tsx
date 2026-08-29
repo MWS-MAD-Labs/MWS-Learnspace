@@ -40,7 +40,10 @@ export function reportYearOptions(
 ) {
   const start = currentIsoYear - radius;
   const end = currentIsoYear + radius;
-  const years = Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  const years = Array.from(
+    { length: end - start + 1 },
+    (_, index) => start + index,
+  );
   if (!years.includes(selectedYear)) years.push(selectedYear);
   return years.sort((a, b) => b - a);
 }
