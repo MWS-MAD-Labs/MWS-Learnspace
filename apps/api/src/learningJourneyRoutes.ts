@@ -247,9 +247,26 @@ function mapJourney(
       },
     })),
     projects: row.projects.map((project) => ({
-      ...project,
+      id: project.id,
+      title: project.title,
+      description: project.description,
       startsOn: isoDate(project.startsOn),
       endsOn: isoDate(project.endsOn),
+      color: project.color,
+      position: project.position,
+      goals: project.goals.map(({ id, description, position }) => ({
+        id,
+        description,
+        position,
+      })),
+      connections: project.connections.map(
+        ({ id, subject, description, position }) => ({
+          id,
+          subject,
+          description,
+          position,
+        }),
+      ),
     })),
     createdBy: row.createdBy,
     updatedBy: row.updatedBy,

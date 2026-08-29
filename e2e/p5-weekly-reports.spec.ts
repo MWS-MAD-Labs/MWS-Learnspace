@@ -9,7 +9,6 @@ const fixture = {
   organizationId: '10000000-0000-4000-8000-000000000001',
   studentId: '80000000-0000-4000-8000-000000000004',
   iepId: '74000000-0000-4000-8000-000000000001',
-  goalId: '75000000-0000-4000-8000-000000000001',
   authorEmail: 'p5.iep.author@example.test',
   coordinatorEmail: 'p5.observation.coordinator@example.test',
   directorEmail: 'p5.director@example.test',
@@ -35,14 +34,12 @@ async function csrf(request: APIRequestContext) {
   return { 'x-csrf-token': token as string };
 }
 
-const e2eWeekNumber = 1 + Math.floor(Math.random() * 53);
-
-function command(overrides: Record<string, unknown> = {}) {
+function command(goalId: string, overrides: Record<string, unknown> = {}) {
   return {
     studentId: fixture.studentId,
     iepId: fixture.iepId,
     year: 2026,
-    weekNumber: e2eWeekNumber,
+    weekNumber: 38,
     weekStart: '2026-09-14',
     weekEnd: '2026-09-18',
     descriptiveObservation:
@@ -50,7 +47,7 @@ function command(overrides: Record<string, unknown> = {}) {
     homeConnection: 'Practice the same break-request phrase at home.',
     goalProgress: [
       {
-        goalId: fixture.goalId,
+        goalId,
         addressedThisWeek: true,
         rating: 4,
         notes: 'Used the strategy with one visual cue.',
@@ -67,11 +64,19 @@ test('P5-010 Compose lifecycle persists creation, edit, submission, reviews, and
   const teacher = await browser.newContext();
   await authenticate(teacher, fixture.authorEmail);
   const headers = await csrf(teacher.request);
-  const base = `/api/v1/organizations/${fixture.organizationId}/weekly-reports`;
+  const iepResponse = await teacher.request.get(
+    `/api/v1/organizations/${fixture.organizationId}/ieps/${fixture.iepId}`,
+  );
+  expect(iepResponse.status()).toBe(200);
+  const iep = (await iepResponse.json()).data;
+  const goalId = iep.goals[0]?.id as string | undefined;
+  if (!goalId)
+    throw new Error('The seeded IEP must contain at least one goal.');
 
+  const base = `/api/v1/organizations/${fixture.organizationId}/weekly-reports`;
   const created = await teacher.request.post(base, {
     headers,
-    data: command(),
+    data: command(goalId),
   });
   expect(created.status()).toBe(201);
   let report = (await created.json()).data;
@@ -85,7 +90,7 @@ test('P5-010 Compose lifecycle persists creation, edit, submission, reviews, and
     headers,
     data: {
       expectedVersion: report.version,
-      ...command({
+      ...command(goalId, {
         descriptiveObservation:
           'River independently used the visual transition routine in three classroom changes.',
       }),
