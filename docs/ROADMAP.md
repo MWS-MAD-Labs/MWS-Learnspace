@@ -868,7 +868,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 **Milestone exit gate:** any approved prototype data can be imported through a validated, versioned, auditable, and rehearsed process with rollback.
 
-> **Implementation status (updated 2026-08-27):** P6-001 through P6-004 are implemented and validated against a disposable local Docker database, including migration drift, concurrent apply, backup, restore, and rollback checks. Learning Journey workflows, observation slices, IEP plans and transitions, weekly reports, and cross-domain dashboards/search/notifications are now API/PostgreSQL-backed, but the `0.9.0-beta.1` release gate remains blocked by the declared `P5-013` dependency: remaining sensitive browser persistence, automatic prototype seed initialization, reset controls, and obsolete domain types must be removed. Repeat the rehearsal in staging after P5-013 passes.
+> **Implementation status (updated 2026-08-31):** P5-013 and the P6 import tooling are complete. The local Docker rehearsal, Komodo staging deployment, automated CI/CD gates, OAuth setup, backup/restore preparation, and staging operational checks are documented. The remaining `0.9.0-beta.1` rollout gate is the approved staging import and rollback rehearsal with protected artifacts, reconciled results, retained evidence, and named approval. Immutable registry digest promotion remains tracked separately under the release-image backlog.
 
 ## P6-001 — Define a versioned export format
 
@@ -897,7 +897,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** document and execute freeze, backup, dry run, import, reconciliation, application verification, and rollback.
 - **Acceptance:** record counts and representative workflows reconcile; rollback restores the pre-import state.
 - **Validate:** attach a sanitized rehearsal report to `docs/operations/`.
-- **Note (2026-08-24):** Local Docker rehearsal completed in `docs/operations/prototype-import-rehearsal-2026-08-24-local.md`. Production rollout remains blocked until P5-013 is complete and the rehearsal is repeated in staging.
+- **Note (updated 2026-08-31):** Local Docker rehearsal completed in `docs/operations/prototype-import-rehearsal-2026-08-24-local.md`. The verified staging platform and CI/CD path are documented in `docs/operations/komodo-staging-deployment.md`; production rollout remains blocked until the approved import and rollback rehearsal is completed in staging and signed off.
 
 ---
 

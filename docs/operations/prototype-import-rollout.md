@@ -205,10 +205,6 @@ The `20260827040000_authorized_aggregates` migration adds `Organization.timezone
 
 The repository includes the version 1 export contract, development-only browser exporter, database-mutating administrative importer, import ledger, and a sanitized local Docker rehearsal report at `docs/operations/prototype-import-rehearsal-2026-08-24-local.md`.
 
-The requested local Docker rehearsal is recorded at `docs/operations/prototype-import-rehearsal-2026-08-24-local.md` and validates the implemented P6 tooling.
+P5-013 is complete: sensitive browser persistence, automatic domain seed initialization, production reset controls, and obsolete browser-only domain paths have been removed. The verified Komodo staging deployment and CI/CD path are documented in `docs/operations/komodo-staging-deployment.md`, with sanitized deployment evidence in `docs/operations/staging-deployment-evidence-2026-08-29.md`.
 
-P6 is not ready for production rollout while `P5-013` remains incomplete. P5-004 through P5-012 are complete, including observations, IEPs, weekly reports, transactional goal projections, and authorized dashboard/report/search/notification queries. Before repeating this procedure in staging:
-
-1. Remove sensitive browser persistence, automatic domain seed initialization, production reset controls, and obsolete browser domain types (`P5-013`).
-
-After P5-013 passes, repeat the import procedure in staging with an approved sensitive export and manifest, deployment-specific writer freeze/cutover commands, named operators, application workflow verification, and approver sign-off.
+The staging environment is ready for the controlled import rehearsal once the approved sensitive export, manifest, writer-freeze window, protected backup location, mapped target records, and named operators are available. Production rollout still requires a completed staging import and rollback rehearsal, reconciled results, retained evidence, and approver sign-off.

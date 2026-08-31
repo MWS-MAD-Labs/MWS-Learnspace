@@ -23,13 +23,13 @@ Create a separate Google Cloud project or OAuth client for each environment. Con
 
 Register the values below exactly. Google compares scheme, hostname, port, path, and trailing slash.
 
-| Environment | Authorized JavaScript origin         | Authorized redirect URI                                   |
-| ----------- | ------------------------------------ | --------------------------------------------------------- |
-| Development | `http://localhost:3000`              | `http://localhost:3000/api/v1/auth/callback`              |
-| Staging     | `https://staging.learnspace.example` | `https://staging.learnspace.example/api/v1/auth/callback` |
-| Production  | `https://learnspace.example`         | `https://learnspace.example/api/v1/auth/callback`         |
+| Environment | Authorized JavaScript origin        | Authorized redirect URI                                  |
+| ----------- | ----------------------------------- | -------------------------------------------------------- |
+| Development | `http://localhost:3000`             | `http://localhost:3000/api/v1/auth/callback`             |
+| Staging     | `https://learnspace-stg.mws.web.id` | `https://learnspace-stg.mws.web.id/api/v1/auth/callback` |
+| Production  | `https://learnspace.example`        | `https://learnspace.example/api/v1/auth/callback`        |
 
-Replace the example staging and production hostnames with the deployed hosts. `GOOGLE_REDIRECT_URI` must equal the matching registered redirect URI. `APP_URL` must equal the web origin used after callback.
+Replace the example production hostname with the deployed host. The staging values above are the current verified Learnspace staging URLs. `GOOGLE_REDIRECT_URI` must equal the matching registered redirect URI. `APP_URL` must equal the web origin used after callback.
 
 The browser starts login at `/api/v1/auth/login`; this route is not a Google callback and must not be registered as one.
 
