@@ -239,7 +239,7 @@ The API also:
 - disables Express's `X-Powered-By` header;
 - returns structured `404`, invalid-JSON, payload-too-large, and internal-error responses without production stack traces.
 
-When using the Compose web endpoint, `/api/v1/version` is available through the nginx same-origin proxy at <http://localhost:3000/api/v1/version>. API health endpoints are available directly on the published API port, for example <http://localhost:4000/health/ready>. The web container has its own health endpoint at <http://localhost:3000/health>.
+When using the Compose web endpoint, `/api/v1/version` is available through the nginx same-origin proxy at <http://localhost:3000/api/v1/version>. The API host port is bound to loopback only for local operational access, for example <http://localhost:4000/health/ready>; remote clients must use the web proxy. The web container has its own health endpoint at <http://localhost:3000/health>.
 
 ## Environment setup
 
@@ -296,7 +296,7 @@ docker compose ps
 Services and default host endpoints:
 
 - web: <http://localhost:3000>
-- API: <http://localhost:4000>
+- API: <http://localhost:4000> (loopback only; public requests use the web `/api/` proxy)
 - PostgreSQL: internal Compose network only
 
 The `web` image builds the Vite bundle and serves it with an unprivileged nginx runtime, SPA fallback, immutable asset caching, no-store HTML responses, `/health`, and same-origin `/api/` proxying. The API Dockerfile provides a one-shot Prisma migration target and a pruned non-root runtime image. PostgreSQL uses a named `postgres-data` volume and is isolated on the internal backend network.
