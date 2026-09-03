@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:22-alpine3.24 AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
@@ -9,7 +9,7 @@ COPY apps/web apps/web
 COPY packages/contracts packages/contracts
 RUN npm run build -w @learnspace/web
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.30.4-alpine3.24 AS runtime
 COPY docker/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder --chown=nginx:nginx /app/apps/web/dist /usr/share/nginx/html
 USER nginx

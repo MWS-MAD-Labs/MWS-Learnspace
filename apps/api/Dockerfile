@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:22-alpine3.24 AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
@@ -14,15 +14,30 @@ COPY scripts scripts
 RUN npm run build -w @learnspace/api
 
 FROM builder AS migration
+RUN rm -rf \
+  /usr/local/lib/node_modules/npm \
+  /usr/local/bin/npm \
+  /usr/local/bin/npx \
+  /app/node_modules/vite \
+  /app/node_modules/@esbuild \
+  /app/node_modules/esbuild \
+  /app/node_modules/.bin/vite \
+  /app/node_modules/.bin/esbuild
 USER node
-CMD ["npx", "prisma", "migrate", "deploy", "--schema", "prisma/schema.prisma"]
+CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy", "--schema", "prisma/schema.prisma"]
 
 FROM builder AS production-dependencies
-RUN npm prune --omit=dev
+RUN npm prune --omit=dev && rm -rf \
+  /app/node_modules/vite \
+  /app/node_modules/@esbuild \
+  /app/node_modules/esbuild \
+  /app/node_modules/.bin/vite \
+  /app/node_modules/.bin/esbuild
 
-FROM node:22-alpine AS runtime
+FROM node:22-alpine3.24 AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=node:node /app/apps/api/package.json ./apps/api/package.json

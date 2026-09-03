@@ -79,6 +79,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Student enrollment updates now reject conflicting same-day class starts instead of leaving ambiguous simultaneous active enrollments.
 - GPK assignment routes now validate UUID path parameters before Prisma or raw PostgreSQL queries.
 - Organization account save failures now render as accessible error feedback, scope-only membership updates advance `updatedAt`, account audit metadata records only submitted fields, and cross-organization users cannot have global identity fields changed by a single-organization administrator.
+- Remediated critical container scan findings by upgrading the nginx runtime to Alpine 3.24, removing bundled npm/npx from API and migration images, invoking Prisma directly with Node, and excluding unnecessary Vite/esbuild tooling from API-oriented final stages.
 
 ### Removed
 
