@@ -114,7 +114,7 @@ describe('AppProvider administration refresh', () => {
     );
 
     expect(await screen.findByText('Administration workspace')).toBeVisible();
-    expect(onMount).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onMount).toHaveBeenCalledTimes(1));
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh data' }));
 
