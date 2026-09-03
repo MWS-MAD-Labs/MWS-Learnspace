@@ -28,11 +28,20 @@ test('release candidate serves a hardened first-party application shell', async 
   const expectedOrigin = new URL(
     process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3001',
   ).origin;
-  const unexpectedOrigins = new Set<string>();
-  page.on('request', (request) => {
+  const unexpectedExternalTraffic = new Set<string>();
+  page.on('response', (response) => {
+    const responseUrl = new URL(response.url());
+    if (responseUrl.origin !== expectedOrigin) {
+      unexpectedExternalTraffic.add(responseUrl.origin);
+    }
+  });
+  page.on('requestfailed', (request) => {
     const requestUrl = new URL(request.url());
-    if (requestUrl.origin !== expectedOrigin) {
-      unexpectedOrigins.add(requestUrl.origin);
+    if (
+      requestUrl.origin !== expectedOrigin &&
+      request.failure()?.errorText !== 'csp'
+    ) {
+      unexpectedExternalTraffic.add(requestUrl.origin);
     }
   });
 
@@ -56,7 +65,7 @@ test('release candidate serves a hardened first-party application shell', async 
   await expect(
     page.getByRole('button', { name: 'Continue with Google' }),
   ).toBeVisible();
-  expect([...unexpectedOrigins]).toEqual([]);
+  expect([...unexpectedExternalTraffic]).toEqual([]);
 });
 
 test('operator metrics are not exposed by the public web proxy', async ({

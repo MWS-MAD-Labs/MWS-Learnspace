@@ -907,31 +907,31 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 **Milestone exit gate:** security review findings are resolved or accepted by accountable owners; monitoring and restore procedures meet documented objectives; critical workflows pass accessibility and E2E checks.
 
-> **Implementation status (updated 2026-09-03):** Repository-side hardening has been implemented across all P7 workstreams: HTTP security controls, first-party asset enforcement, security scanning workflows, immutable candidate-image publication/signing, privacy-safe API observability, alert/runbook templates, encrypted backup and restore-verification scripts, threat/risk documentation, browser accessibility scaffolding, performance budgets, and an RC validation harness. The milestone remains blocked from completion because GitHub security/image workflows have not yet executed, monitoring and alert destinations/owners are unassigned, backup RPO/RTO/storage/key custody are unapproved, required tabletop/restore/accessibility/performance reviews have not been executed, and no immutable RC candidate exists. An untracked empty `prisma/migrations/20260829000000_password_credentials/` directory initially blocked Prisma migration validation; because it contained no file content and could not be committed, it was removed before rerunning the database/browser gates.
+> **Implementation status (updated 2026-09-03):** Repository-side hardening has been implemented across all P7 workstreams: HTTP security controls, first-party asset enforcement, security scanning workflows, immutable candidate-image publication/signing, privacy-safe API observability, alert/runbook templates, encrypted backup and restore-verification scripts, threat/risk documentation, browser accessibility scaffolding, performance budgets, and an RC validation harness. The milestone remains blocked from completion because the candidate-image workflow has not yet published and verified immutable artifacts, monitoring and alert destinations/owners are unassigned, backup RPO/RTO/storage/key custody are unapproved, required tabletop/restore/manual-accessibility/authenticated-performance reviews have not been executed, and no immutable RC candidate exists. Functional CI, staging deployment, security scanning, public security checks, the cross-browser login accessibility baseline, and bounded public endpoint performance probes are recorded in `docs/operations/milestone-7-staging-evidence-2026-09-03.md`. An untracked empty `prisma/migrations/20260829000000_password_credentials/` directory initially blocked Prisma migration validation; because it contained no file content and could not be committed, it was removed before rerunning the database/browser gates.
 
 ## P7-001 — Add security headers, CORS, and rate limits
 
-- [!] **Dependencies:** P5-013
+- [x] **Dependencies:** P5-013
 - **Change:** add restrictive CSP, frame protection, content-type protection, referrer policy, production CORS rules, authentication rate limits, and API request limits.
 - **Acceptance:** Google OAuth and the app work under the policy without broad wildcards.
 - **Validate:** header tests, CORS tests, rate-limit tests, and browser smoke tests.
-- **Implemented (2026-09-03):** Added restrictive API/nginx security headers, first-party-only enforced CSP, exact `APP_URL` origin CORS with bounded preflights and credentials, explicit trusted-proxy ranges, configurable independent API/auth fixed-window limits, standard error envelopes and rate headers, health-check exclusion, and query-string-free request logging. Focused API tests, type checking, nginx configuration, Compose configuration, build, and unit suites pass. Browser smoke execution is included in the final local validation pass.
+- **Completed (2026-09-03):** Added restrictive API/nginx security headers, first-party-only enforced CSP, exact `APP_URL` origin CORS with bounded preflights and credentials, explicit trusted-proxy ranges, configurable independent API/auth fixed-window limits, standard error envelopes and rate headers, health-check exclusion, and query-string-free request logging. Unit, integration, Compose browser, deployed staging header/CORS/rate-limit, public endpoint, and OAuth-initiation checks passed; see the dated Milestone 7 staging evidence.
 
 ## P7-002 — Remove third-party asset privacy leaks
 
-- [!] **Dependencies:** P7-001
+- [x] **Dependencies:** P7-001
 - **Change:** self-host required fonts and application images or document approved external providers; replace seeded remote avatar dependencies.
 - **Acceptance:** normal application use does not disclose student/user page visits to unapproved asset hosts.
 - **Validate:** browser network test and CSP report inspection.
-- **Implemented (2026-09-03):** Removed Google-hosted fonts and hard-coded remote image fallbacks, switched to local system font stacks, added a reusable accessible initials/first-party avatar component, prevented Google profile-picture persistence, constrained new avatar mutations to first-party paths, and retained safe rendering of legacy remote values without requesting them. Source/build scans and focused tests pass; the enforced CSP permits only first-party images. Compose browser-network validation is included in the final local validation pass.
+- **Completed (2026-09-03):** Removed Google-hosted fonts and hard-coded remote image fallbacks, switched to local system font stacks, added a reusable accessible initials/first-party avatar component, prevented Google profile-picture persistence, constrained new avatar mutations to first-party paths, and retained safe rendering of legacy remote values without requesting them. Source/build scans, Compose browser checks, and deployed Chromium/Firefox/WebKit validation passed. Cloudflare's injected analytics request was blocked by CSP before receiving a response; see the dated staging evidence.
 
 ## P7-003 — Add secret, dependency, source, and container scanning
 
-- [!] **Dependencies:** P0-005, P1-010
+- [x] **Dependencies:** P0-005, P1-010
 - **Change:** add CI jobs for secret scanning, dependency review/audit, SAST, and container image scanning.
 - **Acceptance:** critical findings fail CI with documented exception handling.
 - **Validate:** workflow execution and a safe synthetic failure test where practical.
-- **Implemented (2026-09-03):** Added dedicated Gitleaks, dependency review/npm audit, CodeQL, and Trivy jobs; weekly npm/Actions/Docker dependency updates; narrow scanner exception policy; and critical-finding failure behavior for API, migration, and web images. Local configuration/format checks and the critical npm audit threshold pass. Completion requires a GitHub-hosted workflow run, synthetic failure evidence, and required branch-protection checks.
+- **Completed (2026-09-03):** Added dedicated Gitleaks, dependency review/npm audit, CodeQL, and Trivy jobs; weekly npm/Actions/Docker dependency updates; narrow scanner exception policy; and critical-finding failure behavior for API, migration, and web images. GitHub run `33708269993` failed on real critical image findings without an exception; after base-image/tooling remediation, run `33708908565` passed every applicable scanner. Repository administrators should make the jobs required branch-protection checks; see the dated staging evidence.
 
 ## P7-004 — Generate SBOMs and sign release images
 
