@@ -80,7 +80,6 @@ describe('P7 encrypted restore wrappers', () => {
       'pwd',
       'rm',
       'sh',
-      'shasum',
     ]) {
       symlinkSync(commandPath(command), join(binaryDirectory, command));
     }

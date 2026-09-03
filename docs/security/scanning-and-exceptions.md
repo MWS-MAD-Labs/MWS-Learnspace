@@ -4,15 +4,15 @@ Learnspace runs security checks in `.github/workflows/security.yml` on pull requ
 
 ## Required checks
 
-| Risk                           | Control                                           | Failure threshold                                                               |
-| ------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Committed secrets              | Gitleaks scans Git history using `.gitleaks.toml` | Any finding                                                                     |
-| Newly introduced dependencies  | GitHub Dependency Review on pull requests         | Critical advisory                                                               |
-| Locked npm dependencies        | `npm audit` against `package-lock.json`           | Critical advisory                                                               |
-| JavaScript/TypeScript source   | CodeQL extended security queries                  | Findings are published to GitHub code scanning and governed by repository rules |
-| API, migration, and web images | Trivy OS and library vulnerability scan           | Any critical vulnerability, including one without a published fix               |
+| Risk                           | Control                                           | Failure threshold                                                 |
+| ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------- |
+| Committed secrets              | Gitleaks scans Git history using `.gitleaks.toml` | Any finding                                                       |
+| Newly introduced dependencies  | GitHub Dependency Review on pull requests         | Critical advisory                                                 |
+| Locked npm dependencies        | `npm audit` against `package-lock.json`           | Critical advisory                                                 |
+| JavaScript/TypeScript source   | CodeQL extended security queries                  | Critical findings in the generated SARIF fail the workflow        |
+| API, migration, and web images | Trivy OS and library vulnerability scan           | Any critical vulnerability, including one without a published fix |
 
-Repository administrators should make the applicable workflow jobs required status checks for protected branches. CodeQL requires GitHub code scanning to be available and enabled for the repository. The workflow grants only repository read access by default; only the CodeQL job receives `security-events: write` so it can publish results.
+Repository administrators should make the applicable workflow jobs required status checks for protected branches. The CodeQL job currently retains and evaluates SARIF inside the workflow without uploading it because GitHub code scanning is not enabled for this repository. If code scanning is enabled later, add the required `security-events: write` permission and restore SARIF upload so findings are also governed through the repository Security interface.
 
 ## Handling findings
 
@@ -63,13 +63,13 @@ Do not weaken the workflow threshold to exempt one package. Remediate the lockfi
 
 ### CodeQL
 
-Use GitHub's code-scanning dismissal flow so the finding retains its audit history. Select the accurate dismissal reason and add the tracking reference, technical rationale, owner, and expiry/review date. Do not exclude broad source directories to hide actionable results.
+While SARIF is gated only inside the workflow, document any reviewed non-critical finding or critical exception with the rule ID, technical rationale, owner, compensating controls, and expiry. If GitHub code scanning is enabled later, use its dismissal flow so findings retain audit history. Do not exclude broad source directories to hide actionable results.
 
 ## Validation and safe synthetic tests
 
 - Run `npm audit --audit-level=critical` locally for dependency findings.
 - Run Gitleaks `v8.30.1` with `.gitleaks.toml`, or use the same container command as the workflow. Test only with a documented fake pattern on a disposable branch; never commit a live credential.
 - Build each Docker target and run Trivy with `.trivyignore.yaml` before requesting an exception.
-- Review CodeQL alerts in the repository **Security** tab after the workflow completes.
+- Review the CodeQL SARIF gate output in the workflow. If repository code scanning is enabled later, also review alerts in the **Security** tab.
 
 Scanner databases and advisory services are network-dependent. A transient upstream outage should be rerun; it is not grounds for suppressing findings or making the job optional.
