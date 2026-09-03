@@ -903,11 +903,11 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 # Milestone 7 — Production hardening
 
-**Target release:** `1.0.0-rc.1`
+**Target release:** staging hardening baseline; remaining gates are deferred into `1.0.0` qualification
 
 **Milestone exit gate:** security review findings are resolved or accepted by accountable owners; monitoring and restore procedures meet documented objectives; critical workflows pass accessibility and E2E checks.
 
-> **Implementation status (updated 2026-09-03):** Repository-side hardening has been implemented across all P7 workstreams: HTTP security controls, first-party asset enforcement, security scanning workflows, immutable candidate-image publication/signing, privacy-safe API observability, alert/runbook templates, encrypted backup and restore-verification scripts, threat/risk documentation, browser accessibility scaffolding, performance budgets, and an RC validation harness. The milestone remains blocked from completion because the candidate-image workflow has not yet published and verified immutable artifacts, monitoring and alert destinations/owners are unassigned, backup RPO/RTO/storage/key custody are unapproved, required tabletop/restore/manual-accessibility/authenticated-performance reviews have not been executed, and no immutable RC candidate exists. Functional CI, staging deployment, security scanning, public security checks, the cross-browser login accessibility baseline, and bounded public endpoint performance probes are recorded in `docs/operations/milestone-7-staging-evidence-2026-09-03.md`. An untracked empty `prisma/migrations/20260829000000_password_credentials/` directory initially blocked Prisma migration validation; because it contained no file content and could not be committed, it was removed before rerunning the database/browser gates.
+> **Implementation status (updated 2026-09-03):** P7-001 through P7-003 are complete and verified in staging. Repository-side foundations for P7-004 through P7-011 are implemented. By owner decision, execution of the remaining image-publication, monitoring, alert/tabletop, backup-policy/restore, accountable security review, manual accessibility, authenticated performance, and full release-validation gates is postponed to the Milestone 8 stable `1.0.0` qualification window. No separate `1.0.0-rc.1` release is currently planned. This is a scheduling change only: every postponed acceptance criterion remains mandatory before `1.0.0` may be published or approved for production data. Functional CI, staging deployment, security scanning, public security checks, the cross-browser login accessibility baseline, and bounded public endpoint performance probes are recorded in `docs/operations/milestone-7-staging-evidence-2026-09-03.md`.
 
 ## P7-001 — Add security headers, CORS, and rate limits
 
@@ -939,7 +939,8 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** generate SBOM and provenance for web/API images; add image signing and verification documentation.
 - **Acceptance:** an operator can verify image digest, signature, and included packages before deployment.
 - **Validate:** local or CI verification of one candidate image.
-- **Implemented (2026-09-03):** Added a manual main-branch candidate workflow that builds API/web images once, pushes immutable GHCR digests, scans the pushed artifacts, emits SPDX SBOMs and package inventories, records BuildKit/GitHub provenance, keyless-signs digests with Cosign, verifies signatures/attestations, and uploads checksummed evidence. Added image build and operator verification policies. Completion requires dispatching and successfully verifying a real candidate image pair.
+- **Implemented (2026-09-03):** Added a manual main-branch candidate workflow that builds API/web images once, pushes immutable GHCR digests, scans the pushed artifacts, emits SPDX SBOMs and package inventories, records BuildKit/GitHub provenance, keyless-signs digests with Cosign, verifies signatures/attestations, and uploads checksummed evidence. Added image build and operator verification policies.
+- **Postponed (2026-09-03):** By owner decision, dispatch and verification of the first immutable image pair will occur during Milestone 8 stable-release qualification. P7-004 remains a mandatory dependency of the `1.0.0` release gate.
 
 ## P7-005 — Add observability
 
@@ -947,7 +948,8 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** add metrics for latency, status codes, DB pool usage, login failures, authorization denials, and background jobs; add trace/request correlation.
 - **Acceptance:** logs and metrics redact secrets and sensitive record contents.
 - **Validate:** telemetry integration tests and manual dashboard/query verification.
-- **Implemented (2026-09-03):** Added dependency-free bounded Prometheus metrics for normalized HTTP latency/status, safe login-failure reasons, authorization/CSRF/CORS denials, authentication cleanup jobs, database readiness, and `pg_stat_activity` connection utilization; internal-only `/metrics`; W3C trace/request correlation; and recursive sensitive-key log redaction. Unit/integration-style telemetry tests pass. Completion requires selecting a monitoring stack, restricting scraper access, and verifying real dashboard queries and retention/access policy.
+- **Implemented (2026-09-03):** Added dependency-free bounded Prometheus metrics for normalized HTTP latency/status, safe login-failure reasons, authorization/CSRF/CORS denials, authentication cleanup jobs, database readiness, and `pg_stat_activity` connection utilization; internal-only `/metrics`; W3C trace/request correlation; and recursive sensitive-key log redaction. Unit/integration-style telemetry tests pass.
+- **Postponed (2026-09-03):** Monitoring-stack selection, protected scraper access, dashboard verification, and retention/access approval will be completed during Milestone 8 and remain mandatory before `1.0.0`.
 
 ## P7-006 — Add alerting and operational runbooks
 
@@ -955,7 +957,8 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** add runbooks for API unavailable, database unavailable, migration failure, elevated login failures, disk pressure, backup failure, and OAuth outage.
 - **Acceptance:** every alert contains an owner, severity, symptoms, diagnosis, mitigation, and escalation path.
 - **Validate:** tabletop exercise for at least database outage and OAuth outage.
-- **Implemented (2026-09-03):** Added an alert catalog, seven incident runbooks, and database/OAuth tabletop templates with privacy-safe evidence rules. Completion requires named reachable owners/escalation routes, provider-specific alert definitions based on staging baselines, test notifications, and executed dated database/OAuth tabletop records.
+- **Implemented (2026-09-03):** Added an alert catalog, seven incident runbooks, and database/OAuth tabletop templates with privacy-safe evidence rules.
+- **Postponed (2026-09-03):** Named owners/escalation routes, provider-specific alerts, test notifications, and executed database/OAuth tabletops are deferred to Milestone 8 and remain mandatory before `1.0.0`.
 
 ## P7-007 — Automate encrypted backups and restore verification
 
@@ -964,7 +967,8 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Acceptance:** documented RPO/RTO are measured in a restore drill.
 - **Owner input required:** target RPO, RTO, backup location, retention, and encryption-key ownership.
 - **Validate:** timed restore drill with fake data.
-- **Implemented (2026-09-03):** Added fail-closed `age` encryption wrappers around guarded backup/restore, ciphertext checksum pairing, private temporary cleanup, machine-readable status, and disposable restore verification with migration/application checks and elapsed timing; focused shell behavior tests pass. Completion remains owner-blocked on RPO, RTO, schedule/platform, protected storage/retention, encryption-key custody/recovery, alert routing, and an executed timed fake-data restore drill.
+- **Implemented (2026-09-03):** Added fail-closed `age` encryption wrappers around guarded backup/restore, ciphertext checksum pairing, private temporary cleanup, machine-readable status, and disposable restore verification with migration/application checks and elapsed timing; focused shell behavior tests pass.
+- **Postponed (2026-09-03):** RPO, RTO, schedule/platform, protected storage/retention, key custody/recovery, alert routing, and the timed restore drill are deferred to Milestone 8. Owner approval and measured objectives remain mandatory before `1.0.0`.
 
 ## P7-008 — Complete authorization and privacy threat model
 
@@ -972,7 +976,8 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** threat-model OAuth, sessions, organization isolation, student/IEP access, approvals, exports, admin functions, backups, and logs.
 - **Acceptance:** each threat has mitigation, test, owner, or explicit risk acceptance.
 - **Validate:** security review against implemented controls and automated tests.
-- **Implemented (2026-09-03):** Added a cross-boundary authorization/privacy threat model and risk register covering OAuth, sessions, tenant/student scope, workflows, export/import, administration, backups, telemetry, audit, privileged operators, migrations, supply chain, availability, and lower-environment data. Completion requires named security/privacy/control owners, endpoint-to-authorization-test review, disposition of all high/critical risks, and a dated accountable review record.
+- **Implemented (2026-09-03):** Added a cross-boundary authorization/privacy threat model and risk register covering OAuth, sessions, tenant/student scope, workflows, export/import, administration, backups, telemetry, audit, privileged operators, migrations, supply chain, availability, and lower-environment data.
+- **Postponed (2026-09-03):** Named security/privacy/control owners, endpoint-to-test review, high/critical risk disposition, and the dated accountable review are deferred to Milestone 8 and remain mandatory before production approval.
 
 ## P7-009 — Complete accessibility review
 
@@ -980,7 +985,8 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** add automated accessibility checks and manually review keyboard navigation, focus management, labels, contrast, errors, dialogs, tables, and responsive behavior.
 - **Acceptance:** no known critical WCAG 2.2 AA blockers in core workflows.
 - **Validate:** automated audit plus documented manual checks for login, attendance, Learning Journey, observation, IEP, and weekly report flows.
-- **Implemented (2026-09-03):** Added Chromium/Firefox/WebKit Playwright accessibility baselines for login semantics, accessible names, keyboard activation/focus visibility, narrow reflow, and reduced motion, plus a detailed WCAG 2.2 AA manual review template. Completion requires authenticated automation and documented manual keyboard, focus, contrast, error, dialog, table, zoom/reflow, and screen-reader review for every core workflow, with no unresolved critical blocker.
+- **Implemented (2026-09-03):** Added Chromium/Firefox/WebKit Playwright accessibility baselines for login semantics, accessible names, keyboard activation/focus visibility, narrow reflow, and reduced motion, plus a detailed WCAG 2.2 AA manual review template.
+- **Postponed (2026-09-03):** Authenticated automation and manual keyboard, focus, contrast, error, dialog, table, zoom/reflow, and screen-reader review are deferred to Milestone 8. No unresolved critical WCAG blocker is permitted at `1.0.0` approval.
 
 ## P7-010 — Add performance and database query budgets
 
@@ -988,7 +994,8 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** define bundle, API latency, query count, and large-list targets; add pagination and indexes where measurements require them.
 - **Acceptance:** no known N+1 query in core list/detail flows; representative data volumes meet documented targets.
 - **Validate:** production build analysis, API load test, and PostgreSQL query-plan review.
-- **Implemented (2026-09-03):** Added machine-readable bundle/API budgets, a build-output budget gate, a bounded read-only API smoke/load runner, query-count and list-size targets, a query-plan review template, and RC integration. The current production bundle passes all configured budgets. Completion requires representative authenticated data/load measurements, query-count instrumentation, PostgreSQL plan review, and pagination of any core list found to exceed the 100-record target.
+- **Implemented (2026-09-03):** Added machine-readable bundle/API budgets, a build-output budget gate, a bounded read-only API smoke/load runner, query-count and list-size targets, a query-plan review template, and release-validation integration. The current production bundle and bounded staging endpoint probes pass their configured budgets.
+- **Postponed (2026-09-03):** Representative authenticated measurements, query-count evidence, PostgreSQL plan review, and required pagination are deferred to Milestone 8 and remain mandatory before `1.0.0`.
 
 ## P7-011 — Run full release-candidate test matrix
 
@@ -996,7 +1003,8 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** test clean install, upgrade from previous release, migration, backup/restore, OAuth, every role, core E2E workflows, and container restart behavior.
 - **Acceptance:** no unresolved release-blocking failures; exceptions are documented with owners.
 - **Validate:** publish a sanitized RC validation report in `docs/releases/`.
-- **Implemented (2026-09-03):** Added an RC validation template, repository-wide validation runner, multi-project browser matrix, and RC smoke checks for health/version, enforced browser headers, first-party-only shell networking, and non-public metrics. Completion is dependency-blocked and requires immutable candidate digests, a defined previous release, Google test OAuth configuration, every-role identities including `SUBJECT_TEACHER`, clean-install/upgrade/restart/rollback execution, all manual review evidence, and accountable release disposition. Local Compose execution is included in the final local validation pass; release approval remains blocked on the external and owner-controlled dependencies above.
+- **Implemented (2026-09-03):** Added a release-validation template, repository-wide validation runner, multi-project browser matrix, and smoke checks for health/version, enforced browser headers, first-party-only shell networking, and non-public metrics.
+- **Postponed (2026-09-03):** The full matrix will execute during Milestone 8 against the stable `1.0.0` candidate artifacts, after P8-001 through P8-003 prepare operator documentation, immutable images, and install/upgrade automation. It still requires Google test OAuth, every-role identities including `SUBJECT_TEACHER`, clean-install/upgrade/restart/rollback execution, all manual review evidence, and accountable release disposition.
 
 ---
 
@@ -1004,17 +1012,19 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 **Target release:** `1.0.0`
 
+> **Execution order (owner decision 2026-09-03):** Prepare final operator documentation and immutable release artifacts through P8-001–P8-003, then execute the postponed P7-004–P7-011 qualification gates against those artifacts. Only after every postponed gate passes may P8-004 finalize `1.0.0` metadata and P8-005 approve production readiness. The postponement does not permit publishing `1.0.0` first and validating it afterward.
+
 ## P8-001 — Finalize operator documentation
 
-- [ ] **Dependencies:** P7-011
+- [ ] **Dependencies:** P7-003
 - **Change:** add installation, configuration reference, reverse proxy/TLS, OAuth, upgrade, rollback, migration, backup, restore, monitoring, and troubleshooting guides.
 - **Acceptance:** a new operator can deploy from a clean host using only published documentation and versioned images.
 - **Validate:** clean-host documentation rehearsal.
 
 ## P8-002 — Add automated versioned image publishing
 
-- [ ] **Dependencies:** P7-004, P8-001
-- **Change:** publish web/API images once per release with exact SemVer, major/minor channels, Git SHA, digest, signature, SBOM, and provenance.
+- [ ] **Dependencies:** P8-001, repository implementation from P7-004
+- **Change:** publish web/API candidate images once for stable qualification with exact SemVer candidate identity, Git SHA, digest, signature, SBOM, and provenance; publish stable channels only after approval.
 - **Acceptance:** staging and production can promote the same immutable digest.
 - **Validate:** pull and verify images on a clean host.
 
@@ -1027,8 +1037,8 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P8-004 — Complete release metadata
 
-- [ ] **Dependencies:** P8-003
-- **Change:** set version `1.0.0`, update `CHANGELOG.md`, publish known issues, compatibility matrix, support window, checksums/digests, and migration notes.
+- [ ] **Dependencies:** P8-003, P7-004, P7-005, P7-006, P7-007, P7-008, P7-009, P7-010, P7-011
+- **Change:** after all stable qualification gates pass, set version `1.0.0`, update `CHANGELOG.md`, publish known issues, compatibility matrix, support window, checksums/digests, and migration notes.
 - **Acceptance:** release notes state configuration changes, database behavior, rollback constraints, and security impact.
 - **Validate:** follow `docs/VERSIONING.md` release checklist.
 

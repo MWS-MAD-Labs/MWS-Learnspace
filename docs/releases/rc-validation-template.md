@@ -1,8 +1,8 @@
-# Learnspace release-candidate validation report template
+# Learnspace stable-release qualification report template
 
-> **Status:** Template only. It is not an RC pass, approval, or release recommendation.
+> **Status:** Template only. It is not a qualification pass, production approval, or release recommendation.
 
-Create a sanitized copy such as `docs/releases/1.0.0-rc.1-validation.md`. Preserve failed, blocked, skipped, and not-applicable entries. Never commit secrets, OAuth codes, session cookies, real student data, database dumps, private hostnames, or raw production logs.
+Create a sanitized copy such as `docs/releases/1.0.0-qualification.md`. Preserve failed, blocked, skipped, and not-applicable entries. Never commit secrets, OAuth codes, session cookies, real student data, database dumps, private hostnames, or raw production logs.
 
 ## Candidate identity
 
@@ -18,7 +18,7 @@ Create a sanitized copy such as `docs/releases/1.0.0-rc.1-validation.md`. Preser
 | Linked performance/query-plan report | TODO                                                      |
 | Overall disposition                  | NOT STARTED / IN PROGRESS / BLOCKED / REJECTED / APPROVED |
 
-Only an authorized release owner may set `APPROVED` after reviewing all blockers and exceptions.
+Only an authorized release owner may set `APPROVED` after reviewing all blockers and exceptions. Stable `1.0.0` must not be published before this qualification and the required P7/P8 gates pass.
 
 ## Automated baseline
 

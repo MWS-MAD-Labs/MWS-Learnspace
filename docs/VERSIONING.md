@@ -4,7 +4,7 @@ This document defines how Learnspace versions application releases, APIs, databa
 
 ## Current maturity
 
-Learnspace is currently at `0.2.0`. Authentication, server-side authorization, deployment foundations, and the attendance vertical slice are implemented, but remaining educator domains still require API migration and operational hardening. Releases remain pre-production until the roadmap's stable-release gates are complete.
+Learnspace is currently at `0.2.0`. Core educator domains, authentication, server-side authorization, persistence, deployment foundations, and the initial production-hardening controls are implemented and staging-validated. By owner decision, the remaining operational and release-qualification gates are scheduled for the `1.0.0` stable-release window. Releases remain pre-production until those mandatory gates pass.
 
 Recommended first milestones:
 
@@ -37,7 +37,7 @@ Pre-releases use SemVer suffixes:
 
 - `alpha`: incomplete and intended for development environments.
 - `beta`: feature-complete for the milestone but still under validation.
-- `rc`: release candidate; only release-blocking fixes are expected.
+- `rc`: release candidate; only release-blocking fixes are expected. Learnspace does not currently plan a separately published `1.0.0-rc.1`; the same qualification procedures will run against unpublished or explicitly candidate-tagged `1.0.0` artifacts before stable publication.
 
 ## Single source of truth
 

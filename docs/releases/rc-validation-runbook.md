@@ -1,6 +1,6 @@
-# Release-candidate validation runner
+# Stable-release qualification runner
 
-The scripts in `scripts/rc/` orchestrate existing repository commands. They produce console evidence only; a successful exit does not replace the manual matrix or authorize a release.
+The scripts retain their historical `scripts/rc/` paths but now support the planned `1.0.0` stable-release qualification window. By owner decision, no separately published `1.0.0-rc.1` is currently planned. The scripts produce console evidence only; a successful exit does not replace the manual matrix or authorize stable publication.
 
 ## Static/build baseline
 
@@ -41,4 +41,4 @@ It always attempts the existing stop command on exit. Failed runs capture Compos
 
 ## Reporting
 
-Copy `rc-validation-template.md` to a candidate-specific report and record exact commands, environment, timestamps, artifacts, failures, and skipped stages. Do not infer manual accessibility, performance, security, OAuth, upgrade, restore, role-matrix, restart, or RC approval from these scripts.
+Copy `rc-validation-template.md` to a candidate-specific stable qualification report, such as `1.0.0-qualification.md`, and record exact commands, environment, timestamps, artifacts, failures, and skipped stages. Do not infer manual accessibility, performance, security, OAuth, upgrade, restore, role-matrix, restart, or RC approval from these scripts.
