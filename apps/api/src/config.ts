@@ -1,6 +1,21 @@
+import { isIP } from 'node:net';
 import { z } from 'zod';
 
 const logLevels = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
+const trustedProxyNames = new Set(['loopback', 'linklocal', 'uniquelocal']);
+
+function isTrustedProxyEntry(value: string): boolean {
+  if (trustedProxyNames.has(value)) return true;
+
+  const [address, prefix, ...extra] = value.split('/');
+  if (extra.length > 0 || !address) return false;
+  const family = isIP(address);
+  if (family === 0) return false;
+  if (prefix === undefined) return true;
+  if (!/^\d+$/.test(prefix)) return false;
+  const bits = Number(prefix);
+  return bits >= 0 && bits <= (family === 4 ? 32 : 128);
+}
 
 const rawEnvironmentSchema = z.object({
   NODE_ENV: z
@@ -17,7 +32,12 @@ const rawEnvironmentSchema = z.object({
         message: 'DATABASE_URL must be a PostgreSQL URL',
       },
     ),
-  APP_URL: z.string().url(),
+  APP_URL: z
+    .string()
+    .url()
+    .refine((value) => /^https?:\/\//i.test(value), {
+      message: 'APP_URL must use HTTP or HTTPS',
+    }),
   SESSION_SECRET: z
     .string()
     .min(32, 'SESSION_SECRET must contain at least 32 characters'),
@@ -30,6 +50,48 @@ const rawEnvironmentSchema = z.object({
     .default('DENY_UNKNOWN'),
 
   SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+  // Express trusts forwarded client IP/protocol values only from these immediate
+  // proxy ranges. Leave empty when the API is directly reachable; never use a
+  // hop count because deployments may have multiple paths of different lengths.
+  TRUSTED_PROXIES: z
+    .string()
+    .default('')
+    .refine(
+      (value) =>
+        value
+          .split(',')
+          .map((proxy) => proxy.trim())
+          .filter(Boolean)
+          .every(isTrustedProxyEntry),
+      {
+        message:
+          'TRUSTED_PROXIES must contain only named private ranges, IP addresses, or CIDRs',
+      },
+    ),
+  API_RATE_LIMIT_REQUESTS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100_000)
+    .default(600),
+  API_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(3600)
+    .default(60),
+  AUTH_RATE_LIMIT_REQUESTS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(10_000)
+    .default(30),
+  AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(3600)
+    .default(60),
   ALLOW_DEVELOPMENT_AUTH_PLACEHOLDERS: z
     .enum(['true', 'false'])
     .default('false'),
@@ -51,6 +113,11 @@ export type AppConfig = {
   authAdmissionMode: 'DENY_UNKNOWN' | 'INVITE_ONLY' | 'ALLOWED_DOMAIN';
 
   sessionTtlHours: number;
+  trustedProxies?: string[];
+  apiRateLimitRequests?: number;
+  apiRateLimitWindowSeconds?: number;
+  authRateLimitRequests?: number;
+  authRateLimitWindowSeconds?: number;
   logLevel: (typeof logLevels)[number];
   e2eAuthSecret?: string;
   e2eAuthUserEmail?: string;
@@ -126,6 +193,13 @@ export function loadConfig(
     authAdmissionMode: values.AUTH_ADMISSION_MODE,
 
     sessionTtlHours: values.SESSION_TTL_HOURS,
+    trustedProxies: values.TRUSTED_PROXIES.split(',')
+      .map((proxy) => proxy.trim())
+      .filter(Boolean),
+    apiRateLimitRequests: values.API_RATE_LIMIT_REQUESTS,
+    apiRateLimitWindowSeconds: values.API_RATE_LIMIT_WINDOW_SECONDS,
+    authRateLimitRequests: values.AUTH_RATE_LIMIT_REQUESTS,
+    authRateLimitWindowSeconds: values.AUTH_RATE_LIMIT_WINDOW_SECONDS,
     logLevel: values.LOG_LEVEL,
     e2eAuthSecret: values.E2E_AUTH_SECRET,
     e2eAuthUserEmail: values.E2E_AUTH_USER_EMAIL?.toLowerCase(),

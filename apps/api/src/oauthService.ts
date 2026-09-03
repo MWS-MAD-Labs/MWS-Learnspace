@@ -30,7 +30,6 @@ type GoogleClaims = JWTPayload & {
   email: string;
   email_verified: boolean;
   name?: string;
-  picture?: string;
   nonce: string;
 };
 
@@ -244,7 +243,6 @@ export class OAuthService {
               data: {
                 email: normalizedEmail,
                 displayName: claims.name?.trim() || normalizedEmail,
-                avatarUrl: claims.picture,
                 memberships: {
                   create: {
                     organizationId: invitation.organizationId,
@@ -281,7 +279,6 @@ export class OAuthService {
             data: {
               email: normalizedEmail,
               displayName: claims.name?.trim() || normalizedEmail,
-              avatarUrl: claims.picture,
               oauthAccounts: {
                 create: { provider: 'google', providerAccountId: claims.sub },
               },

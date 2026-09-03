@@ -907,83 +907,96 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 **Milestone exit gate:** security review findings are resolved or accepted by accountable owners; monitoring and restore procedures meet documented objectives; critical workflows pass accessibility and E2E checks.
 
+> **Implementation status (updated 2026-09-03):** Repository-side hardening has been implemented across all P7 workstreams: HTTP security controls, first-party asset enforcement, security scanning workflows, immutable candidate-image publication/signing, privacy-safe API observability, alert/runbook templates, encrypted backup and restore-verification scripts, threat/risk documentation, browser accessibility scaffolding, performance budgets, and an RC validation harness. The milestone remains blocked from completion because GitHub security/image workflows have not yet executed, monitoring and alert destinations/owners are unassigned, backup RPO/RTO/storage/key custody are unapproved, required tabletop/restore/accessibility/performance reviews have not been executed, and no immutable RC candidate exists. An untracked empty `prisma/migrations/20260829000000_password_credentials/` directory initially blocked Prisma migration validation; because it contained no file content and could not be committed, it was removed before rerunning the database/browser gates.
+
 ## P7-001 — Add security headers, CORS, and rate limits
 
-- [ ] **Dependencies:** P5-013
+- [!] **Dependencies:** P5-013
 - **Change:** add restrictive CSP, frame protection, content-type protection, referrer policy, production CORS rules, authentication rate limits, and API request limits.
 - **Acceptance:** Google OAuth and the app work under the policy without broad wildcards.
 - **Validate:** header tests, CORS tests, rate-limit tests, and browser smoke tests.
+- **Implemented (2026-09-03):** Added restrictive API/nginx security headers, first-party-only enforced CSP, exact `APP_URL` origin CORS with bounded preflights and credentials, explicit trusted-proxy ranges, configurable independent API/auth fixed-window limits, standard error envelopes and rate headers, health-check exclusion, and query-string-free request logging. Focused API tests, type checking, nginx configuration, Compose configuration, build, and unit suites pass. Browser smoke execution is included in the final local validation pass.
 
 ## P7-002 — Remove third-party asset privacy leaks
 
-- [ ] **Dependencies:** P7-001
+- [!] **Dependencies:** P7-001
 - **Change:** self-host required fonts and application images or document approved external providers; replace seeded remote avatar dependencies.
 - **Acceptance:** normal application use does not disclose student/user page visits to unapproved asset hosts.
 - **Validate:** browser network test and CSP report inspection.
+- **Implemented (2026-09-03):** Removed Google-hosted fonts and hard-coded remote image fallbacks, switched to local system font stacks, added a reusable accessible initials/first-party avatar component, prevented Google profile-picture persistence, constrained new avatar mutations to first-party paths, and retained safe rendering of legacy remote values without requesting them. Source/build scans and focused tests pass; the enforced CSP permits only first-party images. Compose browser-network validation is included in the final local validation pass.
 
 ## P7-003 — Add secret, dependency, source, and container scanning
 
-- [ ] **Dependencies:** P0-005, P1-010
+- [!] **Dependencies:** P0-005, P1-010
 - **Change:** add CI jobs for secret scanning, dependency review/audit, SAST, and container image scanning.
 - **Acceptance:** critical findings fail CI with documented exception handling.
 - **Validate:** workflow execution and a safe synthetic failure test where practical.
+- **Implemented (2026-09-03):** Added dedicated Gitleaks, dependency review/npm audit, CodeQL, and Trivy jobs; weekly npm/Actions/Docker dependency updates; narrow scanner exception policy; and critical-finding failure behavior for API, migration, and web images. Local configuration/format checks and the critical npm audit threshold pass. Completion requires a GitHub-hosted workflow run, synthetic failure evidence, and required branch-protection checks.
 
 ## P7-004 — Generate SBOMs and sign release images
 
-- [ ] **Dependencies:** P7-003
+- [!] **Dependencies:** P7-003
 - **Change:** generate SBOM and provenance for web/API images; add image signing and verification documentation.
 - **Acceptance:** an operator can verify image digest, signature, and included packages before deployment.
 - **Validate:** local or CI verification of one candidate image.
+- **Implemented (2026-09-03):** Added a manual main-branch candidate workflow that builds API/web images once, pushes immutable GHCR digests, scans the pushed artifacts, emits SPDX SBOMs and package inventories, records BuildKit/GitHub provenance, keyless-signs digests with Cosign, verifies signatures/attestations, and uploads checksummed evidence. Added image build and operator verification policies. Completion requires dispatching and successfully verifying a real candidate image pair.
 
 ## P7-005 — Add observability
 
-- [ ] **Dependencies:** P5-012
+- [!] **Dependencies:** P5-012
 - **Change:** add metrics for latency, status codes, DB pool usage, login failures, authorization denials, and background jobs; add trace/request correlation.
 - **Acceptance:** logs and metrics redact secrets and sensitive record contents.
 - **Validate:** telemetry integration tests and manual dashboard/query verification.
+- **Implemented (2026-09-03):** Added dependency-free bounded Prometheus metrics for normalized HTTP latency/status, safe login-failure reasons, authorization/CSRF/CORS denials, authentication cleanup jobs, database readiness, and `pg_stat_activity` connection utilization; internal-only `/metrics`; W3C trace/request correlation; and recursive sensitive-key log redaction. Unit/integration-style telemetry tests pass. Completion requires selecting a monitoring stack, restricting scraper access, and verifying real dashboard queries and retention/access policy.
 
 ## P7-006 — Add alerting and operational runbooks
 
-- [ ] **Dependencies:** P7-005
+- [!] **Dependencies:** P7-005
 - **Change:** add runbooks for API unavailable, database unavailable, migration failure, elevated login failures, disk pressure, backup failure, and OAuth outage.
 - **Acceptance:** every alert contains an owner, severity, symptoms, diagnosis, mitigation, and escalation path.
 - **Validate:** tabletop exercise for at least database outage and OAuth outage.
+- **Implemented (2026-09-03):** Added an alert catalog, seven incident runbooks, and database/OAuth tabletop templates with privacy-safe evidence rules. Completion requires named reachable owners/escalation routes, provider-specific alert definitions based on staging baselines, test notifications, and executed dated database/OAuth tabletop records.
 
 ## P7-007 — Automate encrypted backups and restore verification
 
-- [ ] **Dependencies:** P2-012
+- [!] **Dependencies:** P2-012
 - **Change:** add operator-configurable scheduled backups, retention, encryption, failure reporting, and periodic restore verification.
 - **Acceptance:** documented RPO/RTO are measured in a restore drill.
 - **Owner input required:** target RPO, RTO, backup location, retention, and encryption-key ownership.
 - **Validate:** timed restore drill with fake data.
+- **Implemented (2026-09-03):** Added fail-closed `age` encryption wrappers around guarded backup/restore, ciphertext checksum pairing, private temporary cleanup, machine-readable status, and disposable restore verification with migration/application checks and elapsed timing; focused shell behavior tests pass. Completion remains owner-blocked on RPO, RTO, schedule/platform, protected storage/retention, encryption-key custody/recovery, alert routing, and an executed timed fake-data restore drill.
 
 ## P7-008 — Complete authorization and privacy threat model
 
-- [ ] **Dependencies:** P5-013, P7-001
+- [!] **Dependencies:** P5-013, P7-001
 - **Change:** threat-model OAuth, sessions, organization isolation, student/IEP access, approvals, exports, admin functions, backups, and logs.
 - **Acceptance:** each threat has mitigation, test, owner, or explicit risk acceptance.
 - **Validate:** security review against implemented controls and automated tests.
+- **Implemented (2026-09-03):** Added a cross-boundary authorization/privacy threat model and risk register covering OAuth, sessions, tenant/student scope, workflows, export/import, administration, backups, telemetry, audit, privileged operators, migrations, supply chain, availability, and lower-environment data. Completion requires named security/privacy/control owners, endpoint-to-authorization-test review, disposition of all high/critical risks, and a dated accountable review record.
 
 ## P7-009 — Complete accessibility review
 
-- [ ] **Dependencies:** P5-012
+- [!] **Dependencies:** P5-012
 - **Change:** add automated accessibility checks and manually review keyboard navigation, focus management, labels, contrast, errors, dialogs, tables, and responsive behavior.
 - **Acceptance:** no known critical WCAG 2.2 AA blockers in core workflows.
 - **Validate:** automated audit plus documented manual checks for login, attendance, Learning Journey, observation, IEP, and weekly report flows.
+- **Implemented (2026-09-03):** Added Chromium/Firefox/WebKit Playwright accessibility baselines for login semantics, accessible names, keyboard activation/focus visibility, narrow reflow, and reduced motion, plus a detailed WCAG 2.2 AA manual review template. Completion requires authenticated automation and documented manual keyboard, focus, contrast, error, dialog, table, zoom/reflow, and screen-reader review for every core workflow, with no unresolved critical blocker.
 
 ## P7-010 — Add performance and database query budgets
 
-- [ ] **Dependencies:** P5-012
+- [!] **Dependencies:** P5-012
 - **Change:** define bundle, API latency, query count, and large-list targets; add pagination and indexes where measurements require them.
 - **Acceptance:** no known N+1 query in core list/detail flows; representative data volumes meet documented targets.
 - **Validate:** production build analysis, API load test, and PostgreSQL query-plan review.
+- **Implemented (2026-09-03):** Added machine-readable bundle/API budgets, a build-output budget gate, a bounded read-only API smoke/load runner, query-count and list-size targets, a query-plan review template, and RC integration. The current production bundle passes all configured budgets. Completion requires representative authenticated data/load measurements, query-count instrumentation, PostgreSQL plan review, and pagination of any core list found to exceed the 100-record target.
 
 ## P7-011 — Run full release-candidate test matrix
 
-- [ ] **Dependencies:** P7-002, P7-004, P7-006, P7-007, P7-008, P7-009, P7-010
+- [!] **Dependencies:** P7-002, P7-004, P7-006, P7-007, P7-008, P7-009, P7-010
 - **Change:** test clean install, upgrade from previous release, migration, backup/restore, OAuth, every role, core E2E workflows, and container restart behavior.
 - **Acceptance:** no unresolved release-blocking failures; exceptions are documented with owners.
 - **Validate:** publish a sanitized RC validation report in `docs/releases/`.
+- **Implemented (2026-09-03):** Added an RC validation template, repository-wide validation runner, multi-project browser matrix, and RC smoke checks for health/version, enforced browser headers, first-party-only shell networking, and non-public metrics. Completion is dependency-blocked and requires immutable candidate digests, a defined previous release, Google test OAuth configuration, every-role identities including `SUBJECT_TEACHER`, clean-install/upgrade/restart/rollback execution, all manual review evidence, and accountable release disposition. Local Compose execution is included in the final local validation pass; release approval remains blocked on the external and owner-controlled dependencies above.
 
 ---
 

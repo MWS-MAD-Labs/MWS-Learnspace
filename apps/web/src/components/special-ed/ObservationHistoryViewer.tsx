@@ -8,6 +8,7 @@ import { useApp } from '../../context/AppContext';
 import { useFEDCObservations } from '../../hooks/useFEDCObservations';
 import { useSensoryProfileObservations } from '../../hooks/useSensoryProfileObservations';
 import { useSFAObservations } from '../../hooks/useSFAObservations';
+import { Avatar } from '../common/Avatar';
 import {
   Brain,
   Activity,
@@ -197,13 +198,10 @@ export const ObservationHistoryViewer: React.FC<
       <div className="bg-gradient-to-br from-[#FFFDF9] to-[#F7F2EA] border border-[#EBE1D3] rounded-2xl p-5 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <img
-              src={
-                student.avatarUrl ||
-                'https://images.unsplash.com/photo-1544717305-2782549b5136?w=120'
-              }
-              alt={student.name}
-              className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-xs"
+            <Avatar
+              name={student.name}
+              src={student.avatarUrl}
+              className="w-14 h-14 rounded-2xl border-2 border-white shadow-xs text-base"
             />
             <div>
               <div className="flex items-center gap-2">

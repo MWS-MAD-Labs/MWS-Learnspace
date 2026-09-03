@@ -65,6 +65,11 @@ services:
       GOOGLE_REDIRECT_URI: http://127.0.0.1:${E2E_WEB_PORT:-3001}/api/v1/auth/callback
       AUTH_ADMISSION_MODE: DENY_UNKNOWN
       SESSION_TTL_HOURS: 1
+      TRUSTED_PROXIES: linklocal,uniquelocal
+      API_RATE_LIMIT_REQUESTS: 10000
+      API_RATE_LIMIT_WINDOW_SECONDS: 60
+      AUTH_RATE_LIMIT_REQUESTS: 1000
+      AUTH_RATE_LIMIT_WINDOW_SECONDS: 60
       LOG_LEVEL: info
       E2E_AUTH_SECRET: attendance-e2e-auth-secret-at-least-32-characters
       E2E_AUTH_USER_EMAIL: attendance.teacher@example.test

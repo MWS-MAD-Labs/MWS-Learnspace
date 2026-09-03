@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: learnspace
       POSTGRES_PASSWORD: test-password
     ports:
-      - '127.0.0.1:55433:5432'
+      - '127.0.0.1:${INTEGRATION_DB_PORT:-55433}:5432'
     volumes:
       - integration-postgres-data:/var/lib/postgresql/data
     healthcheck:

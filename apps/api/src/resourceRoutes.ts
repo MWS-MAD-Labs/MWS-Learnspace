@@ -9,6 +9,7 @@ import { Router as createRouter } from 'express';
 import { z } from 'zod';
 import {
   academicYearsResponseSchema,
+  avatarPathSchema,
   attendanceBulkSaveCommandSchema,
   attendanceBulkSaveResponseSchema,
   attendanceQuerySchema,
@@ -70,6 +71,11 @@ export const DEFAULT_GPK_MAX_CASELOAD = 2;
 
 function isoDate(value: Date): string {
   return value.toISOString().slice(0, 10);
+}
+
+function localAvatarPath(value: string | null): string | null {
+  const parsed = avatarPathSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }
 
 function dateAtUtcMidnight(value: string): Date {
@@ -388,7 +394,7 @@ function mapGpkAssignment(assignment: SelectedGpkAssignment) {
       membershipId: assignment.membership.id,
       userId: assignment.membership.user.id,
       displayName: assignment.membership.user.displayName,
-      avatarUrl: assignment.membership.user.avatarUrl,
+      avatarUrl: localAvatarPath(assignment.membership.user.avatarUrl),
       roleTitle: assignment.membership.roleTitle,
     },
   } as const;
@@ -406,7 +412,7 @@ function mapStudent(student: SelectedStudent) {
     dateOfBirth: isoDate(student.dateOfBirth),
     specialNeedsFlag: student.specialNeedsFlag,
     status: student.status,
-    avatarUrl: student.avatarUrl,
+    avatarUrl: localAvatarPath(student.avatarUrl),
     primaryClassification: student.primaryClassification,
     currentPlacement: student.currentPlacement,
     enrollments,
@@ -560,7 +566,10 @@ async function loadAssignmentForResponse(
   });
   return {
     ...mapGpkAssignment(assignment),
-    student: assignment.student,
+    student: {
+      ...assignment.student,
+      avatarUrl: localAvatarPath(assignment.student.avatarUrl),
+    },
   };
 }
 
@@ -610,7 +619,7 @@ function mapOrganizationAccount(account: SelectedOrganizationAccount) {
     userId: account.user.id,
     email: account.user.email,
     displayName: account.user.displayName,
-    avatarUrl: account.user.avatarUrl,
+    avatarUrl: localAvatarPath(account.user.avatarUrl),
     userStatus: account.user.status,
     role: account.role,
     roleTitle: account.roleTitle,
@@ -1463,7 +1472,7 @@ export function createResourceRouter(
           userId: row.user.id,
           organizationId: row.organizationId,
           displayName: row.user.displayName,
-          avatarUrl: row.user.avatarUrl,
+          avatarUrl: localAvatarPath(row.user.avatarUrl),
           role: row.role,
           roleTitle: row.roleTitle,
           status: row.status,
@@ -1924,7 +1933,10 @@ export function createResourceRouter(
         });
         const data = rows.map((row) => ({
           ...mapGpkAssignment(row),
-          student: row.student,
+          student: {
+            ...row.student,
+            avatarUrl: localAvatarPath(row.student.avatarUrl),
+          },
         }));
         response.json(
           gpkAssignmentsResponseSchema.parse({
@@ -2293,7 +2305,10 @@ export function createResourceRouter(
               roster: roster.map((enrollment) => {
                 const record = byStudent.get(enrollment.student.id);
                 return {
-                  student: enrollment.student,
+                  student: {
+                    ...enrollment.student,
+                    avatarUrl: localAvatarPath(enrollment.student.avatarUrl),
+                  },
                   enrollmentId: enrollment.id,
                   attendance: record
                     ? {

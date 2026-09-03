@@ -19,6 +19,26 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'accessibility-chromium',
+      testMatch: /accessibility\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
+    },
+    {
+      name: 'accessibility-firefox',
+      testMatch: /accessibility\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'], browserName: 'firefox' },
+    },
+    {
+      name: 'accessibility-webkit',
+      testMatch: /accessibility\.spec\.ts/,
+      use: { ...devices['Desktop Safari'], browserName: 'webkit' },
+    },
+    {
+      name: 'rc-smoke-chromium',
+      testMatch: /rc-smoke\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
+    },
+    {
       name: 'attendance-chromium',
       testMatch: /attendance\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], browserName: 'chromium' },

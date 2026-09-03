@@ -23,7 +23,7 @@ The repository is currently at **`0.2.0`**. Milestone 4 delivered the first full
 - Weekly IEP progress reports with goal synchronization
 - Role-oriented views for teachers, coordinators, principals, and directors
 - Guarded development/test PostgreSQL seed records for evaluating workflows
-- Express API foundation with liveness, PostgreSQL readiness, version, structured logging, request IDs, and safe error responses
+- Express API foundation with liveness, PostgreSQL readiness, version, structured logging with query-string redaction, request IDs, safe error responses, exact-origin CORS, restrictive response headers, trusted-proxy controls, and fixed-window rate limits
 - Docker Compose services for the web application, API, PostgreSQL, and a one-shot Prisma migration job
 - Normalized Prisma models for tenant ownership, academics, attendance, planning, observations, IEPs, weekly reports, workflows, sessions, audit events, and prototype import runs
 - Versioned legacy-browser export, fail-closed administrative import CLI, and documented local Docker backup/import/rollback rehearsal
@@ -44,7 +44,7 @@ flowchart TB
 The workspace and service boundary are implemented:
 
 - `apps/web` contains the React/Vite application. All sensitive domain screens use typed API services and PostgreSQL-backed data; production application paths do not read or write `localStorage` or `sessionStorage`.
-- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, organization account administration, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, scoped Learning Journey workflows, assignment-bound FEDC, Sensory Profile, and SFA observation lifecycles, and role/student-scoped transactional IEP plan authoring with optimistic concurrency and historical immutability, plus runtime configuration validation, structured logging, readiness checks, and graceful shutdown.
+- `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, organization account administration, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, scoped Learning Journey workflows, assignment-bound FEDC, Sensory Profile, and SFA observation lifecycles, and role/student-scoped transactional IEP plan authoring with optimistic concurrency and historical immutability, plus runtime configuration validation, exact-origin CORS, trusted-proxy controls, fixed-window request limits, restrictive response headers, query-string-redacted structured logging, readiness checks, and graceful shutdown.
 - `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, organization accounts, academic resources, students, staff directories, GPK assignments, attendance, Learning Journeys, observation definitions and assignments, FEDC, Sensory Profile, SFA, and IEP records and commands.
 - `compose.yaml` defines production-oriented `web`, `api`, `migrate`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation. API startup waits for the one-shot migration job.
 - `compose.dev.yaml` is an optional override that publishes PostgreSQL on host port `5432` for database tools or a host-run API.
@@ -148,10 +148,11 @@ The API listens on <http://localhost:4000> by default.
 
 ### Run database integration tests locally
 
-The reusable local integration command starts the dedicated PostgreSQL service in `compose.integration.yaml` at `127.0.0.1:55433`, waits for it to become healthy, and applies committed migrations before running the API integration suite:
+The reusable local integration command starts the dedicated PostgreSQL service in `compose.integration.yaml` at `127.0.0.1:55433`, waits for it to become healthy, and applies committed migrations before running the API integration suite. If that port is occupied, set `INTEGRATION_DB_PORT` to another free local port:
 
 ```bash
 npm run test:integration:local
+INTEGRATION_DB_PORT=55434 npm run test:integration:local
 ```
 
 To use a different running PostgreSQL container, override the URL for that invocation:
@@ -184,8 +185,15 @@ npm run openapi:generate
 npm run openapi:check
 npm run e2e:attendance # Disposable Compose-backed attendance Playwright run
 npm run e2e:p5         # Disposable Compose-backed P5 administration Playwright run
+npm run e2e:accessibility # Cross-browser accessibility baseline against a running E2E stack
+npm run performance:bundle # Enforce production web bundle budgets
+npm run performance:api -- --base-url URL # Bounded read-only API latency smoke
+npm run rc:validate     # Local RC static/unit/build gate; integration/E2E are opt-in
 npm run db:backup -- --database SOURCE --output FILE
 npm run db:restore -- --archive FILE --database NEW_TARGET
+npm run db:backup:encrypted -- --database SOURCE --output FILE.dump.age
+npm run db:restore:encrypted -- --archive FILE.dump.age --database NEW_TARGET
+npm run db:restore:verify -- --archive FILE.dump.age --database NAME_restore_verify_SUFFIX
 npm run db:import:prepare-local -- OUTPUT_DIRECTORY
 npm run db:import -- --file EXPORT --manifest MANIFEST --dry-run
 npm run db:import -- --file EXPORT --manifest MANIFEST --apply --confirm-organization UUID
@@ -234,10 +242,17 @@ The API also:
 
 - propagates a valid incoming `X-Request-ID` or generates one;
 - returns the request ID in response headers and error envelopes;
+- logs request paths without query strings, preventing OAuth `code` and `state` values from entering request-completion logs;
+- permits credentialed browser CORS only from the exact origin derived from `APP_URL`; same-origin proxy requests require no CORS headers;
+- trusts forwarded client addresses only from the explicitly configured `TRUSTED_PROXIES` ranges;
+- applies an in-memory fixed-window API limit and a separate tighter authentication limit, returning `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, and `Retry-After` with the standard API error envelope;
+- returns restrictive CSP, frame, content-type, referrer, opener, and permissions-policy headers;
 - limits JSON request bodies to `100kb` and returns a safe `413 PAYLOAD_TOO_LARGE` envelope when exceeded;
 - bounds the Prisma readiness operation to two seconds and requires migration `20260824000000_prototype_import_runs`;
 - disables Express's `X-Powered-By` header;
 - returns structured `404`, invalid-JSON, payload-too-large, and internal-error responses without production stack traces.
+
+The in-memory rate-limit counters are per API process and reset on restart. Multi-replica deployments should replace them with a shared limiter before relying on aggregate limits across replicas.
 
 When using the Compose web endpoint, `/api/v1/version` is available through the nginx same-origin proxy at <http://localhost:3000/api/v1/version>. The API host port is bound to loopback only for local operational access, for example <http://localhost:4000/health/ready>; remote clients must use the web proxy. The web container exposes liveness at <http://localhost:3000/health> and proxies API readiness at <http://localhost:3000/health/ready>.
 
@@ -264,6 +279,11 @@ Never commit `.env` or real credentials. The API validates the following contrac
 | `GOOGLE_REDIRECT_URI`                 | Exact Google callback URL registered for this environment         |
 | `AUTH_ADMISSION_MODE`                 | `DENY_UNKNOWN`, `INVITE_ONLY`, or `ALLOWED_DOMAIN`                |
 | `SESSION_TTL_HOURS`                   | Session lifetime from 1 to 168 hours                              |
+| `TRUSTED_PROXIES`                     | Optional comma-separated named private ranges, IPs, or CIDRs      |
+| `API_RATE_LIMIT_REQUESTS`             | API requests per fixed window; defaults to `600`                  |
+| `API_RATE_LIMIT_WINDOW_SECONDS`       | API fixed-window duration from 1 to 3600 seconds                  |
+| `AUTH_RATE_LIMIT_REQUESTS`            | Authentication requests per fixed window; defaults to `30`        |
+| `AUTH_RATE_LIMIT_WINDOW_SECONDS`      | Authentication fixed-window duration from 1 to 3600 seconds       |
 | `ALLOW_DEVELOPMENT_AUTH_PLACEHOLDERS` | `true` only for explicit development placeholder credentials      |
 | `LOG_LEVEL`                           | `fatal`, `error`, `warn`, `info`, `debug`, or `trace`             |
 
@@ -276,8 +296,10 @@ Before any production-oriented Compose deployment:
 - set a unique `SESSION_SECRET` of at least 32 characters;
 - set real `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` values—development placeholders are rejected because the Compose API runs with `NODE_ENV=production`;
 - replace the default PostgreSQL password and ensure `DATABASE_URL` uses the matching database, user, password, host, and database name;
-- set `APP_URL` to the externally reachable HTTPS origin and `GOOGLE_REDIRECT_URI` to the exact registered API callback;
+- set `APP_URL` to the externally reachable HTTPS origin and `GOOGLE_REDIRECT_URI` to the exact registered API callback; `APP_URL` is also the sole credentialed CORS origin;
 - choose `AUTH_ADMISSION_MODE`; configure `GOOGLE_ALLOWED_DOMAINS` only for domain admission;
+- set `TRUSTED_PROXIES` only to the actual reverse-proxy ranges between clients and the API; never use a universal trust value;
+- size the API and authentication rate limits for the deployment, remembering that the built-in counters are process-local;
 - keep all secrets outside the repository and arrange TLS, secret rotation, backups, and restore testing.
 
 See `docs/auth/google-oauth.md` for Google Cloud clients, exact development/staging/production URLs, admission policy, and rotation procedures.
@@ -299,7 +321,7 @@ Services and default host endpoints:
 - API: <http://localhost:4000> (loopback only; public requests use the web `/api/` proxy)
 - PostgreSQL: internal Compose network only
 
-The `web` image builds the Vite bundle and serves it with an unprivileged nginx runtime, SPA fallback, immutable asset caching, no-store HTML responses, `/health`, proxied `/health/ready`, and same-origin `/api/` proxying. The API Dockerfile provides a one-shot Prisma migration target and a pruned non-root runtime image. PostgreSQL uses a named `postgres-data` volume and is isolated on the internal backend network. See [`docs/operations/komodo-staging-deployment.md`](docs/operations/komodo-staging-deployment.md) for the verified staging topology and CI/CD runbook.
+The `web` image builds the Vite bundle and serves it with an unprivileged nginx runtime, restrictive browser security headers, SPA fallback, immutable asset caching, no-store HTML responses, `/health`, proxied `/health/ready`, and same-origin `/api/` proxying. The CSP has no broad source wildcards and permits only first-party images through `img-src 'self'`; external Google Fonts, Unsplash fallbacks, and Google profile-image dependencies have been removed. Legacy stored remote avatar values render as initials without making external requests. nginx replaces inbound forwarding headers rather than appending untrusted client-supplied proxy chains. The API Dockerfile provides a one-shot Prisma migration target and a pruned non-root runtime image. PostgreSQL uses a named `postgres-data` volume and is isolated on the internal backend network. See [`docs/operations/komodo-staging-deployment.md`](docs/operations/komodo-staging-deployment.md) for the verified staging topology and CI/CD runbook.
 
 Stop the stack without deleting database data:
 

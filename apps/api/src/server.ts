@@ -6,11 +6,13 @@ import { createLogger } from './logger.js';
 import { scheduleAuthCleanup } from './authCleanup.js';
 import { OAuthService } from './oauthService.js';
 import { SessionService } from './sessionService.js';
+import { createObservability } from './observability.js';
 
 async function main() {
   const config = loadConfig();
   const logger = createLogger(config);
   const database = createDatabase(config.databaseUrl);
+  const observability = createObservability();
   if (!database.client) throw new Error('Database client is unavailable.');
   const auth = {
     sessions: new SessionService(
@@ -20,8 +22,13 @@ async function main() {
     ),
     oauth: new OAuthService(database.client, config),
   };
-  const cleanupTimer = scheduleAuthCleanup(auth, logger);
-  const app = createApp({ config, database, logger, auth });
+  const cleanupTimer = scheduleAuthCleanup(
+    auth,
+    logger,
+    undefined,
+    observability,
+  );
+  const app = createApp({ config, database, logger, auth, observability });
   const server = createServer(app);
 
   let shuttingDown = false;

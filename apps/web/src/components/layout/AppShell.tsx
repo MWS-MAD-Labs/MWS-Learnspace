@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useGlobalSearch, useNotifications } from '../../hooks/useAggregates';
+import { Avatar } from '../common/Avatar';
 
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -550,13 +551,10 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
           {/* Current User Card at bottom of Sidebar */}
           <div className="pt-4 border-t border-[#EFE7DC] space-y-3">
             <div className="flex items-center gap-3 p-2 rounded-xl bg-[#FAF5EF] border border-[#E8DFC8]">
-              <img
-                src={
-                  currentUser.avatarUrl ||
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80'
-                }
-                alt={currentUser.name}
-                className="w-9 h-9 rounded-full object-cover border border-stone-200"
+              <Avatar
+                name={currentUser.name}
+                src={currentUser.avatarUrl}
+                className="w-9 h-9 rounded-full border border-stone-200 text-xs"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-stone-900 truncate">

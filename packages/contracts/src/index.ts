@@ -46,7 +46,7 @@ export const currentSessionResponseSchema = z.object({
     id: z.string().uuid(),
     email: z.string().email(),
     name: z.string().min(1),
-    avatarUrl: z.string().url().nullable(),
+    avatarUrl: z.string().nullable(),
     status: z.literal('ACTIVE'),
   }),
   memberships: z.array(

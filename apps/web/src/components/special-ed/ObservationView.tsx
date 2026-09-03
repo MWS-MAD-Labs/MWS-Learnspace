@@ -7,6 +7,7 @@ import { CoordinatorObservationManager } from './CoordinatorObservationManager';
 import { FEDCObservationView } from './FEDCObservationView';
 import { SensoryProfileView } from './SensoryProfileView';
 import { SFAObservationView } from './SFAObservationView';
+import { Avatar } from '../common/Avatar';
 import {
   Brain,
   Activity,
@@ -424,13 +425,10 @@ export const ObservationView: React.FC = () => {
                           : 'bg-[#FAF5EF] text-stone-700 hover:bg-[#F2EAE0] border-[#E8DFC8]'
                       }`}
                     >
-                      <img
-                        src={
-                          student.avatarUrl ||
-                          'https://images.unsplash.com/photo-1544717305-2782549b5136?w=40'
-                        }
-                        alt={student.name}
-                        className="w-5 h-5 rounded-full object-cover border border-white"
+                      <Avatar
+                        name={student.name}
+                        src={student.avatarUrl}
+                        className="w-5 h-5 rounded-full border border-white text-[8px]"
                       />
                       <span>{student.name}</span>
                     </button>
@@ -444,13 +442,10 @@ export const ObservationView: React.FC = () => {
           {currentStudent && (
             <div className="bg-[#FAF5EF] border border-[#E8DFC8] rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <img
-                  src={
-                    currentStudent.avatarUrl ||
-                    'https://images.unsplash.com/photo-1544717305-2782549b5136?w=60'
-                  }
-                  alt={currentStudent.name}
-                  className="w-11 h-11 rounded-xl object-cover border-2 border-white shadow-xs"
+                <Avatar
+                  name={currentStudent.name}
+                  src={currentStudent.avatarUrl}
+                  className="w-11 h-11 rounded-xl border-2 border-white shadow-xs text-sm"
                 />
                 <div>
                   <div className="flex items-center gap-2">

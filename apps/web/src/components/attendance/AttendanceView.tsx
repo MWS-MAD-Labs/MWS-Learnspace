@@ -26,6 +26,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { ApiClientError, isRequestCancelled } from '../../services/apiClient';
 import { attendanceService } from '../../services/attendanceService';
+import { Avatar } from '../common/Avatar';
 
 const STATUSES: AttendanceStatus[] = [
   'PRESENT',
@@ -749,17 +750,11 @@ export const AttendanceView: React.FC = () => {
                     className="rounded-2xl border border-[#EFE7DC] bg-white p-4 shadow-xs"
                   >
                     <div className="flex items-start gap-3">
-                      {student.avatarUrl ? (
-                        <img
-                          alt=""
-                          className="h-12 w-12 rounded-full object-cover"
-                          src={student.avatarUrl}
-                        />
-                      ) : (
-                        <div className="grid h-12 w-12 place-items-center rounded-full bg-stone-100 font-bold text-stone-500">
-                          {student.fullName.slice(0, 1)}
-                        </div>
-                      )}
+                      <Avatar
+                        name={student.fullName}
+                        src={student.avatarUrl}
+                        className="h-12 w-12 rounded-full text-sm"
+                      />
                       <div className="min-w-0 flex-1">
                         <h2 className="truncate text-sm font-bold text-stone-900">
                           {student.fullName}

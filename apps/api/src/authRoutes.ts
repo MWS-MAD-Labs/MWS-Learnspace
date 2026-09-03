@@ -151,6 +151,7 @@ export function createAuthRouter(
   sessions: SessionService,
   oauth: OAuthService,
   logger: Logger,
+  observeLoginFailure?: (reason: string) => void,
 ): Router {
   const router = createRouter();
   const requireAuthentication = createRequiredAuthentication(sessions);
@@ -212,13 +213,13 @@ export function createAuthRouter(
         error instanceof OAuthDeniedError && error.code === 'ACCOUNT_DISABLED'
           ? 'disabled'
           : 'denied';
+      const reason =
+        error instanceof OAuthDeniedError ? error.code : 'AUTH_CALLBACK_FAILED';
+      observeLoginFailure?.(reason);
       logger.warn(
         {
           requestId: response.locals.requestId,
-          reason:
-            error instanceof OAuthDeniedError
-              ? error.code
-              : 'AUTH_CALLBACK_FAILED',
+          reason,
         },
         'authentication callback denied',
       );

@@ -21,6 +21,24 @@ export const strictBooleanSchema = z.custom<boolean>(
   'Expected a boolean.',
 );
 
+export function isSafeAvatarPath(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.startsWith('/') &&
+    !value.startsWith('//') &&
+    !value.startsWith('/\\') &&
+    !Array.from(value).some((character) => {
+      const code = character.charCodeAt(0);
+      return code <= 31 || code === 127;
+    })
+  );
+}
+
+export const avatarPathSchema = z
+  .string()
+  .startsWith('/', 'Expected a same-origin path beginning with /.')
+  .refine(isSafeAvatarPath, 'Expected a safe same-origin path.');
+
 export const attendanceStatusSchema = z.enum([
   'PRESENT',
   'LATE',
@@ -163,7 +181,7 @@ export const staffDirectoryItemSchema = z
     userId: uuidSchema,
     organizationId: uuidSchema,
     displayName: z.string().min(1),
-    avatarUrl: z.string().url().nullable(),
+    avatarUrl: z.string().nullable(),
     role: staffMembershipRoleSchema,
     roleTitle: z.string().nullable(),
     status: z.literal('ACTIVE'),
@@ -183,7 +201,7 @@ export const organizationAccountSchema = z
     userId: uuidSchema,
     email: z.string().email(),
     displayName: z.string().min(1),
-    avatarUrl: z.string().url().nullable(),
+    avatarUrl: z.string().nullable(),
     userStatus: accountStatusSchema,
     role: staffMembershipRoleSchema,
     roleTitle: z.string().nullable(),
@@ -211,7 +229,7 @@ export const organizationAccountCreateCommandSchema = z
   .object({
     email: z.string().trim().email().max(320),
     displayName: z.string().trim().min(1).max(256),
-    avatarUrl: z.string().url().nullable().optional(),
+    avatarUrl: avatarPathSchema.nullable().optional(),
     role: staffMembershipRoleSchema,
     roleTitle: nullableTrimmedText(128).optional(),
     ...membershipScopeCommandFields,
@@ -222,7 +240,7 @@ export const organizationAccountUpdateCommandSchema = z
   .object({
     email: z.string().trim().email().max(320).optional(),
     displayName: z.string().trim().min(1).max(256).optional(),
-    avatarUrl: z.string().url().nullable().optional(),
+    avatarUrl: avatarPathSchema.nullable().optional(),
     userStatus: accountStatusSchema.optional(),
     role: staffMembershipRoleSchema.optional(),
     roleTitle: nullableTrimmedText(128).optional(),
@@ -257,7 +275,7 @@ export const gpkStaffSummarySchema = z
     membershipId: uuidSchema,
     userId: uuidSchema,
     displayName: z.string().min(1),
-    avatarUrl: z.string().url().nullable(),
+    avatarUrl: z.string().nullable(),
     roleTitle: z.string().nullable(),
   })
   .strict();
@@ -282,7 +300,7 @@ export const studentSummarySchema = z
     studentNumber: z.string().min(1),
     fullName: z.string().min(1),
     nickname: z.string().nullable(),
-    avatarUrl: z.string().url().nullable(),
+    avatarUrl: z.string().nullable(),
   })
   .strict();
 export const studentListItemSchema = studentSummarySchema
@@ -350,7 +368,7 @@ export const studentCreateCommandSchema = z
     address: nullableTrimmedText(1000).optional(),
     specialNeedsFlag: strictBooleanSchema.optional(),
     status: accountStatusSchema.optional(),
-    avatarUrl: z.string().url().nullable().optional(),
+    avatarUrl: avatarPathSchema.nullable().optional(),
     primaryClassification: nullableTrimmedText(256).optional(),
     currentPlacement: nullableTrimmedText(256).optional(),
     activeEnrollment: studentEnrollmentCommandSchema.optional(),
@@ -367,7 +385,7 @@ export const studentUpdateCommandSchema = z
     address: nullableTrimmedText(1000).optional(),
     specialNeedsFlag: strictBooleanSchema.optional(),
     status: accountStatusSchema.optional(),
-    avatarUrl: z.string().url().nullable().optional(),
+    avatarUrl: avatarPathSchema.nullable().optional(),
     primaryClassification: nullableTrimmedText(256).optional(),
     currentPlacement: nullableTrimmedText(256).optional(),
     activeEnrollment: studentEnrollmentCommandSchema.optional(),

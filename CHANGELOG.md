@@ -46,6 +46,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Dedicated persistent local PostgreSQL integration-test Compose service and `npm run test:integration:local` migration/test command.
 - Assignment-bound Sensory Profile APIs and web workflows with strict pinned-definition contracts, server-validated `0`–`5` ratings, trusted section/total scoring, transactional completion and audits, API-backed history/reference/reporting, and dedicated PostgreSQL and Compose-backed browser coverage.
 - Strict IEP aggregate contracts and organization-scoped list/detail/create/update APIs for team members, performance areas, accommodations, goals, services, parent approval metadata, and plan dates, with session-derived actors, transactional audits, draft-only mutation, integer optimistic concurrency, assigned-student scope, PostgreSQL historical-content immutability, generated OpenAPI operations, and dedicated contract, integration, component, service, and Compose-backed authoring coverage.
+- Production-hardening HTTP controls with restrictive browser/API security headers, exact-origin credentialed CORS, explicit trusted proxies, configurable API/authentication rate limits, and query-string-safe request logging.
+- First-party-only application assets with local system fonts, accessible initials avatars, safe first-party avatar paths, and removal of Google/Unsplash profile-image requests.
+- Dedicated secret, dependency, CodeQL, and container scanning workflows plus Dependabot configuration and documented time-bounded scanner exceptions.
+- Release-candidate image workflow for immutable GHCR digests, vulnerability scans, SPDX SBOMs, provenance attestations, keyless Cosign signatures, verification, and checksummed evidence.
+- Privacy-safe Prometheus telemetry for HTTP latency/status, login failures, authorization/CSRF/CORS denials, authentication cleanup, readiness, and PostgreSQL connection utilization, with trace correlation and recursive log redaction.
+- Alert catalogs and incident runbooks, encrypted backup/restore-verification wrappers, authorization/privacy threat and risk documentation, accessibility automation/review templates, performance budgets, and release-candidate validation tooling.
 
 ### Changed
 

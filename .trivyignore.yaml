@@ -1,0 +1,7 @@
+# Trivy exceptions are intentionally empty. Every future entry must include a
+# narrow path or PURL where practical, a risk statement, an owner/tracking
+# reference, and an expired_at date as described in the scanning policy.
+vulnerabilities: []
+misconfigurations: []
+secrets: []
+licenses: []

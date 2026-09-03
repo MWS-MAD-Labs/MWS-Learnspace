@@ -15,6 +15,7 @@ import {
   ObservationInstrumentType,
 } from '../../types';
 import { ObservationHistoryViewer } from './ObservationHistoryViewer';
+import { Avatar } from '../common/Avatar';
 import {
   Users,
   ClipboardCheck,
@@ -558,13 +559,10 @@ export const CoordinatorObservationManager: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <img
-                        src={
-                          teacher.avatarUrl ||
-                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80'
-                        }
-                        alt={teacher.name}
-                        className="w-9 h-9 rounded-xl object-cover border border-stone-200"
+                      <Avatar
+                        name={teacher.name}
+                        src={teacher.avatarUrl}
+                        className="w-9 h-9 rounded-xl border border-stone-200 text-xs"
                       />
                       <div>
                         <h4 className="font-bold text-xs text-stone-900">
@@ -653,13 +651,10 @@ export const CoordinatorObservationManager: React.FC = () => {
                       >
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <img
-                              src={
-                                student.avatarUrl ||
-                                'https://images.unsplash.com/photo-1544717305-2782549b5136?w=80'
-                              }
-                              alt={student.name}
-                              className="w-8 h-8 rounded-full object-cover border border-stone-200"
+                            <Avatar
+                              name={student.name}
+                              src={student.avatarUrl}
+                              className="w-8 h-8 rounded-full border border-stone-200 text-[10px]"
                             />
                             <div>
                               <p className="font-bold text-stone-900">
@@ -1075,13 +1070,10 @@ export const CoordinatorObservationManager: React.FC = () => {
                         : 'bg-[#FAF5EF] text-stone-700 hover:bg-[#F2EAE0] border border-[#E8DFC8]'
                     }`}
                   >
-                    <img
-                      src={
-                        s.avatarUrl ||
-                        'https://images.unsplash.com/photo-1544717305-2782549b5136?w=60'
-                      }
-                      alt={s.name}
-                      className="w-5 h-5 rounded-full object-cover"
+                    <Avatar
+                      name={s.name}
+                      src={s.avatarUrl}
+                      className="w-5 h-5 rounded-full text-[8px]"
                     />
                     <span>{s.name}</span>
                   </button>

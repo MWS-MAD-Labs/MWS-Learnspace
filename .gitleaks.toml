@@ -1,0 +1,18 @@
+title = "Learnspace Gitleaks configuration"
+
+[extend]
+useDefault = true
+
+# Exceptions must be narrow, reviewed, and documented in
+# docs/security/scanning-and-exceptions.md. Prefer rule/path-scoped allowlists
+# with a removal date; never allowlist a real credential.
+
+# Owner: Learnspace maintainers; tracking: P7-003; review/remove by 2026-12-01.
+# This exact value is an intentionally invalid credential used to verify that
+# the test-only authentication endpoint rejects incorrect authorization.
+[[allowlists]]
+description = "Synthetic wrong-secret value in test-auth negative test"
+condition = "AND"
+regexTarget = "match"
+paths = ['''^apps/api/test/testAuthRoutes\.test\.ts$''']
+regexes = ['''wrong-secret-with-at-least-32-characters''']

@@ -5,6 +5,7 @@ import { isRequestCancelled } from '../../services/apiClient';
 import { iepService } from '../../services/iepService';
 import { IEPRecord, IEPGoal, Student } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
+import { Avatar } from '../common/Avatar';
 import { IEPStatusTracker } from './IEPStatusTracker';
 import {
   FileText,
@@ -629,13 +630,10 @@ export const IEPPlanView: React.FC = () => {
           {/* Header Banner */}
           <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 print:border-none">
             <div className="flex items-center gap-4">
-              <img
-                src={
-                  currentStudent.avatarUrl ||
-                  'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=120'
-                }
-                alt={currentStudent.fullName}
-                className="w-16 h-16 rounded-2xl object-cover border-2 border-[#EFE7DC] shadow-xs"
+              <Avatar
+                name={currentStudent.fullName}
+                src={currentStudent.avatarUrl}
+                className="w-16 h-16 rounded-2xl border-2 border-[#EFE7DC] shadow-xs text-lg"
               />
               <div>
                 <div className="flex flex-wrap items-center gap-2">

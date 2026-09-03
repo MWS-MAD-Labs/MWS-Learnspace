@@ -14,6 +14,11 @@ const validEnvironment = {
   AUTH_ADMISSION_MODE: 'INVITE_ONLY',
 
   SESSION_TTL_HOURS: '24',
+  TRUSTED_PROXIES: 'loopback, 10.0.0.0/8',
+  API_RATE_LIMIT_REQUESTS: '600',
+  API_RATE_LIMIT_WINDOW_SECONDS: '60',
+  AUTH_RATE_LIMIT_REQUESTS: '30',
+  AUTH_RATE_LIMIT_WINDOW_SECONDS: '60',
   LOG_LEVEL: 'info',
 };
 
@@ -25,6 +30,11 @@ describe('loadConfig', () => {
       googleRedirectUri: 'https://api.example.org/api/v1/auth/callback',
       authAdmissionMode: 'INVITE_ONLY',
       sessionTtlHours: 24,
+      trustedProxies: ['loopback', '10.0.0.0/8'],
+      apiRateLimitRequests: 600,
+      apiRateLimitWindowSeconds: 60,
+      authRateLimitRequests: 30,
+      authRateLimitWindowSeconds: 60,
     });
   });
 
@@ -36,6 +46,40 @@ describe('loadConfig', () => {
     expect(() =>
       loadConfig({ ...validEnvironment, APP_URL: 'not-a-url' }),
     ).toThrow(/APP_URL/);
+    expect(() =>
+      loadConfig({ ...validEnvironment, APP_URL: 'ftp://example.org' }),
+    ).toThrow(/APP_URL/);
+    expect(() =>
+      loadConfig({ ...validEnvironment, AUTH_RATE_LIMIT_REQUESTS: '0' }),
+    ).toThrow(/AUTH_RATE_LIMIT_REQUESTS/);
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        API_RATE_LIMIT_WINDOW_SECONDS: '3601',
+      }),
+    ).toThrow(/API_RATE_LIMIT_WINDOW_SECONDS/);
+    expect(() =>
+      loadConfig({ ...validEnvironment, TRUSTED_PROXIES: 'anywhere' }),
+    ).toThrow(/TRUSTED_PROXIES/);
+  });
+
+  it('uses safe HTTP security defaults', () => {
+    const {
+      TRUSTED_PROXIES: _trustedProxies,
+      API_RATE_LIMIT_REQUESTS: _apiRequests,
+      API_RATE_LIMIT_WINDOW_SECONDS: _apiWindow,
+      AUTH_RATE_LIMIT_REQUESTS: _authRequests,
+      AUTH_RATE_LIMIT_WINDOW_SECONDS: _authWindow,
+      ...environment
+    } = validEnvironment;
+
+    expect(loadConfig(environment)).toMatchObject({
+      trustedProxies: [],
+      apiRateLimitRequests: 600,
+      apiRateLimitWindowSeconds: 60,
+      authRateLimitRequests: 30,
+      authRateLimitWindowSeconds: 60,
+    });
   });
 
   it('rejects weak or documented placeholder secrets', () => {

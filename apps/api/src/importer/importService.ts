@@ -9,6 +9,7 @@ import {
   type WorkflowState,
 } from '@prisma/client';
 import {
+  isSafeAvatarPath,
   isoWeekForDate,
   weeklyReportDateRange,
   type LearnspaceExportV1,
@@ -75,6 +76,8 @@ const requiredString = (record: LegacyRecord, field: string) => {
 };
 const optionalString = (value: unknown) =>
   typeof value === 'string' && value !== '' ? value : undefined;
+const localAvatarPath = (value: unknown) =>
+  isSafeAvatarPath(value) ? value : undefined;
 const requiredArray = (record: LegacyRecord, field: string): LegacyRecord[] => {
   const value = record[field];
   if (!Array.isArray(value)) {
@@ -332,7 +335,7 @@ async function persistExport(
         address: optionalString(student.address),
         specialNeedsFlag: student.specialNeedsFlag === true,
         status: student.active === false ? 'DISABLED' : 'ACTIVE',
-        avatarUrl: optionalString(student.avatarUrl),
+        avatarUrl: localAvatarPath(student.avatarUrl),
         primaryClassification:
           optionalString(student.primaryClassification) ??
           optionalString(student.primaryDiagnosis),

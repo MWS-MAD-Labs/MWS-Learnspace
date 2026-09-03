@@ -1,0 +1,212 @@
+name: Security scanning
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    name: Secret scan (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out full repository history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Scan repository history
+        run: >-
+          docker run --rm
+          --volume "${{ github.workspace }}:/repo:ro"
+          --env GIT_CONFIG_COUNT=1
+          --env GIT_CONFIG_KEY_0=safe.directory
+          --env GIT_CONFIG_VALUE_0=/repo
+          ghcr.io/gitleaks/gitleaks:v8.30.1
+          git /repo
+          --config=/repo/.gitleaks.toml
+          --redact
+          --no-banner
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: critical
+          show-openssf-scorecard: true
+
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Audit locked dependencies
+        run: npm audit --audit-level=critical
+
+  codeql:
+    name: CodeQL (JavaScript/TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+
+      - name: Analyze source
+        id: codeql
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript
+          post-processed-sarif-path: codeql-results
+
+      - name: Fail on critical CodeQL findings
+        shell: bash
+        env:
+          SARIF_DIRECTORY: ${{ steps.codeql.outputs.sarif-output }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const directory = process.env.SARIF_DIRECTORY;
+          if (!directory || !fs.existsSync(directory)) {
+            throw new Error("CodeQL did not produce a SARIF directory");
+          }
+
+          const files = fs
+            .readdirSync(directory)
+            .filter((file) => file.endsWith(".sarif"));
+          if (files.length === 0) {
+            throw new Error("CodeQL did not produce a SARIF result file");
+          }
+
+          let critical = 0;
+          for (const file of files) {
+            const sarif = JSON.parse(fs.readFileSync(path.join(directory, file), "utf8"));
+            for (const run of sarif.runs ?? []) {
+              const rules = run.tool?.driver?.rules ?? [];
+              const rulesById = new Map(
+                rules.map((rule, index) => [rule.id ?? String(index), rule]),
+              );
+
+              for (const result of run.results ?? []) {
+                const rule =
+                  rulesById.get(result.ruleId) ??
+                  (Number.isInteger(result.ruleIndex) ? rules[result.ruleIndex] : undefined);
+                const severity = Number(
+                  result.properties?.["security-severity"] ??
+                    rule?.properties?.["security-severity"] ??
+                    0,
+                );
+                if (severity >= 9) {
+                  critical += 1;
+                  console.error(
+                    `Critical CodeQL finding: ${result.ruleId ?? "unknown rule"} (${severity})`,
+                  );
+                }
+              }
+            }
+          }
+
+          if (critical > 0) {
+            console.error(`${critical} critical CodeQL finding(s) detected.`);
+            process.exitCode = 1;
+          }
+          NODE
+
+  trivy-images:
+    name: Trivy (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            dockerfile: apps/api/Dockerfile
+            target: runtime
+          - image: migration
+            dockerfile: apps/api/Dockerfile
+            target: migration
+          - image: web
+            dockerfile: apps/web/Dockerfile
+            target: runtime
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build scan image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          load: true
+          tags: learnspace-${{ matrix.image }}:scan-${{ github.sha }}
+          cache-from: type=gha,scope=security-${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=security-${{ matrix.image }}
+
+      - name: Scan image for critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: learnspace-${{ matrix.image }}:scan-${{ github.sha }}
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL
+          ignore-unfixed: false
+          trivyignores: .trivyignore.yaml
+          format: table
+          exit-code: '1'
+          timeout: 10m

@@ -20,6 +20,18 @@ import { createIepRouter } from './iepRoutes.js';
 import { createWeeklyReportRouter } from './weeklyReportRoutes.js';
 import { createAggregateRouter } from './aggregateRoutes.js';
 import { createTestAuthRouter } from './testAuthRoutes.js';
+import {
+  configureTrustedProxies,
+  createExactOriginCors,
+  createFixedWindowRateLimit,
+  createSecurityHeaders,
+} from './httpSecurity.js';
+import {
+  createObservability,
+  createTraceContext,
+  normalizeRoutePath,
+  type Observability,
+} from './observability.js';
 
 export type AppDependencies = {
   config: AppConfig;
@@ -30,6 +42,7 @@ export type AppDependencies = {
     sessions: SessionService;
     oauth: OAuthService;
   };
+  observability?: Observability;
 };
 
 export function createApp({
@@ -38,10 +51,12 @@ export function createApp({
   logger,
   version = '0.2.0',
   auth,
+  observability = createObservability(),
 }: AppDependencies) {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: '100kb' }));
+  configureTrustedProxies(app, config);
+  app.use(createSecurityHeaders());
 
   app.use((request, response, next) => {
     const suppliedRequestId = request.header('x-request-id')?.trim();
@@ -49,26 +64,83 @@ export function createApp({
       suppliedRequestId && suppliedRequestId.length <= 128
         ? suppliedRequestId
         : randomUUID();
+    const trace = createTraceContext(request.header('traceparent'));
     response.locals.requestId = requestId;
+    response.locals.traceId = trace.traceId;
     response.setHeader('x-request-id', requestId);
+    response.setHeader('traceparent', trace.traceparent);
+    response.setHeader('x-trace-id', trace.traceId);
+
+    const originalJson = response.json.bind(response);
+    response.json = ((body: unknown) => {
+      const errorCode =
+        typeof body === 'object' &&
+        body !== null &&
+        'error' in body &&
+        typeof body.error === 'object' &&
+        body.error !== null &&
+        'code' in body.error
+          ? body.error.code
+          : undefined;
+      if (typeof errorCode === 'string') response.locals.errorCode = errorCode;
+      return originalJson(body);
+    }) as typeof response.json;
 
     const startedAt = process.hrtime.bigint();
     response.on('finish', () => {
-      const durationMs =
-        Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+      const durationSeconds =
+        Number(process.hrtime.bigint() - startedAt) / 1_000_000_000;
+      observability.observeHttpRequest(
+        request.method,
+        request.originalUrl,
+        response.statusCode,
+        durationSeconds,
+      );
+      if (response.statusCode === 403) {
+        observability.observeForbidden(response.locals.errorCode);
+      }
       logger.info(
         {
           requestId,
+          traceId: trace.traceId,
           method: request.method,
-          path: request.originalUrl,
+          path: normalizeRoutePath(request.originalUrl),
+          route: normalizeRoutePath(request.originalUrl),
           status: response.statusCode,
-          durationMs: Number(durationMs.toFixed(2)),
+          durationMs: Number((durationSeconds * 1000).toFixed(2)),
         },
         'request completed',
       );
     });
 
     next();
+  });
+
+  app.use(
+    '/api/v1/auth',
+    createFixedWindowRateLimit({
+      limit: config.authRateLimitRequests ?? 30,
+      windowMs: (config.authRateLimitWindowSeconds ?? 60) * 1000,
+    }),
+  );
+  app.use(
+    '/api/v1',
+    createFixedWindowRateLimit({
+      limit: config.apiRateLimitRequests ?? 600,
+      windowMs: (config.apiRateLimitWindowSeconds ?? 60) * 1000,
+    }),
+  );
+  app.use(createExactOriginCors(config.appUrl));
+  app.use(express.json({ limit: '100kb' }));
+
+  app.get('/metrics', async (_request, response) => {
+    await observability.collectDatabaseConnectionUtilization(database.client);
+    response.setHeader(
+      'content-type',
+      'text/plain; version=0.0.4; charset=utf-8',
+    );
+    response.setHeader('cache-control', 'no-store');
+    response.send(observability.renderPrometheus());
   });
 
   app.get('/health/live', (_request, response) => {
@@ -78,6 +150,7 @@ export function createApp({
   app.get('/health/ready', async (_request, response, next) => {
     try {
       await database.check();
+      observability.setDatabaseUp(true);
       response.json(
         healthResponseSchema.parse({
           status: 'ready',
@@ -85,6 +158,7 @@ export function createApp({
         }),
       );
     } catch (error) {
+      observability.setDatabaseUp(false);
       logger.warn(
         { error: error instanceof Error ? error.message : 'unknown' },
         'readiness check failed',
@@ -96,6 +170,12 @@ export function createApp({
         }),
       );
     }
+  });
+
+  app.get('/api/v1/version', (_request, response) => {
+    response.json(
+      versionResponseSchema.parse({ name: 'learnspace-api', version }),
+    );
   });
 
   const authServices =
@@ -118,6 +198,7 @@ export function createApp({
         authServices.sessions,
         authServices.oauth,
         logger,
+        observability.observeLoginFailure,
       ),
     );
     if (database.client) {
@@ -158,15 +239,16 @@ export function createApp({
     }
   }
 
-  app.get('/api/v1/version', (_request, response) => {
-    response.json(
-      versionResponseSchema.parse({ name: 'learnspace-api', version }),
-    );
-  });
-
   if (config.nodeEnv === 'test') {
     app.get('/__test/error', () => {
       throw new Error('test failure');
+    });
+    app.get('/__test/authorization-denied', () => {
+      throw new HttpError(
+        403,
+        'AUTHORIZATION_DENIED',
+        'The request was denied.',
+      );
     });
   }
 
@@ -228,6 +310,7 @@ export function createApp({
     logger.error(
       {
         requestId,
+        traceId: response.locals.traceId,
         error: error instanceof Error ? error.message : 'unknown error',
         ...(config.nodeEnv === 'production'
           ? {}

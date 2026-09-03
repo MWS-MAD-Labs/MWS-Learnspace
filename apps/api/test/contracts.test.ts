@@ -6,6 +6,7 @@ import {
   gpkAssignmentUpsertCommandSchema,
   organizationAccountCreateCommandSchema,
   organizationAccountUpdateCommandSchema,
+  avatarPathSchema,
   organizationSettingsUpdateCommandSchema,
   learningJourneyCreateCommandSchema,
   learningJourneyDirectorReviewCommandSchema,
@@ -26,6 +27,21 @@ import {
 const studentId = '11111111-1111-4111-8111-111111111111';
 
 describe('resource contracts', () => {
+  it('restricts avatar values to null or safe same-origin paths', () => {
+    expect(avatarPathSchema.safeParse('/avatars/person.png').success).toBe(
+      true,
+    );
+    expect(
+      avatarPathSchema.safeParse('https://example.test/person.png').success,
+    ).toBe(false);
+    expect(
+      avatarPathSchema.safeParse('//example.test/person.png').success,
+    ).toBe(false);
+    expect(
+      avatarPathSchema.safeParse('/\\example.test/person.png').success,
+    ).toBe(false);
+  });
+
   it('uses the canonical Prisma attendance statuses', () => {
     expect(attendanceStatusSchema.options).toEqual([
       'PRESENT',
@@ -148,6 +164,18 @@ describe('resource contracts', () => {
     };
     expect(studentCreateCommandSchema.safeParse(create).success).toBe(true);
     expect(
+      studentCreateCommandSchema.safeParse({
+        ...create,
+        avatarUrl: '/avatars/student.png',
+      }).success,
+    ).toBe(true);
+    expect(
+      studentCreateCommandSchema.safeParse({
+        ...create,
+        avatarUrl: 'https://example.test/student.png',
+      }).success,
+    ).toBe(false);
+    expect(
       studentCreateCommandSchema.safeParse({ ...create, actorId: studentId })
         .success,
     ).toBe(false);
@@ -197,6 +225,14 @@ describe('resource contracts', () => {
         subjectIds: [],
       }).success,
     ).toBe(true);
+    expect(
+      organizationAccountCreateCommandSchema.safeParse({
+        email: 'teacher@example.test',
+        displayName: 'Teacher One',
+        avatarUrl: 'https://example.test/avatar.png',
+        role: 'GRADE_TEACHER',
+      }).success,
+    ).toBe(false);
     expect(organizationAccountUpdateCommandSchema.safeParse({}).success).toBe(
       false,
     );

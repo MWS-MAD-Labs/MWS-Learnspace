@@ -13,6 +13,7 @@ import {
 import { attendanceService } from '../../services/attendanceService';
 import { isRequestCancelled } from '../../services/apiClient';
 import { StatusBadge } from '../common/StatusBadge';
+import { Avatar } from '../common/Avatar';
 import {
   Search,
   CheckCircle2,
@@ -670,13 +671,10 @@ export const WeeklyReportStatusTracker: React.FC<
                   >
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={
-                            student.avatarUrl ||
-                            'https://images.unsplash.com/photo-1544717305-2782549b5136?w=80'
-                          }
-                          alt={student.name}
-                          className="w-9 h-9 rounded-full object-cover border border-stone-200"
+                        <Avatar
+                          name={student.name}
+                          src={student.avatarUrl}
+                          className="w-9 h-9 rounded-full border border-stone-200 text-xs"
                         />
                         <div>
                           <p className="font-bold text-stone-900">

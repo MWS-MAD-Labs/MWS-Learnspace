@@ -5,6 +5,7 @@ import {
 } from '@learnspace/contracts';
 import { useApp } from '../../context/AppContext';
 import { useSFAObservations } from '../../hooks/useSFAObservations';
+import { Avatar } from '../common/Avatar';
 import {
   observationService,
   type SFAObservationCommand,
@@ -368,13 +369,10 @@ export const SFAObservationView: React.FC<Props> = ({ assignment }) => {
     >
       <div className="bg-white border border-[#EFE7DC] rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <img
-            src={
-              student?.avatarUrl ||
-              'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=120'
-            }
-            alt={student?.fullName || assignment.studentName}
-            className="w-14 h-14 rounded-2xl object-cover border-2 border-[#EFE7DC]"
+          <Avatar
+            name={student?.fullName || assignment.studentName}
+            src={student?.avatarUrl}
+            className="w-14 h-14 rounded-2xl border-2 border-[#EFE7DC] text-base"
           />
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-[#6E161E] bg-[#6E161E]/10 px-2.5 py-0.5 rounded-full">

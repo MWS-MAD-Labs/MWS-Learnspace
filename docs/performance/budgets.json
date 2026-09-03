@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "bundle": {
+    "root": "apps/web/dist",
+    "maxTotalJavaScriptBytes": 1050000,
+    "maxTotalJavaScriptGzipBytes": 300000,
+    "maxJavaScriptChunkBytes": 330000,
+    "maxJavaScriptChunkGzipBytes": 95000,
+    "maxTotalCssBytes": 80000,
+    "maxTotalCssGzipBytes": 15000
+  },
+  "api": {
+    "requests": 50,
+    "concurrency": 5,
+    "timeoutMs": 5000,
+    "endpoints": [
+      {
+        "name": "liveness",
+        "path": "/health/live",
+        "expectedStatus": 200,
+        "maxP95Ms": 150
+      },
+      {
+        "name": "readiness",
+        "path": "/health/ready",
+        "expectedStatus": 200,
+        "maxP95Ms": 300
+      },
+      {
+        "name": "version",
+        "path": "/api/v1/version",
+        "expectedStatus": 200,
+        "maxP95Ms": 200
+      }
+    ]
+  },
+  "database": {
+    "coreListMaxQueries": 12,
+    "coreDetailMaxQueries": 10,
+    "maxListPageSize": 100,
+    "representativeStudents": 1000,
+    "representativeConcurrentUsers": 25
+  }
+}

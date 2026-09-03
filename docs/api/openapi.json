@@ -5747,8 +5747,7 @@
               "avatarUrl": {
                 "anyOf": [
                   {
-                    "type": "string",
-                    "format": "uri"
+                    "type": "string"
                   },
                   {
                     "type": "null"
@@ -11059,8 +11058,7 @@
                 "avatarUrl": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "format": "uri"
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -11157,8 +11155,7 @@
                 "avatarUrl": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "format": "uri"
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -11363,8 +11360,7 @@
           "avatarUrl": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uri"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -11443,8 +11439,7 @@
           "avatarUrl": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uri"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -11545,8 +11540,7 @@
               "avatarUrl": {
                 "anyOf": [
                   {
-                    "type": "string",
-                    "format": "uri"
+                    "type": "string"
                   },
                   {
                     "type": "null"
@@ -11676,8 +11670,7 @@
                 "avatarUrl": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "format": "uri"
+                      "type": "string"
                     },
                     {
                       "type": "null"
@@ -11929,8 +11922,7 @@
                             "avatarUrl": {
                               "anyOf": [
                                 {
-                                  "type": "string",
-                                  "format": "uri"
+                                  "type": "string"
                                 },
                                 {
                                   "type": "null"
@@ -12051,8 +12043,7 @@
               "avatarUrl": {
                 "anyOf": [
                   {
-                    "type": "string",
-                    "format": "uri"
+                    "type": "string"
                   },
                   {
                     "type": "null"
@@ -12304,8 +12295,7 @@
                           "avatarUrl": {
                             "anyOf": [
                               {
-                                "type": "string",
-                                "format": "uri"
+                                "type": "string"
                               },
                               {
                                 "type": "null"
@@ -12512,8 +12502,7 @@
           "avatarUrl": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uri"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12651,8 +12640,7 @@
           "avatarUrl": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uri"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12757,8 +12745,7 @@
               "avatarUrl": {
                 "anyOf": [
                   {
-                    "type": "string",
-                    "format": "uri"
+                    "type": "string"
                   },
                   {
                     "type": "null"
@@ -13010,8 +12997,7 @@
                           "avatarUrl": {
                             "anyOf": [
                               {
-                                "type": "string",
-                                "format": "uri"
+                                "type": "string"
                               },
                               {
                                 "type": "null"
@@ -13218,8 +13204,7 @@
                     "avatarUrl": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "format": "uri"
+                          "type": "string"
                         },
                         {
                           "type": "null"
@@ -13278,8 +13263,7 @@
                     "avatarUrl": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "format": "uri"
+                          "type": "string"
                         },
                         {
                           "type": "null"
@@ -13437,8 +13421,7 @@
                   "avatarUrl": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "format": "uri"
+                        "type": "string"
                       },
                       {
                         "type": "null"
@@ -13497,8 +13480,7 @@
                   "avatarUrl": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "format": "uri"
+                        "type": "string"
                       },
                       {
                         "type": "null"
@@ -13630,8 +13612,7 @@
                         "avatarUrl": {
                           "anyOf": [
                             {
-                              "type": "string",
-                              "format": "uri"
+                              "type": "string"
                             },
                             {
                               "type": "null"
@@ -14359,8 +14340,7 @@
                     "avatarUrl": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "format": "uri"
+                          "type": "string"
                         },
                         {
                           "type": "null"
@@ -14813,8 +14793,7 @@
                   "avatarUrl": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "format": "uri"
+                        "type": "string"
                       },
                       {
                         "type": "null"
@@ -15339,8 +15318,7 @@
                   "avatarUrl": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "format": "uri"
+                        "type": "string"
                       },
                       {
                         "type": "null"
@@ -15743,8 +15721,7 @@
                     "avatarUrl": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "format": "uri"
+                          "type": "string"
                         },
                         {
                           "type": "null"
@@ -16162,8 +16139,7 @@
                       "avatarUrl": {
                         "anyOf": [
                           {
-                            "type": "string",
-                            "format": "uri"
+                            "type": "string"
                           },
                           {
                             "type": "null"
@@ -16827,8 +16803,7 @@
                   "avatarUrl": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "format": "uri"
+                        "type": "string"
                       },
                       {
                         "type": "null"
@@ -17298,8 +17273,7 @@
                     "avatarUrl": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "format": "uri"
+                          "type": "string"
                         },
                         {
                           "type": "null"
@@ -17784,8 +17758,7 @@
                       "avatarUrl": {
                         "anyOf": [
                           {
-                            "type": "string",
-                            "format": "uri"
+                            "type": "string"
                           },
                           {
                             "type": "null"
@@ -18700,8 +18673,7 @@
                   "avatarUrl": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "format": "uri"
+                        "type": "string"
                       },
                       {
                         "type": "null"
@@ -19232,8 +19204,7 @@
                     "avatarUrl": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "format": "uri"
+                          "type": "string"
                         },
                         {
                           "type": "null"
@@ -19779,8 +19750,7 @@
                       "avatarUrl": {
                         "anyOf": [
                           {
-                            "type": "string",
-                            "format": "uri"
+                            "type": "string"
                           },
                           {
                             "type": "null"

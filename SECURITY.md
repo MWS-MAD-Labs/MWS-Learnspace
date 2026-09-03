@@ -19,3 +19,9 @@ Include, when possible:
 - whether sensitive student, family, credential, or session data may be exposed.
 
 Maintainers should acknowledge a report privately, coordinate remediation and disclosure, and avoid requesting real student records or production credentials. A dedicated private security contact remains owner-configured and must be added before inviting external vulnerability reports.
+
+## Automated security controls
+
+Learnspace scans committed secrets, npm dependencies, JavaScript/TypeScript source, and the API, migration, and web container images. Critical scanner findings block the applicable workflow unless maintainers approve a narrow, time-limited exception under [`docs/security/scanning-and-exceptions.md`](docs/security/scanning-and-exceptions.md).
+
+Release-candidate images are built and published under [`docs/security/image-build-policy.md`](docs/security/image-build-policy.md). Operators must verify image digests, keyless signatures, provenance, and SBOM contents using [`docs/operations/image-verification.md`](docs/operations/image-verification.md) before deployment.

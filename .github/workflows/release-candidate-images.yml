@@ -1,0 +1,267 @@
+name: Release candidate images
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: Release-candidate identifier, for example 0.3.0-rc.1
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: release-candidate-${{ inputs.candidate }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            dockerfile: apps/api/Dockerfile
+            target: runtime
+          - image: web
+            dockerfile: apps/web/Dockerfile
+            target: runtime
+    steps:
+      - name: Require a main-branch candidate
+        shell: bash
+        env:
+          CANDIDATE: ${{ inputs.candidate }}
+          SOURCE_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$SOURCE_REF" != "refs/heads/main" ]]; then
+            echo "Release candidates must be dispatched from the main branch." >&2
+            exit 1
+          fi
+          if [[ ! "$CANDIDATE" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
+            echo "candidate must match N.N.N-rc.N" >&2
+            exit 1
+          fi
+
+      - name: Check out candidate commit
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Derive image references
+        id: image
+        shell: bash
+        env:
+          CANDIDATE: ${{ inputs.candidate }}
+          IMAGE_COMPONENT: ${{ matrix.image }}
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "name=ghcr.io/$owner/learnspace-$IMAGE_COMPONENT" >> "$GITHUB_OUTPUT"
+          echo "tag=ghcr.io/$owner/learnspace-$IMAGE_COMPONENT:$CANDIDATE" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Refuse to overwrite an existing candidate tag
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ steps.image.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if docker buildx imagetools inspect "$IMAGE_TAG" >/dev/null 2>&1; then
+            echo "$IMAGE_TAG already exists; release-candidate tags are immutable." >&2
+            exit 1
+          fi
+
+      - name: Build once and push candidate image
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.image.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ inputs.candidate }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=release-${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.image }}
+
+      - name: Scan pushed digest for critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL
+          ignore-unfixed: false
+          trivyignores: .trivyignore.yaml
+          format: table
+          output: vulnerabilities-${{ matrix.image }}.txt
+          exit-code: '1'
+          timeout: 10m
+
+      - name: Generate downloadable SPDX SBOM
+        uses: anchore/sbom-action@v0.24.2
+        with:
+          image: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.image }}.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Generate human-readable package inventory
+        shell: bash
+        env:
+          SBOM: sbom-${{ matrix.image }}.spdx.json
+          INVENTORY: packages-${{ matrix.image }}.txt
+        run: |
+          set -euo pipefail
+          jq -r '
+            ["PACKAGE", "VERSION", "SUPPLIER"],
+            (.packages[] | [.name, (.versionInfo // ""), (.supplier // "")]) |
+            @tsv
+          ' "$SBOM" > "$INVENTORY"
+
+      - name: Attest build provenance
+        id: provenance
+        uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Attest SPDX SBOM
+        id: sbom-attestation
+        uses: actions/attest@v4.2.2
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          sbom-path: sbom-${{ matrix.image }}.spdx.json
+          push-to-registry: true
+
+      - name: Preserve attestation bundles
+        shell: bash
+        env:
+          PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          SBOM_BUNDLE: ${{ steps.sbom-attestation.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          cp "$PROVENANCE_BUNDLE" provenance-${{ matrix.image }}.sigstore.json
+          cp "$SBOM_BUNDLE" sbom-${{ matrix.image }}.sigstore.json
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.1.2
+
+      - name: Sign image by immutable digest
+        shell: bash
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          cosign sign --yes "$IMAGE@$DIGEST"
+
+      - name: Verify keyless signature
+        shell: bash
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          CERTIFICATE_IDENTITY: ${{ github.server_url }}/${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-identity "$CERTIFICATE_IDENTITY" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            --output=json \
+            "$IMAGE@$DIGEST" > signature-verification-${{ matrix.image }}.json
+
+      - name: Verify GitHub provenance attestation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ steps.image.outputs.name }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          gh attestation verify "oci://$IMAGE@$DIGEST" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release-candidate-images.yml" \
+            --source-ref "$GITHUB_REF" \
+            --format json > provenance-verification-${{ matrix.image }}.json
+
+      - name: Record immutable candidate evidence
+        shell: bash
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          IMAGE_TAG: ${{ steps.image.outputs.tag }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          CANDIDATE: ${{ inputs.candidate }}
+          PROVENANCE_URL: ${{ steps.provenance.outputs.attestation-url }}
+          SBOM_ATTESTATION_URL: ${{ steps.sbom-attestation.outputs.attestation-url }}
+        run: |
+          set -euo pipefail
+          immutable="$IMAGE@$DIGEST"
+          printf '%s\n' "$immutable" > image-${{ matrix.image }}.txt
+          cat > evidence-${{ matrix.image }}.md <<EOF
+          # Learnspace ${CANDIDATE} ${{ matrix.image }} image evidence
+
+          - Source repository: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}
+          - Source ref: ${GITHUB_REF}
+          - Source commit: ${GITHUB_SHA}
+          - Candidate tag: ${IMAGE_TAG}
+          - Immutable image: ${immutable}
+          - Provenance attestation: ${PROVENANCE_URL}
+          - SBOM attestation: ${SBOM_ATTESTATION_URL}
+          - Signature identity: ${GITHUB_SERVER_URL}/${GITHUB_WORKFLOW_REF}
+          - OIDC issuer: https://token.actions.githubusercontent.com
+          EOF
+          sha256sum \
+            image-${{ matrix.image }}.txt \
+            sbom-${{ matrix.image }}.spdx.json \
+            packages-${{ matrix.image }}.txt \
+            vulnerabilities-${{ matrix.image }}.txt \
+            provenance-${{ matrix.image }}.sigstore.json \
+            sbom-${{ matrix.image }}.sigstore.json \
+            signature-verification-${{ matrix.image }}.json \
+            provenance-verification-${{ matrix.image }}.json \
+            evidence-${{ matrix.image }}.md > SHA256SUMS-${{ matrix.image }}.txt
+          cat evidence-${{ matrix.image }}.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload candidate evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-candidate-${{ matrix.image }}-${{ inputs.candidate }}
+          path: |
+            image-${{ matrix.image }}.txt
+            evidence-${{ matrix.image }}.md
+            SHA256SUMS-${{ matrix.image }}.txt
+            sbom-${{ matrix.image }}.spdx.json
+            packages-${{ matrix.image }}.txt
+            vulnerabilities-${{ matrix.image }}.txt
+            provenance-${{ matrix.image }}.sigstore.json
+            sbom-${{ matrix.image }}.sigstore.json
+            signature-verification-${{ matrix.image }}.json
+            provenance-verification-${{ matrix.image }}.json
+          if-no-files-found: error
+          retention-days: 90
