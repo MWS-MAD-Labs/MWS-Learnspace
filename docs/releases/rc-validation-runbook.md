@@ -39,6 +39,27 @@ The script uses the existing `compose.e2e.yaml` stack and existing start/stop co
 
 It always attempts the existing stop command on exit. Failed runs capture Compose status/logs under `test-results/rc-compose/`. Install all configured Playwright browser binaries before running.
 
+## Published candidate image qualification
+
+The manual `.github/workflows/release-qualification.yml` workflow is the authoritative automated P8-003/P7-011 candidate gate. It requires the full source commit and digest-pinned API, web, and migration images from `.github/workflows/release-candidate-images.yml`. It verifies OCI source/version labels, runs fresh-install and `0.2.0` upgrade scenarios with a checksummed/catalog-validated backup, tests configuration failure and service/database restarts, and runs the complete Playwright matrix against the submitted images.
+
+Equivalent local commands require an available registry and an explicitly built previous migration image:
+
+```bash
+API_IMAGE=REGISTRY/learnspace-api@sha256:... \
+WEB_IMAGE=REGISTRY/learnspace-web@sha256:... \
+MIGRATION_IMAGE=REGISTRY/learnspace-migration@sha256:... \
+PREVIOUS_MIGRATION_IMAGE=learnspace-previous-migration:qualification \
+  npm run release:qualify-images
+
+API_IMAGE=REGISTRY/learnspace-api@sha256:... \
+WEB_IMAGE=REGISTRY/learnspace-web@sha256:... \
+MIGRATION_IMAGE=REGISTRY/learnspace-migration@sha256:... \
+  npm run release:e2e-images
+```
+
+A local pass against unsigned or dirty-worktree images validates only the automation. It is not P7-004 image evidence or stable approval.
+
 ## Reporting
 
 Copy `rc-validation-template.md` to a candidate-specific stable qualification report, such as `1.0.0-qualification.md`, and record exact commands, environment, timestamps, artifacts, failures, and skipped stages. Do not infer manual accessibility, performance, security, OAuth, upgrade, restore, role-matrix, restart, or RC approval from these scripts.

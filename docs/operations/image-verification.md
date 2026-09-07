@@ -20,7 +20,7 @@ Do not put tokens on the command line or in shell history. `GHCR_TOKEN` needs on
 
 ## Obtain the immutable reference
 
-Download the `release-candidate-<image>-<candidate>` artifact from the workflow run. Separate artifacts are produced for `api` and `web`. First verify `SHA256SUMS-<image>.txt`, then inspect `evidence-<image>.md` and `image-<image>.txt`. The image file contains a reference such as:
+Download the `release-candidate-<image>-<candidate>` artifact from the workflow run. Separate artifacts are produced for `api`, `web`, and `migration`. First verify `SHA256SUMS-<image>.txt`, then inspect `evidence-<image>.md` and `image-<image>.txt`. The image file contains a reference such as:
 
 ```text
 ghcr.io/example/learnspace-api@sha256:0123456789abcdef...
@@ -107,7 +107,7 @@ Review at least:
 - unexpected package managers, shells, compilers, or debugging tools;
 - license or vulnerability concerns relevant to the deployment environment.
 
-The migration target is built and scanned for critical vulnerabilities by `.github/workflows/security.yml`, but this repository-side P7-004 workflow publishes, signs, and attests only the API and web runtime images.
+The migration target is published, scanned, signed, and attested alongside the API and web runtime images. Verify all three and require the candidate identifier and source commit to match before migration or deployment.
 
 ## 4. Pull and deploy by digest
 
@@ -118,7 +118,7 @@ docker pull "$IMAGE"
 docker image inspect "$IMAGE" --format '{{json .RepoDigests}}'
 ```
 
-Configure Compose, Komodo, or another orchestrator with the complete digest reference. Record both verified digests, candidate identifier, source commit, verifier, and verification time in deployment evidence.
+Configure Compose, Komodo, or another orchestrator with the complete digest references. `compose.release.yaml` requires `API_IMAGE`, `WEB_IMAGE`, and `MIGRATION_IMAGE`. Record all three verified digests, candidate identifier, source commit, verifier, and verification time in deployment evidence.
 
 ## Failure handling
 

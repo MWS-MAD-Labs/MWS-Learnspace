@@ -46,7 +46,7 @@ The workspace and service boundary are implemented:
 - `apps/web` contains the React/Vite application. All sensitive domain screens use typed API services and PostgreSQL-backed data; production application paths do not read or write `localStorage` or `sessionStorage`.
 - `apps/api` is an active Express/TypeScript service with Google authentication, server sessions, authorization, organization account administration, academic/student resources, privileged student mutations, transactional GPK assignment and attendance endpoints, scoped Learning Journey workflows, assignment-bound FEDC, Sensory Profile, and SFA observation lifecycles, and role/student-scoped transactional IEP plan authoring with optimistic concurrency and historical immutability, plus runtime configuration validation, exact-origin CORS, trusted-proxy controls, fixed-window request limits, restrictive response headers, query-string-redacted structured logging, readiness checks, and graceful shutdown.
 - `packages/contracts` provides shared runtime Zod schemas and inferred TypeScript types for authentication, API errors, organization accounts, academic resources, students, staff directories, GPK assignments, attendance, Learning Journeys, observation definitions and assignments, FEDC, Sensory Profile, SFA, and IEP records and commands.
-- `compose.yaml` defines production-oriented `web`, `api`, `migrate`, and `db` services. The database is internal by default, while the web and API ports are available on the host for local operation. API startup waits for the one-shot migration job.
+- `compose.yaml` defines source-build `web`, `api`, `migrate`, and `db` services for development/staging. `compose.release.yaml` is the supported digest-pinned operator stack for candidate and stable images.
 - `compose.dev.yaml` is an optional override that publishes PostgreSQL on host port `5432` for database tools or a host-run API.
 - PostgreSQL is authoritative for authentication, user identity and membership administration, authorization scope, academic/student lookup and administration, GPK assignments, attendance, Learning Journey workflows, observation definitions and assignments, FEDC, Sensory Profile, SFA, IEP plans and transitions, weekly reports, dashboards, reports, search, and notifications.
 
@@ -80,7 +80,8 @@ Frontend role checks are presentation behavior only and are not authorization. T
 │   ├── domain-model.md
 │   ├── ROADMAP.md
 │   └── VERSIONING.md
-├── compose.yaml                   # Web, API, and internal PostgreSQL stack
+├── compose.yaml                   # Source-build web, API, migration, and PostgreSQL stack
+├── compose.release.yaml           # Digest-pinned self-hosted release stack
 ├── compose.dev.yaml               # Optional host PostgreSQL port override
 ├── compose.e2e.yaml               # Disposable attendance and P5 administration E2E stack
 ├── compose.integration.yaml       # Persistent local PostgreSQL integration-test service
@@ -189,6 +190,8 @@ npm run e2e:accessibility # Cross-browser accessibility baseline against a runni
 npm run performance:bundle # Enforce production web bundle budgets
 npm run performance:api -- --base-url URL # Bounded read-only API latency smoke
 npm run rc:validate     # Local RC static/unit/build gate; integration/E2E are opt-in
+npm run release:qualify-images # Candidate digest clean-install/upgrade/restart gate
+npm run release:e2e-images # Full browser matrix against candidate image digests
 npm run db:backup -- --database SOURCE --output FILE
 npm run db:restore -- --archive FILE --database NEW_TARGET
 npm run db:backup:encrypted -- --database SOURCE --output FILE.dump.age
@@ -321,7 +324,7 @@ Services and default host endpoints:
 - API: <http://localhost:4000> (loopback only; public requests use the web `/api/` proxy)
 - PostgreSQL: internal Compose network only
 
-The `web` image builds the Vite bundle and serves it with an unprivileged nginx runtime, restrictive browser security headers, SPA fallback, immutable asset caching, no-store HTML responses, `/health`, proxied `/health/ready`, and same-origin `/api/` proxying. The CSP has no broad source wildcards and permits only first-party images through `img-src 'self'`; external Google Fonts, Unsplash fallbacks, and Google profile-image dependencies have been removed. Legacy stored remote avatar values render as initials without making external requests. nginx replaces inbound forwarding headers rather than appending untrusted client-supplied proxy chains. The API Dockerfile provides a one-shot Prisma migration target and a pruned non-root runtime image. PostgreSQL uses a named `postgres-data` volume and is isolated on the internal backend network. See [`docs/operations/komodo-staging-deployment.md`](docs/operations/komodo-staging-deployment.md) for the verified staging topology and CI/CD runbook.
+The `web` image builds the Vite bundle and serves it with an unprivileged nginx runtime, restrictive browser security headers, SPA fallback, immutable asset caching, no-store HTML responses, `/health`, proxied `/health/ready`, and same-origin `/api/` proxying. The CSP has no broad source wildcards and permits only first-party images through `img-src 'self'`; external Google Fonts, Unsplash fallbacks, and Google profile-image dependencies have been removed. Legacy stored remote avatar values render as initials without making external requests. nginx replaces inbound forwarding headers rather than appending untrusted client-supplied proxy chains. The API Dockerfile provides a one-shot Prisma migration target and a pruned non-root runtime image. PostgreSQL uses a named `postgres-data` volume and is isolated on the internal backend network. `compose.release.yaml` consumes separately verified API, web, and migration image digests without rebuilding. See [`docs/operations/self-hosting.md`](docs/operations/self-hosting.md) for the release operator path and [`docs/operations/komodo-staging-deployment.md`](docs/operations/komodo-staging-deployment.md) for the existing source-build staging topology.
 
 Stop the stack without deleting database data:
 
@@ -359,6 +362,7 @@ Google OAuth, opaque server-side sessions, Prisma persistence, audit events, and
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — implementation backlog and milestone status
 - [`docs/domain-model.md`](docs/domain-model.md) — canonical entities, enums, ownership, workflow transitions, and JSON boundaries
+- [`docs/operations/self-hosting.md`](docs/operations/self-hosting.md) — clean installation, configuration, TLS, OAuth, upgrade, rollback, monitoring, and troubleshooting
 - [`docs/operations/backup-and-restore.md`](docs/operations/backup-and-restore.md) — guarded Compose PostgreSQL backup and restore procedure
 - [`docs/adr/0001-application-architecture.md`](docs/adr/0001-application-architecture.md) — accepted architecture decisions
 - [`docs/VERSIONING.md`](docs/VERSIONING.md) — release and migration policy

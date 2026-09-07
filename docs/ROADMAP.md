@@ -1016,24 +1016,30 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P8-001 — Finalize operator documentation
 
-- [ ] **Dependencies:** P7-003
+- [!] **Dependencies:** P7-003
 - **Change:** add installation, configuration reference, reverse proxy/TLS, OAuth, upgrade, rollback, migration, backup, restore, monitoring, and troubleshooting guides.
 - **Acceptance:** a new operator can deploy from a clean host using only published documentation and versioned images.
 - **Validate:** clean-host documentation rehearsal.
+- **Implemented (2026-09-05):** Added the consolidated digest-pinned self-hosting guide and release Compose path covering prerequisites, configuration, TLS/reverse proxying, OAuth, clean installation, upgrades, rollback/database recovery, migrations, backup/restore, monitoring, alerting, troubleshooting, and a clean-host rehearsal checklist.
+- **Blocked:** Independent clean-host rehearsal requires published candidate images from P8-002.
 
 ## P8-002 — Add automated versioned image publishing
 
-- [ ] **Dependencies:** P8-001, repository implementation from P7-004
+- [!] **Dependencies:** P8-001, repository implementation from P7-004
 - **Change:** publish web/API candidate images once for stable qualification with exact SemVer candidate identity, Git SHA, digest, signature, SBOM, and provenance; publish stable channels only after approval.
 - **Acceptance:** staging and production can promote the same immutable digest.
 - **Validate:** pull and verify images on a clean host.
+- **Implemented (2026-09-05):** Extended candidate publication to API, web, and one-shot migration images, each built once, scanned, SBOM/provenance-attested, keyless-signed, verified, and recorded by immutable digest. Added the digest-only release Compose contract.
+- **Blocked:** Publication requires the approved commit on protected `main`, successful required checks, and a new `1.0.0-rc.N` dispatch. No candidate digest is claimed in repository evidence yet.
 
 ## P8-003 — Add clean-install and upgrade CI
 
-- [ ] **Dependencies:** P8-002
+- [!] **Dependencies:** P8-002
 - **Change:** test a new installation and an upgrade from the latest supported previous release using PostgreSQL backups and Prisma migrations.
 - **Acceptance:** CI catches missing environment variables, migration incompatibility, and image mismatch.
 - **Validate:** release pipeline execution.
+- **Implemented (2026-09-05):** Added a digest- and source-identity-enforcing release qualifier and manual workflow that pull the exact candidate images, test missing configuration, perform a fresh migration/install, restart services, build the `0.2.0` migration baseline, create a checksummed/catalog-validated pre-upgrade PostgreSQL backup, migrate preserved data, test API/web/database restart recovery, and run the full existing Playwright matrix against the candidate API/web/migration artifacts.
+- **Blocked:** The pipeline must run successfully against P8-002 candidate digests before acceptance is complete.
 
 ## P8-004 — Complete release metadata
 
@@ -1041,6 +1047,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** after all stable qualification gates pass, set version `1.0.0`, update `CHANGELOG.md`, publish known issues, compatibility matrix, support window, checksums/digests, and migration notes.
 - **Acceptance:** release notes state configuration changes, database behavior, rollback constraints, and security impact.
 - **Validate:** follow `docs/VERSIONING.md` release checklist.
+- **Blocked (2026-09-05):** Stable metadata remains intentionally unchanged at `0.2.0`; `docs/releases/1.0.0-qualification.md` records the incomplete mandatory gates. Do not finalize `1.0.0` until every dependency passes.
 
 ## P8-005 — Production-readiness approval
 
@@ -1048,6 +1055,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 - **Change:** obtain accountable owner approval for security findings, privacy/data governance, backup objectives, incident response, support ownership, and deployment jurisdiction requirements.
 - **Acceptance:** all production-readiness criteria below are evidenced, not assumed.
 - **Validate:** signed-off release checklist or equivalent organizational record.
+- **Blocked (2026-09-05):** `docs/releases/production-readiness-approval.md` records that no accountable organizational sign-off is currently provided and production/real-data use remains prohibited.
 
 ---
 

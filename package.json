@@ -49,6 +49,8 @@
     "e2e:accessibility": "playwright test --project=accessibility-chromium --project=accessibility-firefox --project=accessibility-webkit",
     "rc:validate": "sh scripts/rc/validate.sh",
     "rc:e2e": "sh scripts/rc/e2e.sh",
+    "release:qualify-images": "sh scripts/release/qualify-images.sh",
+    "release:e2e-images": "sh scripts/release/e2e-images.sh",
     "openapi:generate": "npm run openapi:generate -w @learnspace/api",
     "openapi:check": "npm run openapi:check -w @learnspace/api",
     "db:import": "npm run db:import -w @learnspace/api --",

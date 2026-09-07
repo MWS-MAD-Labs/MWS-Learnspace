@@ -1,0 +1,173 @@
+name: Stable release qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: Candidate identifier, for example 1.0.0-rc.1
+        required: true
+        type: string
+      source_commit:
+        description: Full 40-character Git commit recorded in candidate image evidence
+        required: true
+        type: string
+      api_image:
+        description: Immutable API image reference
+        required: true
+        type: string
+      web_image:
+        description: Immutable web image reference
+        required: true
+        type: string
+      migration_image:
+        description: Immutable migration image reference
+        required: true
+        type: string
+      previous_ref:
+        description: Previous supported source ref used to build its migration image
+        required: true
+        default: fde695c
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: stable-qualification-${{ inputs.candidate }}
+  cancel-in-progress: false
+
+jobs:
+  candidate-install-upgrade:
+    name: Candidate clean install and upgrade
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Validate immutable inputs
+        shell: bash
+        env:
+          CANDIDATE: ${{ inputs.candidate }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          API_IMAGE: ${{ inputs.api_image }}
+          WEB_IMAGE: ${{ inputs.web_image }}
+          MIGRATION_IMAGE: ${{ inputs.migration_image }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Stable qualification must be dispatched from main." >&2
+            exit 1
+          fi
+          if [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "source_commit must be a full lowercase Git SHA." >&2
+            exit 1
+          fi
+          if [[ ! "$CANDIDATE" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
+            echo "candidate must match N.N.N-rc.N" >&2
+            exit 1
+          fi
+          for image in "$API_IMAGE" "$WEB_IMAGE" "$MIGRATION_IMAGE"; do
+            if [[ ! "$image" =~ @sha256:[0-9a-f]{64}$ ]]; then
+              echo "Every candidate image must be pinned by sha256 digest: $image" >&2
+              exit 1
+            fi
+          done
+
+      - name: Check out candidate source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ inputs.source_commit }}
+
+      - name: Require source commit on main
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$SOURCE_COMMIT" origin/main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies and Playwright browsers
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium firefox webkit
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build previous supported migration image
+        shell: bash
+        env:
+          PREVIOUS_REF: ${{ inputs.previous_ref }}
+        run: |
+          set -euo pipefail
+          git worktree add ../learnspace-previous "$PREVIOUS_REF"
+          docker build \
+            --file ../learnspace-previous/apps/api/Dockerfile \
+            --target migration \
+            --tag learnspace-previous-migration:qualification \
+            ../learnspace-previous
+
+      - name: Qualify candidate images
+        shell: bash
+        env:
+          API_IMAGE: ${{ inputs.api_image }}
+          WEB_IMAGE: ${{ inputs.web_image }}
+          MIGRATION_IMAGE: ${{ inputs.migration_image }}
+          PREVIOUS_MIGRATION_IMAGE: learnspace-previous-migration:qualification
+          CANDIDATE: ${{ inputs.candidate }}
+          CANDIDATE_COMMIT: ${{ inputs.source_commit }}
+        run: sh scripts/release/qualify-images.sh
+
+      - name: Run candidate browser matrix
+        shell: bash
+        env:
+          API_IMAGE: ${{ inputs.api_image }}
+          WEB_IMAGE: ${{ inputs.web_image }}
+          MIGRATION_IMAGE: ${{ inputs.migration_image }}
+        run: sh scripts/release/e2e-images.sh
+
+      - name: Record qualification identity
+        if: always()
+        shell: bash
+        env:
+          CANDIDATE: ${{ inputs.candidate }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          API_IMAGE: ${{ inputs.api_image }}
+          WEB_IMAGE: ${{ inputs.web_image }}
+          MIGRATION_IMAGE: ${{ inputs.migration_image }}
+          PREVIOUS_REF: ${{ inputs.previous_ref }}
+        run: |
+          mkdir -p test-results/release-qualification
+          cat > test-results/release-qualification/identity.txt <<EOF
+          candidate=$CANDIDATE
+          source_commit=$SOURCE_COMMIT
+          api_image=$API_IMAGE
+          web_image=$WEB_IMAGE
+          migration_image=$MIGRATION_IMAGE
+          previous_ref=$PREVIOUS_REF
+          workflow_run=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          EOF
+
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stable-qualification-${{ inputs.candidate }}
+          path: |
+            test-results/release-qualification/
+            test-results/release-e2e/
+            test-results/playwright/
+            playwright-report/
+          if-no-files-found: error
+          retention-days: 90

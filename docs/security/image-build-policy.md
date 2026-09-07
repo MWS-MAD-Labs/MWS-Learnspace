@@ -1,13 +1,13 @@
 # Image build and release-candidate policy
 
-This policy applies to the Learnspace API and web runtime release-candidate images. The database migration target is built and scanned by `.github/workflows/security.yml`, but P7-004 does not publish it as a release-candidate package.
+This policy applies to the Learnspace API runtime, web runtime, and one-shot database migration release-candidate images.
 
 ## Trusted build path
 
 Release-candidate images are produced only by a manual run of `.github/workflows/release-candidate-images.yml` from a reviewed repository ref. The workflow:
 
 1. validates a candidate identifier in the form `N.N.N-rc.N`;
-2. builds each of the API `runtime` and web `runtime` Docker targets exactly once with Buildx;
+2. builds the API `runtime`, web `runtime`, and API `migration` Docker targets exactly once with Buildx;
 3. pushes a new candidate tag to GHCR using the workflow-scoped `GITHUB_TOKEN` and captures the resulting immutable digest;
 4. scans that exact pushed digest and fails before signing if Trivy finds a critical OS or library vulnerability;
 5. records BuildKit SBOM and provenance attestations without rebuilding the image;
@@ -24,6 +24,7 @@ The workflow publishes these packages under the repository owner:
 
 - `ghcr.io/<owner>/learnspace-api`
 - `ghcr.io/<owner>/learnspace-web`
+- `ghcr.io/<owner>/learnspace-migration`
 
 Each run creates one human-readable release-candidate tag, such as `0.3.0-rc.1`. The workflow refuses to run if that package tag already exists. GHCR administrators should additionally enable immutable tags or equivalent package protection when available.
 
@@ -54,7 +55,7 @@ The workflow records `org.opencontainers.image.source`, `org.opencontainers.imag
 
 ## Retention and promotion
 
-The workflow retains, per image, an SPDX JSON SBOM, human-readable package inventory and vulnerability report, immutable image reference, evidence summary, checksums, signature/provenance verification output, and Sigstore attestation bundles for 90 days. GHCR stores the image, signature, and OCI attestations according to package retention settings.
+The workflow retains, per image, an SPDX JSON SBOM, human-readable package inventory and vulnerability report, immutable image reference, evidence summary, checksums, signature/provenance verification output, and Sigstore attestation bundles for 90 days. GHCR stores the image, signature, and OCI attestations according to package retention settings. Qualification and deployment must use matching API, web, and migration candidate identities from the same source commit.
 
 Promotion must preserve the digest. If a release tag is later added, it must point to the already verified candidate digest rather than rebuilding from source. Automated stable publishing and channel tags are outside this release-candidate policy.
 
