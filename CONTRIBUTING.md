@@ -14,6 +14,20 @@ npm ci
 
 Use `npm ci` for reproducible installs. Start the prototype with `npm run dev` and open <http://localhost:3000>.
 
+## Fork, clone, and branch
+
+The canonical public repository is <https://github.com/MWS-MAD-Labs/MWS-Learnspace>.
+
+External contributors should fork the repository on GitHub, clone their fork, and add the canonical repository as `upstream`:
+
+```bash
+git clone https://github.com/YOUR-USERNAME/MWS-Learnspace.git
+cd MWS-Learnspace
+git remote add upstream https://github.com/MWS-MAD-Labs/MWS-Learnspace.git
+```
+
+Organization members with write access may clone the canonical repository directly.
+
 ## Branches and changes
 
 1. Create a focused branch from `main`.

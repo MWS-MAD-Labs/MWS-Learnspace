@@ -6,18 +6,20 @@ This sanitized record captures the staging deployment evidence requested for com
 
 ## Deployment identity
 
-| Field                                  | Recorded value                                               | Provenance                                                                                                |
-| -------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| Repository                             | `faisalnh/MWS-Learnspace`                                    | GitHub Actions run metadata                                                                               |
-| Branch                                 | `staging`                                                    | GitHub Actions run metadata                                                                               |
-| Commit                                 | `139f1e7b23e590816a286a131a3e664edc448ef5`                   | Git and GitHub Actions run metadata                                                                       |
-| Workflow                               | `CI`                                                         | GitHub Actions                                                                                            |
-| Run                                    | `33235742175`, attempt 2                                     | GitHub Actions API                                                                                        |
-| Workflow result                        | `success`                                                    | GitHub Actions API                                                                                        |
-| Deployment job                         | `Deploy staging through Komodo`                              | GitHub Actions API                                                                                        |
-| Deployment job interval                | `2026-08-29T07:05:33Z`–`2026-08-29T07:05:41Z`                | GitHub Actions API                                                                                        |
-| Signed webhook accepted                | HTTP `200` at `2026-08-29T07:05:37Z`                         | GitHub Actions job log                                                                                    |
-| Komodo webhook authentication evidence | `2026-08-29T05:34:45.327508Z` for stack `learnspace-staging` | Retained Komodo Core log; this is an earlier historical trigger and is not the attempt-2 GitHub timestamp |
+| Field                                  | Recorded value                                                                  | Provenance                                                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Repository                             | `faisalnh/MWS-Learnspace` (historical owner; now `MWS-MAD-Labs/MWS-Learnspace`) | GitHub Actions run metadata and subsequent repository transfer                                            |
+| Branch                                 | `staging`                                                                       | GitHub Actions run metadata                                                                               |
+| Commit                                 | `139f1e7b23e590816a286a131a3e664edc448ef5`                                      | Git and GitHub Actions run metadata                                                                       |
+| Workflow                               | `CI`                                                                            | GitHub Actions                                                                                            |
+| Run                                    | `33235742175`, attempt 2                                                        | GitHub Actions API                                                                                        |
+| Workflow result                        | `success`                                                                       | GitHub Actions API                                                                                        |
+| Deployment job                         | `Deploy staging through Komodo`                                                 | GitHub Actions API                                                                                        |
+| Deployment job interval                | `2026-08-29T07:05:33Z`–`2026-08-29T07:05:41Z`                                   | GitHub Actions API                                                                                        |
+| Signed webhook accepted                | HTTP `200` at `2026-08-29T07:05:37Z`                                            | GitHub Actions job log                                                                                    |
+| Komodo webhook authentication evidence | `2026-08-29T05:34:45.327508Z` for stack `learnspace-staging`                    | Retained Komodo Core log; this is an earlier historical trigger and is not the attempt-2 GitHub timestamp |
+
+The repository value above preserves the owner recorded at the time of the run. The repository was subsequently transferred to the `MWS-MAD-Labs` organization and made public; the commit and run metadata remain point-in-time evidence.
 
 The GitHub deployment step completed successfully at `2026-08-29T07:05:41Z`. GitHub Actions reported staging ready at `2026-08-29T07:05:38Z`.
 

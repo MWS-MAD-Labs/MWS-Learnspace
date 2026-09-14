@@ -55,6 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- Transferred the public repository to the `MWS-MAD-Labs` organization and updated contributor and operational documentation for the canonical GitHub location.
 - Scheduled the remaining image-publication, monitoring, operational-drill, accountable security review, manual accessibility, authenticated performance, and full release-validation gates for the stable `1.0.0` qualification window; no separate `1.0.0-rc.1` publication is currently planned, and all gates remain mandatory before stable release or production-data approval.
 - Migrated the Learning Journey calendar, tracker, editor, dashboard, curriculum-report reads, and submit/review/approval workflow away from browser persistence; returned-review comments and reviewer attribution now remain visible after refresh.
 - Formatted the existing prototype source and fixed conditional React Hook execution in the observation workspace.
@@ -102,5 +103,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Seeded demonstration users, students, plans, observations, and reports.
 - Browser-local persistence and development role simulation.
 
-[Unreleased]: https://github.com/faisalnh/MWS-Learnspace/compare/main...HEAD
-[0.0.0]: https://github.com/faisalnh/MWS-Learnspace/commits/main
+[Unreleased]: https://github.com/MWS-MAD-Labs/MWS-Learnspace/compare/main...HEAD
+[0.0.0]: https://github.com/MWS-MAD-Labs/MWS-Learnspace/commits/main

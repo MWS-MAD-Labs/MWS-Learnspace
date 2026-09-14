@@ -2,6 +2,8 @@
 
 Learnspace is an educator portal for academic planning, attendance, special-education observations, Individualized Education Programs (IEPs), and weekly progress reporting.
 
+This is the public, organization-owned repository at <https://github.com/MWS-MAD-Labs/MWS-Learnspace>. Public visibility allows anyone to inspect and fork the source, but it does not make the application production-ready or grant reuse rights beyond an explicit license.
+
 The repository is currently at **`0.2.0`**. Milestone 4 delivered the first fully migrated product vertical, and Milestone 5 now includes API-backed organization account and membership administration, authorized student directories, privileged student administration, transactional GPK staff assignments, and Learning Journey authoring and approval workflows in addition to PostgreSQL attendance.
 
 > [!IMPORTANT]
@@ -369,6 +371,10 @@ Google OAuth, opaque server-side sessions, Prisma persistence, audit events, and
 - [`CHANGELOG.md`](CHANGELOG.md) — release history
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution and validation workflow
 - [`SECURITY.md`](SECURITY.md) — private vulnerability reporting
+
+## Contributing
+
+Public contributions are welcome through forks and pull requests. Review [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup, validation, and submission requirements. Report suspected vulnerabilities privately as described in [`SECURITY.md`](SECURITY.md), not through public issues or pull requests.
 
 ## License
 

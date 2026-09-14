@@ -29,13 +29,15 @@ Configure a repository-backed Stack with:
 | Setting              | Value                                |
 | -------------------- | ------------------------------------ |
 | Stack name           | `learnspace-staging`                 |
-| Repository           | `faisalnh/MWS-Learnspace`            |
+| Repository           | `MWS-MAD-Labs/MWS-Learnspace`        |
 | Branch               | `staging`                            |
 | Compose file         | `compose.yaml`                       |
 | Auto pull            | Enabled                              |
 | Run build            | Enabled                              |
 | Webhook              | Enabled, GitHub authentication style |
 | Webhook force deploy | Enabled                              |
+
+The repository is public, so source checkout does not require private-repository credentials. Keep GitHub authentication configured for the signed deployment webhook and any operations that require write access.
 
 `Run build` is required because the Compose services use local `build` definitions. Without it, Komodo can pull a new commit while continuing to run images built from an older checkout.
 
