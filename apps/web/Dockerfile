@@ -9,7 +9,7 @@ COPY apps/web apps/web
 COPY packages/contracts packages/contracts
 RUN npm run build -w @learnspace/web
 
-FROM nginxinc/nginx-unprivileged:1.30.4-alpine3.24 AS runtime
+FROM nginxinc/nginx-unprivileged:1.31.5-alpine3.24 AS runtime
 COPY docker/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder --chown=nginx:nginx /app/apps/web/dist /usr/share/nginx/html
 USER nginx
