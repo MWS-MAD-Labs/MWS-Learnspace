@@ -28,7 +28,7 @@
     "@testing-library/react": "^16.2.0",
     "@types/node": "^22.14.0",
     "jsdom": "^26.0.0",
-    "typescript": "~5.8.2",
+    "typescript": "~7.0.2",
     "vitest": "^3.0.8"
   }
 }
