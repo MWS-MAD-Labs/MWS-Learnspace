@@ -1063,6 +1063,8 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 These tasks are not prerequisites for `1.0.0`. Promote them into numbered milestones only after validating demand and assigning product/security owners.
 
+The [Student Reports Engine scope and assessment](student-reports-engine.md) records proposed general academic reporting, owner decisions, and dependencies on family access, private media, PDF export, and background workers. It is a planning document, not an implementation status update or a change to this backlog's execution order. Existing weekly reports remain IEP-specific.
+
 ## Product backlog
 
 - [ ] **FUT-PROD-001:** configurable school terminology, calendars, grades, and classes.

@@ -364,6 +364,7 @@ Google OAuth, opaque server-side sessions, Prisma persistence, audit events, and
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — implementation backlog and milestone status
 - [`docs/domain-model.md`](docs/domain-model.md) — canonical entities, enums, ownership, workflow transitions, and JSON boundaries
+- [`docs/student-reports-engine.md`](docs/student-reports-engine.md) — proposed general academic reporting scope, repository assessment, product decisions, and delivery dependencies
 - [`docs/operations/self-hosting.md`](docs/operations/self-hosting.md) — clean installation, configuration, TLS, OAuth, upgrade, rollback, monitoring, and troubleshooting
 - [`docs/operations/backup-and-restore.md`](docs/operations/backup-and-restore.md) — guarded Compose PostgreSQL backup and restore procedure
 - [`docs/adr/0001-application-architecture.md`](docs/adr/0001-application-architecture.md) — accepted architecture decisions
