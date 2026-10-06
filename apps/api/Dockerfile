@@ -1,4 +1,4 @@
-FROM node:22-alpine3.24 AS builder
+FROM node:26-alpine3.24 AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
@@ -34,7 +34,7 @@ RUN npm prune --omit=dev && rm -rf \
   /app/node_modules/.bin/vite \
   /app/node_modules/.bin/esbuild
 
-FROM node:22-alpine3.24 AS runtime
+FROM node:26-alpine3.24 AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
