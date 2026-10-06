@@ -57,7 +57,7 @@
     "db:import:prepare-local": "tsx scripts/prepare-local-import-rehearsal.ts"
   },
   "devDependencies": {
-    "@eslint/js": "^9.22.0",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "eslint": "^9.22.0",
     "eslint-plugin-react": "^7.37.4",
