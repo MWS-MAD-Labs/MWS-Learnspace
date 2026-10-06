@@ -125,7 +125,7 @@ jobs:
           timeout: 10m
 
       - name: Generate downloadable SPDX SBOM
-        uses: anchore/sbom-action@v0.24.2
+        uses: anchore/sbom-action@v0.24.3
         with:
           image: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
           format: spdx-json
