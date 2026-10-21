@@ -136,7 +136,7 @@ npm run db:migrate:deploy
 npm run dev:api
 ```
 
-For a host-run API, set `DATABASE_URL` to a host address such as `postgresql://learnspace:change-me@localhost:5432/learnspace`. The Compose-internal hostname `db` is only resolvable from containers.
+For a host-run API, set `DATABASE_URL` to a host address such as `postgresql://learnspace:change-me@localhost:5432/learnspace`. The Compose-internal hostname `db` is only resolvable from containers. If port `5432` is already occupied, set `POSTGRES_PORT` and use the same port in `DATABASE_URL`, for example `POSTGRES_PORT=5440` and `postgresql://learnspace:change-me@localhost:5440/learnspace`.
 
 Equivalent workspace command:
 
@@ -144,7 +144,7 @@ Equivalent workspace command:
 npm run dev -w @learnspace/api
 ```
 
-The API listens on <http://localhost:4000> by default.
+The API listens on <http://localhost:4000> by default. Host-run development reads the repository root `.env`; change `PORT` and set `VITE_API_PROXY_TARGET` to the same API origin when port 4000 is occupied.
 
 ### Run database integration tests locally
 
@@ -171,6 +171,7 @@ npm run build         # Build all workspaces that provide a build script
 npm run format        # Format supported repository files
 npm run format:check  # Check formatting without modifying files
 npm run lint          # Lint the complete workspace
+npm run lint:anti-slop # Enforce the repository anti-slop baseline
 npm run typecheck     # Type-check all workspaces that provide the script
 npm test              # Run workspace tests once
 npm run test:integration:local # Migrate and test against local Docker PostgreSQL
@@ -267,7 +268,7 @@ Never commit `.env` or real credentials. The API validates the following contrac
 | `ALLOW_DEVELOPMENT_AUTH_PLACEHOLDERS` | `true` only for explicit development placeholder credentials      |
 | `LOG_LEVEL`                           | `fatal`, `error`, `warn`, `info`, `debug`, or `trace`             |
 
-Compose additionally accepts `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `API_PORT`. Defaults are suitable only for isolated development.
+Compose additionally accepts `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`, and `API_PORT`. Defaults are suitable only for isolated development. `POSTGRES_PORT` is used by the development override when PostgreSQL must be reached from the host.
 
 ### Production-required secrets and settings
 

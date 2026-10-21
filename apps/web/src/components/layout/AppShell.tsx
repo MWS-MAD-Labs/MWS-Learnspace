@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import type {
   AggregateNotification,
   AggregateSearchItem,
@@ -24,18 +25,18 @@ import {
   UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useGlobalSearch, useNotifications } from '../../hooks/useAggregates';
+import {
+  useGlobalSearch,
+  useNotifications,
+} from '../../features/aggregates/hooks/useAggregates';
 
-export const AppShell: React.FC<{ children: React.ReactNode }> = ({
+export const AppShell: React.FC<{ children?: React.ReactNode }> = ({
   children,
 }) => {
   const {
     currentUser,
     organizationId,
     activeTab,
-    setActiveTab,
-    specialEdSubTab,
-    setSpecialEdSubTab,
     searchQuery,
     setSearchQuery,
     navigateToJourneyEditor,
@@ -128,6 +129,19 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
     activeTab === 'SPECIAL_ED_OBSERVATION' ||
     activeTab === 'SPECIAL_ED_IEP' ||
     activeTab === 'SPECIAL_ED_WEEKLY_REPORT';
+
+  const primaryNavClass = (active: boolean) =>
+    `w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+      active
+        ? 'bg-[#6E161E] text-white shadow-sm'
+        : 'text-stone-700 hover:bg-[#FAF5EF] hover:text-stone-900'
+    }`;
+  const subNavClass = (active: boolean) =>
+    `w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+      active
+        ? 'bg-[#6E161E] text-white font-bold'
+        : 'text-stone-600 hover:bg-[#FAF5EF] hover:text-stone-900'
+    }`;
 
   return (
     <div className="min-h-screen bg-[#FAF6F0] flex flex-col font-sans text-stone-900">
@@ -333,28 +347,20 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
             {/* Primary Nav Links */}
             <nav className="space-y-1">
               {/* Dashboard */}
-              <button
+              <NavLink
                 id="nav-dashboard"
-                onClick={() => setActiveTab('DASHBOARD')}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === 'DASHBOARD'
-                    ? 'bg-[#6E161E] text-white shadow-sm'
-                    : 'text-stone-700 hover:bg-[#FAF5EF] hover:text-stone-900'
-                }`}
+                to="/dashboard"
+                className={({ isActive }) => primaryNavClass(isActive)}
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Dashboard</span>
-              </button>
+              </NavLink>
 
               {/* Attendance */}
-              <button
+              <NavLink
                 id="nav-attendance"
-                onClick={() => setActiveTab('ATTENDANCE')}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === 'ATTENDANCE'
-                    ? 'bg-[#6E161E] text-white shadow-sm'
-                    : 'text-stone-700 hover:bg-[#FAF5EF] hover:text-stone-900'
-                }`}
+                to="/attendance"
+                className={({ isActive }) => primaryNavClass(isActive)}
               >
                 <CalendarCheck className="w-4 h-4" />
                 <span>Attendance</span>
@@ -367,21 +373,17 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
                 >
                   Today
                 </span>
-              </button>
+              </NavLink>
 
               {canAdminOrganization && (
-                <button
+                <NavLink
                   id="nav-people-access"
-                  onClick={() => setActiveTab('PEOPLE_ACCESS')}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    activeTab === 'PEOPLE_ACCESS'
-                      ? 'bg-[#6E161E] text-white shadow-sm'
-                      : 'text-stone-700 hover:bg-[#FAF5EF] hover:text-stone-900'
-                  }`}
+                  to="/people"
+                  className={({ isActive }) => primaryNavClass(isActive)}
                 >
                   <UserCog className="w-4 h-4" />
                   <span>People & access</span>
-                </button>
+                </NavLink>
               )}
 
               {/* Learning Journey Accordion */}
@@ -411,47 +413,39 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
 
                   {learningJourneyMenuOpen && (
                     <div className="ml-5 pl-3 border-l-2 border-[#EFE7DC] mt-1 space-y-1 py-1">
-                      <button
+                      <NavLink
                         id="nav-lj-calendar"
-                        onClick={() =>
-                          setActiveTab('LEARNING_JOURNEY_CALENDAR')
-                        }
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                          activeTab === 'LEARNING_JOURNEY_CALENDAR'
-                            ? 'bg-[#6E161E] text-white font-bold'
-                            : 'text-stone-600 hover:bg-[#FAF5EF] hover:text-stone-900'
-                        }`}
+                        to="/journeys/calendar"
+                        className={({ isActive }) => subNavClass(isActive)}
                       >
                         <Calendar className="w-3.5 h-3.5" />
                         <span>Calendar View</span>
-                      </button>
+                      </NavLink>
 
-                      <button
+                      <NavLink
                         id="nav-lj-tracker"
-                        onClick={() => setActiveTab('LEARNING_JOURNEY_TRACKER')}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                          activeTab === 'LEARNING_JOURNEY_TRACKER'
-                            ? 'bg-[#6E161E] text-white font-bold'
-                            : 'text-stone-600 hover:bg-[#FAF5EF] hover:text-stone-900'
-                        }`}
+                        to="/journeys/tracker"
+                        className={({ isActive }) => subNavClass(isActive)}
                       >
                         <ListOrdered className="w-3.5 h-3.5" />
                         <span>Status Tracker</span>
-                      </button>
+                      </NavLink>
 
                       {currentUser.permissions.includes('journey:write') && (
-                        <button
+                        <NavLink
                           id="nav-lj-create"
-                          onClick={() => navigateToJourneyEditor()}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                            activeTab === 'LEARNING_JOURNEY_EDITOR'
-                              ? 'bg-[#6E161E] text-white font-bold'
-                              : 'text-[#6E161E] hover:bg-[#6E161E]/5 font-semibold'
-                          }`}
+                          to="/journeys/new"
+                          className={({ isActive }) =>
+                            `${subNavClass(isActive)} ${
+                              isActive
+                                ? ''
+                                : 'text-[#6E161E] hover:bg-[#6E161E]/5 font-semibold'
+                            }`
+                          }
                         >
                           <PlusCircle className="w-3.5 h-3.5" />
                           <span>+ Create Journey</span>
-                        </button>
+                        </NavLink>
                       )}
                     </div>
                   )}
@@ -488,62 +482,52 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
 
                   {specialEdMenuOpen && (
                     <div className="ml-5 pl-3 border-l-2 border-[#EFE7DC] mt-1 space-y-1 py-1">
-                      <button
+                      <NavLink
                         id="nav-sp-observation"
-                        onClick={() => setActiveTab('SPECIAL_ED_OBSERVATION')}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                          activeTab === 'SPECIAL_ED_OBSERVATION'
-                            ? 'bg-[#6E161E] text-white font-bold'
-                            : 'text-stone-600 hover:bg-[#FAF5EF] hover:text-stone-900'
-                        }`}
+                        to="/observations"
+                        className={() =>
+                          subNavClass(activeTab === 'SPECIAL_ED_OBSERVATION')
+                        }
                       >
                         <Brain className="w-3.5 h-3.5" />
                         <span>Observation</span>
-                      </button>
+                      </NavLink>
 
-                      <button
+                      <NavLink
                         id="nav-sp-iep"
-                        onClick={() => setActiveTab('SPECIAL_ED_IEP')}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                          activeTab === 'SPECIAL_ED_IEP'
-                            ? 'bg-[#6E161E] text-white font-bold'
-                            : 'text-stone-600 hover:bg-[#FAF5EF] hover:text-stone-900'
-                        }`}
+                        to="/ieps"
+                        className={() =>
+                          subNavClass(activeTab === 'SPECIAL_ED_IEP')
+                        }
                       >
                         <FileSignature className="w-3.5 h-3.5" />
                         <span>Annual IEP Plan</span>
-                      </button>
+                      </NavLink>
 
-                      <button
+                      <NavLink
                         id="nav-sp-report"
-                        onClick={() => setActiveTab('SPECIAL_ED_WEEKLY_REPORT')}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                          activeTab === 'SPECIAL_ED_WEEKLY_REPORT'
-                            ? 'bg-[#6E161E] text-white font-bold'
-                            : 'text-stone-600 hover:bg-[#FAF5EF] hover:text-stone-900'
-                        }`}
+                        to="/weekly-reports"
+                        className={() =>
+                          subNavClass(activeTab === 'SPECIAL_ED_WEEKLY_REPORT')
+                        }
                       >
                         <ClipboardList className="w-3.5 h-3.5" />
                         <span>Weekly IEP Report</span>
-                      </button>
+                      </NavLink>
                     </div>
                   )}
                 </div>
               )}
 
               {/* Reports */}
-              <button
+              <NavLink
                 id="nav-reports"
-                onClick={() => setActiveTab('REPORTS')}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === 'REPORTS'
-                    ? 'bg-[#6E161E] text-white shadow-sm'
-                    : 'text-stone-700 hover:bg-[#FAF5EF] hover:text-stone-900'
-                }`}
+                to="/reports"
+                className={({ isActive }) => primaryNavClass(isActive)}
               >
                 <BarChart3 className="w-4 h-4" />
                 <span>Reports & Analytics</span>
-              </button>
+              </NavLink>
             </nav>
           </div>
 

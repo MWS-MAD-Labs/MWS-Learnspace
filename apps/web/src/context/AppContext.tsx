@@ -1,44 +1,28 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import React, { createContext, useContext, type ReactNode } from 'react';
 import { RefreshCw, TriangleAlert } from 'lucide-react';
 import { User, Student } from '../types';
-import { isRequestCancelled } from '../services/apiClient';
 import {
-  mapStaffDirectoryItemToUser,
-  mapStudentListItemToStudent,
-  studentAdministrationService,
-} from '../services/studentAdministrationService';
+  useAuthorizedDirectory,
+  type AdministrationDataStatus,
+} from '../app/state/useAuthorizedDirectory';
+import {
+  useNavigationState,
+  type NavigationTab,
+  type ObservationManageTab,
+  type SpecialEdSubTab,
+} from '../app/state/useNavigationState';
+import { useObservationState } from '../app/state/useObservationState';
+import { useToastState, type ToastMessage } from '../app/state/useToastState';
 
-export type NavigationTab =
-  | 'DASHBOARD'
-  | 'ATTENDANCE'
-  | 'PEOPLE_ACCESS'
-  | 'LEARNING_JOURNEY_CALENDAR'
-  | 'LEARNING_JOURNEY_TRACKER'
-  | 'LEARNING_JOURNEY_EDITOR'
-  | 'SPECIAL_ED_OBSERVATION'
-  | 'SPECIAL_ED_IEP'
-  | 'SPECIAL_ED_WEEKLY_REPORT'
-  | 'REPORTS';
+export type {
+  AdministrationDataStatus,
+  NavigationTab,
+  ObservationManageTab,
+  SpecialEdSubTab,
+};
+export type { ToastMessage };
 
-export type SpecialEdSubTab = 'FEDC' | 'SENSORY_PROFILE' | 'SFA';
-export type AdministrationDataStatus = 'loading' | 'ready' | 'error';
-
-export interface ToastMessage {
-  id: string;
-  type: 'success' | 'info' | 'warning' | 'error';
-  title: string;
-  message?: string;
-}
-
-interface AppContextType {
+export interface AppContextType {
   organizationId: string;
   currentUser: User;
   allUsers: User[];
@@ -48,6 +32,7 @@ interface AppContextType {
   administrationDataError?: string;
   activeTab: NavigationTab;
   specialEdSubTab: SpecialEdSubTab;
+  observationManageTab: ObservationManageTab;
   selectedStudentId: string;
   selectedJourneyId: string | null;
   selectedIepId: string | null;
@@ -84,6 +69,7 @@ interface AppContextType {
   refreshData: () => Promise<void>;
 
   navigateToJourneyEditor: (journeyId?: string) => void;
+  navigateToJourneyDetail: (journeyId: string) => void;
   navigateToObservation: (
     studentId: string,
     type?: SpecialEdSubTab,
@@ -98,186 +84,59 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-function administrationErrorMessage(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : 'Student administration data could not be loaded.';
-}
-
 export const AppProvider: React.FC<{
   children: ReactNode;
   authenticatedUser: User;
   organizationId: string;
 }> = ({ children, authenticatedUser, organizationId }) => {
-  const [currentUser, setCurrentUser] = useState<User>(authenticatedUser);
-  const [allUsers, setAllUsers] = useState<User[]>([authenticatedUser]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [assignedStudents, setAssignedStudents] = useState<Student[]>([]);
-  const [administrationDataStatus, setAdministrationDataStatus] =
-    useState<AdministrationDataStatus>('loading');
-  const [administrationDataError, setAdministrationDataError] = useState<
-    string | undefined
-  >();
-  const hasLoadedAdministrationData = useRef(false);
-  const administrationRequestSequenceRef = useRef(0);
-  const administrationRequestControllerRef = useRef<AbortController>();
+  const observation = useObservationState();
+  const navigation = useNavigationState();
+  const directory = useAuthorizedDirectory(authenticatedUser, organizationId);
+  const toast = useToastState();
 
-  const [activeTab, setActiveTab] = useState<NavigationTab>('DASHBOARD');
-  const [specialEdSubTab, setSpecialEdSubTab] =
-    useState<SpecialEdSubTab>('FEDC');
-  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
-  const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(
-    null,
-  );
-  const [selectedIepId, setSelectedIepId] = useState<string | null>(null);
-  const [selectedWeeklyReportId, setSelectedWeeklyReportId] = useState<
-    string | null
-  >(null);
-  const [weeklyReportTrackerRequested, setWeeklyReportTrackerRequested] =
-    useState(false);
-  const [attendanceTarget, setAttendanceTarget] = useState<{
-    studentId: string;
-    classId: string;
-  } | null>(null);
-  const [selectedObservationAssignmentId, setSelectedObservationAssignmentId] =
-    useState<string | null>(null);
-  const [observationResultsStudentId, setObservationResultsStudentId] =
-    useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [isObservationDrawerOpen, setIsObservationDrawerOpen] =
-    useState<boolean>(false);
-
-  const refreshData = useCallback(async () => {
-    const requestSequence = ++administrationRequestSequenceRef.current;
-    administrationRequestControllerRef.current?.abort();
-    const controller = new AbortController();
-    administrationRequestControllerRef.current = controller;
-    const requestStillCurrent = () =>
-      administrationRequestSequenceRef.current === requestSequence &&
-      administrationRequestControllerRef.current === controller;
-
-    const isInitialLoad = !hasLoadedAdministrationData.current;
-    if (isInitialLoad) setAdministrationDataStatus('loading');
-    setAdministrationDataError(undefined);
-    try {
-      const canReadStaff = authenticatedUser.permissions.includes(
-        'staff-directory:read',
-      );
-      const [studentsResponse, staffResponse] = await Promise.all([
-        studentAdministrationService.getStudents(
-          organizationId,
-          controller.signal,
-        ),
-        canReadStaff
-          ? studentAdministrationService.getStaff(
-              organizationId,
-              controller.signal,
-            )
-          : Promise.resolve(undefined),
-      ]);
-      const loadedStudents = studentsResponse.data.map(
-        mapStudentListItemToStudent,
-      );
-      const loadedStaff = staffResponse?.data.map(mapStaffDirectoryItemToUser);
-      const directoryUsers = loadedStaff?.map((user) =>
-        user.membershipId === authenticatedUser.membershipId
-          ? authenticatedUser
-          : user,
-      );
-
-      if (!requestStillCurrent()) return;
-      setCurrentUser(authenticatedUser);
-      setAllUsers(directoryUsers ?? [authenticatedUser]);
-      setStudents(loadedStudents);
-      // The students endpoint is authorization-filtered for the active membership.
-      setAssignedStudents(loadedStudents);
-      setSelectedStudentId((selected) =>
-        loadedStudents.some((student) => student.id === selected)
-          ? selected
-          : (loadedStudents[0]?.id ?? ''),
-      );
-      hasLoadedAdministrationData.current = true;
-      setAdministrationDataError(undefined);
-      setAdministrationDataStatus('ready');
-    } catch (error) {
-      if (isRequestCancelled(error) || !requestStillCurrent()) return;
-      setAdministrationDataError(administrationErrorMessage(error));
-      if (isInitialLoad) {
-        setStudents([]);
-        setAssignedStudents([]);
-        setAllUsers([authenticatedUser]);
-        setAdministrationDataStatus('error');
-      } else {
-        setAdministrationDataStatus('ready');
-      }
-    }
-  }, [authenticatedUser, organizationId]);
-
-  useEffect(() => {
-    void refreshData();
-    return () => administrationRequestControllerRef.current?.abort();
-  }, [refreshData]);
-
-  const toggleObservationDrawer = () => {
-    setIsObservationDrawerOpen((prev) => !prev);
-  };
-
-  const showToast = (
-    type: 'success' | 'info' | 'warning' | 'error',
-    title: string,
-    message?: string,
-  ) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-    setToasts((prev) => [...prev, { id, type, title, message }]);
-    setTimeout(() => dismissToast(id), 4500);
-  };
-
-  const dismissToast = (id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
-
-  const navigateToJourneyEditor = (journeyId?: string) => {
-    setSelectedJourneyId(journeyId || null);
-    setActiveTab('LEARNING_JOURNEY_EDITOR');
-  };
-
-  const navigateToObservation = (
-    studentId: string,
-    type: SpecialEdSubTab = 'FEDC',
-    assignmentId?: string,
-    target?: 'ALL_RESULTS',
-  ) => {
-    setSelectedStudentId(studentId);
-    setSpecialEdSubTab(type);
-    setSelectedObservationAssignmentId(assignmentId ?? null);
-    setObservationResultsStudentId(target === 'ALL_RESULTS' ? studentId : null);
-    setActiveTab('SPECIAL_ED_OBSERVATION');
-  };
-
-  const navigateToIEP = (studentId: string, iepId?: string) => {
-    setSelectedStudentId(studentId);
-    setSelectedIepId(iepId || null);
-    setActiveTab('SPECIAL_ED_IEP');
-  };
-
-  const navigateToWeeklyReport = (studentId: string, reportId?: string) => {
-    setSelectedStudentId(studentId);
-    setSelectedWeeklyReportId(reportId ?? null);
-    setWeeklyReportTrackerRequested(false);
-    setActiveTab('SPECIAL_ED_WEEKLY_REPORT');
-  };
-
-  const navigateToAttendanceStudent = (studentId: string, classId: string) => {
-    setAttendanceTarget({ studentId, classId });
-    setActiveTab('ATTENDANCE');
-  };
-
-  const navigateToWeeklyReportTracker = () => {
-    setSelectedWeeklyReportId(null);
-    setWeeklyReportTrackerRequested(true);
-    setActiveTab('SPECIAL_ED_WEEKLY_REPORT');
-  };
+  const {
+    currentUser,
+    allUsers,
+    students,
+    assignedStudents,
+    administrationDataStatus,
+    administrationDataError,
+    refreshData,
+  } = directory;
+  const {
+    activeTab,
+    setActiveTab,
+    specialEdSubTab,
+    setSpecialEdSubTab,
+    observationManageTab,
+    selectedStudentId,
+    setSelectedStudentId,
+    selectedJourneyId,
+    setSelectedJourneyId,
+    selectedIepId,
+    setSelectedIepId,
+    selectedWeeklyReportId,
+    setSelectedWeeklyReportId,
+    weeklyReportTrackerRequested,
+    setWeeklyReportTrackerRequested,
+    attendanceTarget,
+    setAttendanceTarget,
+    searchQuery,
+    setSearchQuery,
+    navigateToJourneyEditor,
+    navigateToJourneyDetail,
+    navigateToObservation,
+    navigateToIEP,
+    navigateToWeeklyReport,
+    navigateToWeeklyReportTracker,
+    navigateToAttendanceStudent,
+  } = navigation;
+  const {
+    isObservationDrawerOpen,
+    setIsObservationDrawerOpen,
+    toggleObservationDrawer,
+  } = observation;
+  const { toasts, showToast, dismissToast } = toast;
 
   const value: AppContextType = {
     organizationId,
@@ -289,14 +148,15 @@ export const AppProvider: React.FC<{
     administrationDataError,
     activeTab,
     specialEdSubTab,
+    observationManageTab,
     selectedStudentId,
     selectedJourneyId,
     selectedIepId,
     selectedWeeklyReportId,
     weeklyReportTrackerRequested,
     attendanceTarget,
-    selectedObservationAssignmentId,
-    observationResultsStudentId,
+    selectedObservationAssignmentId: navigation.selectedObservationAssignmentId,
+    observationResultsStudentId: navigation.observationResultsStudentId,
     searchQuery,
     toasts,
     isObservationDrawerOpen,
@@ -308,8 +168,9 @@ export const AppProvider: React.FC<{
     setSelectedWeeklyReportId,
     setWeeklyReportTrackerRequested,
     setAttendanceTarget,
-    setSelectedObservationAssignmentId,
-    setObservationResultsStudentId,
+    setSelectedObservationAssignmentId:
+      navigation.setSelectedObservationAssignmentId,
+    setObservationResultsStudentId: navigation.setObservationResultsStudentId,
     setSearchQuery,
     setIsObservationDrawerOpen,
     toggleObservationDrawer,
@@ -317,6 +178,7 @@ export const AppProvider: React.FC<{
     dismissToast,
     refreshData,
     navigateToJourneyEditor,
+    navigateToJourneyDetail,
     navigateToObservation,
     navigateToIEP,
     navigateToWeeklyReport,

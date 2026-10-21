@@ -52,6 +52,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Check anti-slop rules
+        run: npm run lint:anti-slop
+
       - name: Type check
         run: npm run typecheck
 

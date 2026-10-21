@@ -189,7 +189,11 @@ export interface WorkflowHistoryEntry {
     | 'Director Approval'
     | 'DRAFT'
     | 'COORDINATOR_REVIEW'
-    | 'DIRECTOR_APPROVAL';
+    | 'DIRECTOR_APPROVAL'
+    | 'PRINCIPAL_REVIEW'
+    | 'APPROVED'
+    | 'ACTIVE'
+    | 'ARCHIVED';
   action?:
     | 'Submitted'
     | 'Returned'

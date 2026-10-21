@@ -6,8 +6,9 @@ Describe the change and why it is needed.
 
 - [ ] `npm run format:check`
 - [ ] `npm run lint`
+- [ ] `npm run lint:anti-slop`
 - [ ] `npm run typecheck`
-- [ ] `npm test -- --run`
+- [ ] `npm test`
 - [ ] `npm run build`
 
 ## Review checklist

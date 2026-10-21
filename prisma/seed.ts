@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { assertSeedAllowed } from '../apps/api/src/seedGuard.js';
+import { assertSeedAllowed } from '../apps/api/src/validation/seed-guard-validation.js';
 
 const sfaDefinitionBody = {
   participationItems: [
@@ -130,6 +130,34 @@ export async function seedDatabase(prisma: PrismaClient) {
     create: {
       organizationId: organization.id,
       userId: user.id,
+      role: 'PRINCIPAL',
+    },
+  });
+
+  const dummyStaff = await prisma.user.upsert({
+    where: { email: 'dummystaff@millennia21.id' },
+    update: {
+      displayName: 'Dummy Staff',
+      status: 'ACTIVE',
+    },
+    create: {
+      email: 'dummystaff@millennia21.id',
+      displayName: 'Dummy Staff',
+      status: 'ACTIVE',
+    },
+  });
+
+  await prisma.membership.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: organization.id,
+        userId: dummyStaff.id,
+      },
+    },
+    update: { role: 'PRINCIPAL', status: 'ACTIVE' },
+    create: {
+      organizationId: organization.id,
+      userId: dummyStaff.id,
       role: 'PRINCIPAL',
     },
   });

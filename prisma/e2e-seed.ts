@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { assertSeedAllowed } from '../apps/api/src/seedGuard.js';
+import { assertSeedAllowed } from '../apps/api/src/validation/seed-guard-validation.js';
 
 const sfaDefinitionBody = {
   participationItems: [

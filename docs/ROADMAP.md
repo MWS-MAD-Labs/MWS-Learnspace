@@ -2,6 +2,8 @@
 
 This file is the implementation source of truth for turning Learnspace from a Google AI Studio frontend prototype into a production-ready, self-hosted application using Docker, PostgreSQL, Prisma, and Google OAuth.
 
+For a current implementation-versus-roadmap audit, including stale statuses, production-hardening gaps, deferred product work, and recommended execution order, see [`ROADMAP_GAP_ANALYSIS.md`](ROADMAP_GAP_ANALYSIS.md).
+
 The backlog is intentionally ordered. An AI coding agent should select the **first unchecked task whose dependencies are complete**, implement only that task, validate it, update this file, and stop for review unless explicitly asked to continue.
 
 ## Execution protocol

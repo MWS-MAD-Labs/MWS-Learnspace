@@ -51,7 +51,7 @@ Use a dedicated non-production OAuth client. Place secrets in an untracked local
 
 A real login requires real development credentials and `ALLOW_DEVELOPMENT_AUTH_PLACEHOLDERS=false`.
 
-The Vite development server proxies `/api` to `http://localhost:4000`, matching the production Nginx same-origin proxy. Keep `VITE_API_BASE_URL` unset for the standard deployment so the callback and session cookies remain on the web origin.
+The Vite development server proxies `/api` to `VITE_API_PROXY_TARGET`, falling back to `PORT` and then `http://localhost:4000`. Keep `VITE_API_BASE_URL` unset for the standard deployment so the callback and session cookies remain on the web origin. If the web app moves to another local port, update both `APP_URL` and `GOOGLE_REDIRECT_URI` to that same browser origin.
 
 ## Staging and production
 

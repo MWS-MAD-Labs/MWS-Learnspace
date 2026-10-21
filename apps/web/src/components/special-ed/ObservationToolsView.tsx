@@ -1,6 +1,1 @@
-import React from 'react';
-import { ObservationView } from './ObservationView';
-
-export const ObservationToolsView: React.FC = () => {
-  return <ObservationView />;
-};
+export { ObservationPage as ObservationToolsView } from '../../features/observations/pages/ObservationPage';

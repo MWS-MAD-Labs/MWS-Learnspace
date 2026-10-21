@@ -31,4 +31,4 @@ COPY --from=builder --chown=node:node /app/packages/contracts/dist ./packages/co
 USER node
 EXPOSE 4000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:4000/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
-CMD ["node", "apps/api/dist/server.js"]
+CMD ["node", "apps/api/dist/application/server.js"]
