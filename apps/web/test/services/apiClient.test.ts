@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { apiClient } from '@/src/services/apiClient';
+import { apiClient, onApiUnauthorized } from '@/src/services/apiClient';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -73,6 +73,33 @@ describe('apiClient', () => {
       });
     },
   );
+
+  it('notifies subscribers when any API request receives 401', async () => {
+    const listener = vi.fn();
+    const unsubscribe = onApiUnauthorized(listener);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                code: 'UNAUTHENTICATED',
+                message: 'Session ended.',
+                requestId: 'request-401',
+              },
+            }),
+            { status: 401 },
+          ),
+      ),
+    );
+
+    await expect(apiClient.request('/protected')).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(listener).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
 
   it('reports a successful response that violates its schema', async () => {
     vi.stubGlobal(

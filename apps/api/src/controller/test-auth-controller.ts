@@ -1,5 +1,5 @@
-import type { RequestHandler } from 'express';
 import type { AppConfig } from '../lib/config.js';
+import type { RequestHandler } from '../type/http.js';
 import { randomToken, safeEqual } from '../utils/auth-crypto.js';
 import {
   appendCookie,

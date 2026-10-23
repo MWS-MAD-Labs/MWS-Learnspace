@@ -1,17 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
-import type { Router } from 'express';
 import { describe, expect, it } from 'vitest';
 import { createObservationRouter } from '../routes/observations-router.js';
 import type { SessionService } from '../service/session-service.js';
-
-type RouterLayer = {
-  handle?: { stack?: RouterLayer[] };
-  route?: {
-    path: string;
-    methods: Record<string, boolean>;
-    stack: unknown[];
-  };
-};
 
 const expectedRoutes = [
   ['get', '/organizations/:organizationId/observation-definitions'],
@@ -108,44 +98,23 @@ const expectedRoutes = [
   ],
 ] as const;
 
-function layers(router: Router): RouterLayer[] {
-  return (router as Router & { stack: RouterLayer[] }).stack;
-}
-
-function routes(stack: RouterLayer[]): RouterLayer[] {
-  return stack.flatMap((layer) =>
-    layer.route
-      ? [layer]
-      : layer.handle?.stack
-        ? routes(layer.handle.stack)
-        : [],
-  );
-}
-
 describe('observation router composition', () => {
   it('preserves the exact authenticated route stack', () => {
     const router = createObservationRouter(
       {} as PrismaClient,
       {} as SessionService,
     );
-    const stack = layers(router);
-    const routeLayers = routes(stack);
+    const registeredRoutes = router.app.routes.map(
+      (route) => [route.method.toLowerCase(), route.path] as const,
+    );
+    const routes = [
+      ...new Map(
+        registeredRoutes.map((route) => [route.join(' '), route]),
+      ).values(),
+    ];
 
-    expect(stack).toHaveLength(7);
-    expect(stack[0]?.route).toBeUndefined();
-    expect(stack.slice(1).every((layer) => layer.handle?.stack)).toBe(true);
-    expect(routeLayers).toHaveLength(expectedRoutes.length);
-    expect(
-      routeLayers.map((layer) => {
-        const route = layer.route!;
-        return [Object.keys(route.methods)[0], route.path];
-      }),
-    ).toEqual(expectedRoutes);
-
-    for (const layer of routeLayers) {
-      const route = layer.route!;
-      const method = Object.keys(route.methods)[0];
-      expect(route.stack).toHaveLength(method === 'get' ? 1 : 2);
-    }
+    expect(routes).toHaveLength(expectedRoutes.length + 1);
+    expect(routes[0]).toEqual(['all', '/*']);
+    expect(routes.slice(1)).toEqual(expectedRoutes);
   });
 });

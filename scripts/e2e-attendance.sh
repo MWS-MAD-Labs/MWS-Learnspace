@@ -20,4 +20,4 @@ trap cleanup EXIT INT TERM
 rm -rf test-results playwright-report
 docker compose -p "$compose_project" -f "$compose_file" down --volumes --remove-orphans >/dev/null 2>&1 || true
 docker compose -p "$compose_project" -f "$compose_file" up --build --wait --wait-timeout 240
-npm run e2e:attendance:test
+bun run e2e:attendance:test

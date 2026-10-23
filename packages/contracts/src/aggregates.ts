@@ -29,7 +29,7 @@ export const aggregateSearchQuerySchema = z
   .strict();
 
 export const aggregateSearchItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid({ error: 'Invalid uuid' }),
   kind: z.enum([
     'STUDENT',
     'LEARNING_JOURNEY',
@@ -39,9 +39,9 @@ export const aggregateSearchItemSchema = z.object({
   ]),
   title: z.string().min(1),
   subtitle: z.string().min(1),
-  studentId: z.string().uuid().optional(),
-  classId: z.string().uuid().optional(),
-  parentId: z.string().uuid().optional(),
+  studentId: z.string().guid({ error: 'Invalid uuid' }).optional(),
+  classId: z.string().guid({ error: 'Invalid uuid' }).optional(),
+  parentId: z.string().guid({ error: 'Invalid uuid' }).optional(),
   state: workflowStateSchema.optional(),
   updatedAt: z.string().datetime(),
 });
@@ -76,8 +76,8 @@ export const aggregateNotificationSchema = z.object({
       'SPECIAL_ED_WEEKLY_REPORT',
       'SPECIAL_ED_OBSERVATION',
     ]),
-    recordId: z.string().uuid().optional(),
-    studentId: z.string().uuid().optional(),
+    recordId: z.string().guid({ error: 'Invalid uuid' }).optional(),
+    studentId: z.string().guid({ error: 'Invalid uuid' }).optional(),
     observationType: z.enum(['FEDC', 'SENSORY_PROFILE', 'SFA']).optional(),
   }),
 });
@@ -124,7 +124,7 @@ export const dashboardSummaryResponseSchema = z.object({
     recentJourneys: z
       .array(
         z.object({
-          id: z.string().uuid(),
+          id: z.string().guid({ error: 'Invalid uuid' }),
           title: z.string().min(1),
           grade: z.string().min(1),
           subject: z.string().min(1),

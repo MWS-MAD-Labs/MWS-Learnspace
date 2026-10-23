@@ -68,8 +68,28 @@
               }
             }
           },
+          "403": {
+            "description": "Authorization denied without resource enumeration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -188,6 +208,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -252,6 +282,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -347,6 +387,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -411,6 +461,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -519,6 +579,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -583,6 +653,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -661,6 +741,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -725,6 +815,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -803,6 +903,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -867,6 +977,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -945,6 +1065,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1016,6 +1146,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1080,6 +1220,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1179,6 +1329,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1296,6 +1456,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1360,6 +1530,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1475,6 +1655,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       },
@@ -1573,6 +1763,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1656,6 +1856,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1770,6 +1980,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1862,6 +2082,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1978,6 +2208,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -2087,6 +2327,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -2151,6 +2401,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2249,6 +2509,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2365,6 +2635,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -2429,6 +2709,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2517,6 +2807,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2633,6 +2933,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       },
@@ -2716,6 +3026,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2832,6 +3152,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -2905,6 +3235,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3019,6 +3359,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       },
@@ -3119,6 +3469,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3235,6 +3595,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -3308,6 +3678,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3395,6 +3775,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -3468,6 +3858,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3582,6 +3982,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       },
@@ -3682,6 +4092,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3798,6 +4218,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -3871,6 +4301,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3958,6 +4398,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -4031,6 +4481,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -4145,6 +4605,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       },
@@ -4245,6 +4715,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -4361,6 +4841,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -4441,6 +4931,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -4514,6 +5014,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -4636,6 +5146,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       },
@@ -4734,6 +5254,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -4807,6 +5337,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -4915,6 +5455,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -5032,6 +5582,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -5135,6 +5695,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -5252,6 +5822,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -5355,6 +5935,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -5472,6 +6062,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -5555,6 +6155,16 @@
           },
           "500": {
             "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -5669,6 +6279,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Required authentication dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -5729,6 +6349,36 @@
       "CurrentSessionResponse": {
         "type": "object",
         "properties": {
+          "authMode": {
+            "type": "string",
+            "enum": [
+              "off",
+              "shadow",
+              "shared"
+            ]
+          },
+          "hub": {
+            "type": "object",
+            "properties": {
+              "homeUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "refreshUrl": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "homeUrl",
+              "refreshUrl"
+            ],
+            "additionalProperties": false
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 0
+          },
           "user": {
             "type": "object",
             "properties": {

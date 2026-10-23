@@ -6,8 +6,8 @@ import {
   gpkAssignmentUpsertCommandSchema,
   uuidSchema,
 } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
 import { z } from 'zod';
+import type { RequestHandler } from '../type/http.js';
 import { parseRequest } from '../middleware/http-errors.js';
 import {
   requireResourceAuth,

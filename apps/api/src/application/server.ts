@@ -1,7 +1,4 @@
-import { createServer } from 'node:http';
-import { loadEnvFile } from 'node:process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { loadConfig } from '../lib/config.js';
 import { createDatabase } from '../lib/database.js';
@@ -9,19 +6,8 @@ import { createLogger } from '../lib/logger.js';
 import { scheduleAuthCleanup } from '../service/auth-cleanup-service.js';
 import { OAuthService } from '../service/oauth-service.js';
 import { SessionService } from '../service/session-service.js';
-
-if (process.env.NODE_ENV !== 'production') {
-  const rootEnv = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    '../../../../.env',
-  );
-  try {
-    loadEnvFile(rootEnv);
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code !== 'ENOENT') throw error;
-  }
-}
+import { createSharedSessionShadow } from '../service/shared-session-shadow-service.js';
+import { createSharedSessionAuthentication } from '../service/shared-session-service.js';
 
 async function main() {
   const config = loadConfig();
@@ -35,10 +21,28 @@ async function main() {
       config.sessionTtlHours,
     ),
     oauth: new OAuthService(database.client, config),
+    shadowObserver: await createSharedSessionShadow(
+      config,
+      database.client,
+      logger,
+    ),
+    shared: await createSharedSessionAuthentication(
+      config,
+      database.client,
+      logger,
+    ),
   };
   const cleanupTimer = scheduleAuthCleanup(auth, logger);
   const app = createApp({ config, database, logger, auth });
-  const server = createServer(app);
+  const server = serve(
+    { fetch: app.fetch, port: config.port, hostname: '0.0.0.0' },
+    (address) => {
+      logger.info(
+        { port: address.port, environment: config.nodeEnv },
+        'API listening',
+      );
+    },
+  );
 
   let shuttingDown = false;
   const shutdown = (signal: NodeJS.Signals) => {
@@ -73,13 +77,6 @@ async function main() {
       process.exit(1);
     }, 10_000).unref();
   };
-
-  server.listen(config.port, '0.0.0.0', () => {
-    logger.info(
-      { port: config.port, environment: config.nodeEnv },
-      'API listening',
-    );
-  });
 
   process.once('SIGTERM', shutdown);
   process.once('SIGINT', shutdown);

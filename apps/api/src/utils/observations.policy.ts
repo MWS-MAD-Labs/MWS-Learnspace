@@ -1,14 +1,13 @@
-import type { Request } from 'express';
 import {
   AuthorizationDeniedError,
   requireOrganizationScope,
   requirePermission,
   type MembershipScope,
 } from '../utils/authorization.js';
-import type { AuthenticatedRequest } from '../type/http.js';
+import type { AuthenticatedRequest, HttpRequest } from '../type/http.js';
 import { HttpError } from '../middleware/http-errors.js';
 
-export function requireAuth(request: Request) {
+export function requireAuth(request: HttpRequest) {
   const auth = (request as AuthenticatedRequest).auth;
   if (!auth) {
     throw new HttpError(
@@ -24,7 +23,7 @@ export function deny(): never {
   throw new HttpError(403, 'AUTHORIZATION_DENIED', 'The request was denied.');
 }
 
-export function membershipFor(request: Request, organizationId: string) {
+export function membershipFor(request: HttpRequest, organizationId: string) {
   try {
     return requireOrganizationScope(
       requireAuth(request).memberships,

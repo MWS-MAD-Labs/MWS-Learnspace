@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { RequestHandler } from 'express';
 import type { Logger } from '../lib/logger.js';
+import type { RequestHandler } from '../type/http.js';
 
 export function createRequestMiddleware(logger: Logger): RequestHandler {
   return (request, response, next) => {
@@ -13,7 +13,7 @@ export function createRequestMiddleware(logger: Logger): RequestHandler {
     response.setHeader('x-request-id', requestId);
 
     const startedAt = process.hrtime.bigint();
-    response.on('finish', () => {
+    return next().finally(() => {
       const durationMs =
         Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       logger.info(
@@ -27,7 +27,5 @@ export function createRequestMiddleware(logger: Logger): RequestHandler {
         'request completed',
       );
     });
-
-    next();
   };
 }

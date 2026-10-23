@@ -9,9 +9,8 @@ import {
   weeklyReportUpdateCommandSchema,
   uuidSchema,
 } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
 import { z } from 'zod';
-import type { AuthenticatedRequest } from '../type/http.js';
+import type { AuthenticatedRequest, RequestHandler } from '../type/http.js';
 import { HttpError, parseRequest } from '../middleware/http-errors.js';
 import { weeklyReportMembershipFor } from '../utils/weekly-reports.policy.js';
 import type { WeeklyReportService } from '../service/weekly-reports-service.js';

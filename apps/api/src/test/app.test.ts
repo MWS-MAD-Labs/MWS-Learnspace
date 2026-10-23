@@ -4,6 +4,7 @@ import { createApp } from '../application/app.js';
 import type { AppConfig } from '../lib/config.js';
 import type { Database } from '../lib/database.js';
 import type { Logger } from '../lib/logger.js';
+import { httpTestClient } from './http-test-client.js';
 
 const config: AppConfig = {
   nodeEnv: 'test',
@@ -39,7 +40,7 @@ function database(
 describe('API', () => {
   it('returns liveness and propagates a request ID', async () => {
     const response = await request(
-      createApp({ config, database: database(), logger }),
+      httpTestClient(createApp({ config, database: database(), logger })),
     )
       .get('/health/live')
       .set('x-request-id', 'request-123');
@@ -52,7 +53,7 @@ describe('API', () => {
 
   it('returns the API version', async () => {
     const response = await request(
-      createApp({ config, database: database(), logger }),
+      httpTestClient(createApp({ config, database: database(), logger })),
     ).get('/api/v1/version');
 
     expect(response.status).toBe(200);
@@ -64,7 +65,7 @@ describe('API', () => {
 
   it('reports database readiness', async () => {
     const response = await request(
-      createApp({ config, database: database(), logger }),
+      httpTestClient(createApp({ config, database: database(), logger })),
     ).get('/health/ready');
 
     expect(response.status).toBe(200);
@@ -76,11 +77,13 @@ describe('API', () => {
 
   it('becomes unready when PostgreSQL is unavailable', async () => {
     const response = await request(
-      createApp({
-        config,
-        database: database(async () => Promise.reject(new Error('offline'))),
-        logger,
-      }),
+      httpTestClient(
+        createApp({
+          config,
+          database: database(async () => Promise.reject(new Error('offline'))),
+          logger,
+        }),
+      ),
     ).get('/health/ready');
 
     expect(response.status).toBe(503);
@@ -90,9 +93,41 @@ describe('API', () => {
     });
   });
 
+  it('reports passive shared dependency degradation without changing liveness', async () => {
+    const shared = {
+      readinessDependencies: vi.fn(() => ({
+        hub: 'up' as const,
+        central: 'down' as const,
+      })),
+    };
+    const app = createApp({
+      config: { ...config, sharedSessionMode: 'shared' },
+      database: database(),
+      logger,
+      auth: {
+        sessions: {} as never,
+        oauth: {} as never,
+        shared: shared as never,
+      },
+    });
+
+    const ready = await request(httpTestClient(app)).get('/health/ready');
+    expect(ready.status).toBe(503);
+    expect(ready.body).toEqual({
+      status: 'unavailable',
+      dependencies: { database: 'up', hub: 'up', central: 'down' },
+    });
+    expect(shared.readinessDependencies).toHaveBeenCalledOnce();
+
+    const live = await request(httpTestClient(app)).get('/health/live');
+    expect(live.status).toBe(200);
+    expect(live.body).toEqual({ status: 'live' });
+    expect(shared.readinessDependencies).toHaveBeenCalledOnce();
+  });
+
   it('returns a consistent 404 envelope', async () => {
     const response = await request(
-      createApp({ config, database: database(), logger }),
+      httpTestClient(createApp({ config, database: database(), logger })),
     ).get('/missing');
 
     expect(response.status).toBe(404);
@@ -102,7 +137,7 @@ describe('API', () => {
 
   it('returns a safe invalid JSON response', async () => {
     const response = await request(
-      createApp({ config, database: database(), logger }),
+      httpTestClient(createApp({ config, database: database(), logger })),
     )
       .post('/api/v1/version')
       .set('content-type', 'application/json')
@@ -114,7 +149,7 @@ describe('API', () => {
 
   it('returns a safe response when the JSON body exceeds the limit', async () => {
     const response = await request(
-      createApp({ config, database: database(), logger }),
+      httpTestClient(createApp({ config, database: database(), logger })),
     )
       .post('/api/v1/version')
       .send({ content: 'x'.repeat(110 * 1024) });
@@ -130,7 +165,7 @@ describe('API', () => {
 
   it('does not expose stack traces for unexpected errors', async () => {
     const response = await request(
-      createApp({ config, database: database(), logger }),
+      httpTestClient(createApp({ config, database: database(), logger })),
     ).get('/__test/error');
 
     expect(response.status).toBe(500);

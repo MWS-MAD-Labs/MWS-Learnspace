@@ -1,8 +1,9 @@
 import type { DatabaseClient } from '../lib/database.js';
-import type { Router } from 'express';
-import { Router as createRouter } from 'express';
+import { createRouter, type Router } from '../type/http.js';
 import { createRequiredAuthentication } from '../routes/auth-router.js';
 import type { SessionService } from '../service/session-service.js';
+import type { ShadowSessionObserver } from '../service/shared-session-shadow-service.js';
+import type { RequestAuthenticationService } from '../service/request-authentication-service.js';
 import { createObservationAssignmentDeleteController } from '../controller/observation-assignment-delete-controller.js';
 import { createObservationAssignmentsController } from '../controller/observation-assignments-controller.js';
 import { createObservationDefinitionsController } from '../controller/observation-definitions-controller.js';
@@ -18,10 +19,11 @@ import { createSfaObservationsService } from '../service/sfa-observations-servic
 
 export function createObservationRouter(
   prisma: DatabaseClient,
-  sessions: SessionService,
+  sessions: SessionService | RequestAuthenticationService,
+  shadowObserver?: ShadowSessionObserver,
 ): Router {
   const router = createRouter();
-  router.use(createRequiredAuthentication(sessions));
+  router.use(createRequiredAuthentication(sessions, shadowObserver));
   router.use(
     createObservationDefinitionsController(
       createObservationDefinitionsService(prisma),

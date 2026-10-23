@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
-import request from 'supertest';
+import request from '../http-test-client.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../../application/app.js';
 import type { AppConfig } from '../../lib/config.js';

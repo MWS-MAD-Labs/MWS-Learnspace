@@ -80,13 +80,15 @@ describe('App authentication shell', () => {
   it('renders the dashboard only after the session and authorized students load', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      const payload = url.includes('/students')
-        ? { data: [], meta: { count: 0 } }
-        : url.includes('/dashboard-summary')
-          ? dashboard
-          : url.includes('/notifications')
-            ? { data: [], meta: { count: 0 } }
-            : session;
+      const payload = url.includes('/auth/bootstrap')
+        ? { authMode: 'off' }
+        : url.includes('/students')
+          ? { data: [], meta: { count: 0 } }
+          : url.includes('/dashboard-summary')
+            ? dashboard
+            : url.includes('/notifications')
+              ? { data: [], meta: { count: 0 } }
+              : session;
       return new Response(JSON.stringify(payload), {
         status: 200,
         headers: { 'content-type': 'application/json' },
@@ -121,6 +123,9 @@ describe('App authentication shell', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
+        if (url.includes('/auth/bootstrap')) {
+          return Response.json({ authMode: 'off' });
+        }
         if (url.includes('/notifications')) {
           return new Response(
             JSON.stringify({ data: [], meta: { count: 0 } }),
@@ -172,7 +177,11 @@ describe('App authentication shell', () => {
   it('renders login instead of data when no session exists', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response('', { status: 401 })),
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input).includes('/auth/bootstrap')
+          ? Response.json({ authMode: 'off' })
+          : new Response('', { status: 401 }),
+      ),
     );
     render(<App />);
 
@@ -190,7 +199,11 @@ describe('App authentication shell', () => {
     );
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response('', { status: 401 })),
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input).includes('/auth/bootstrap')
+          ? Response.json({ authMode: 'off' })
+          : new Response('', { status: 401 }),
+      ),
     );
     render(<App />);
 

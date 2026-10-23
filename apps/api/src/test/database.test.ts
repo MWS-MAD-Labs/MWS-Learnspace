@@ -17,7 +17,7 @@ function clientWithQuery(queryRaw: ReturnType<typeof vi.fn>) {
 
 describe('createDatabase', () => {
   it('requires the latest committed migration', () => {
-    expect(requiredMigration).toBe('20260827050000_aggregate_search_indexes');
+    expect(requiredMigration).toBe('20261021000000_external_principals');
   });
 
   it('checks the required migration with parameterized PostgreSQL timeouts', async () => {

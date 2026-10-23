@@ -4,8 +4,7 @@ import {
   attendanceQuerySchema,
   attendanceRosterResponseSchema,
 } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
-import type { AuthenticatedRequest } from '../type/http.js';
+import type { AuthenticatedRequest, RequestHandler } from '../type/http.js';
 import { HttpError, parseRequest } from '../middleware/http-errors.js';
 import { attendanceMembershipFor } from '../utils/attendance.policy.js';
 import type { AttendanceService } from '../service/attendance-service.js';

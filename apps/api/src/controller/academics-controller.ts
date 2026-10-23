@@ -6,9 +6,9 @@ import {
   subjectsResponseSchema,
   unitsResponseSchema,
 } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
 import { resourceMembershipFor } from '../utils/resource-access.js';
 import type { AcademicsService } from '../service/academics-service.js';
+import type { RequestHandler } from '../type/http.js';
 
 export function createAcademicsController(service: AcademicsService) {
   const collection =

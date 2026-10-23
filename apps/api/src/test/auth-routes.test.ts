@@ -1,14 +1,15 @@
-import express from 'express';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { createAuthRouter } from '../routes/auth-router.js';
 import { createCsrfProtection } from '../middleware/auth-middleware.js';
 import type { AppConfig } from '../lib/config.js';
 import { appendCookie } from '../utils/http-cookies.js';
+import { createRouter } from '../type/http.js';
+import { httpTestClient } from './http-test-client.js';
 
 function csrfApp() {
-  const app = express();
-  app.use((_, response, next) => {
+  const app = createRouter();
+  app.use((_request, response, next) => {
     response.locals.requestId = 'request-auth';
     next();
   });
@@ -35,6 +36,56 @@ const config: AppConfig = {
 };
 
 describe('authentication HTTP protections', () => {
+  it('exposes only public auth bootstrap configuration', async () => {
+    const app = createRouter();
+    app.use(
+      '/api/v1/auth',
+      createAuthRouter(
+        config,
+        {} as never,
+        {} as never,
+        { warn: vi.fn() } as never,
+      ),
+    );
+
+    const response = await request(httpTestClient(app)).get(
+      '/api/v1/auth/bootstrap',
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.body).toEqual({ authMode: 'off' });
+  });
+
+  it('includes Hub home for shadow bootstrap without authentication data', async () => {
+    const app = createRouter();
+    app.use(
+      '/api/v1/auth',
+      createAuthRouter(
+        {
+          ...config,
+          sharedSessionMode: 'shadow',
+          hubBaseUrl: 'https://hub.example.test',
+        },
+        {} as never,
+        {} as never,
+        { warn: vi.fn() } as never,
+      ),
+    );
+
+    const response = await request(httpTestClient(app)).get(
+      '/api/v1/auth/bootstrap',
+    );
+
+    expect(response.body).toEqual({
+      authMode: 'shadow',
+      hub: { homeUrl: 'https://hub.example.test/' },
+    });
+    expect(JSON.stringify(response.body)).not.toMatch(
+      /token|secret|email|user|identity/i,
+    );
+  });
+
   it('sets bounded production session cookie attributes', () => {
     const response = {
       getHeader: () => undefined,
@@ -71,8 +122,8 @@ describe('authentication HTTP protections', () => {
       })),
     };
     const logger = { warn: vi.fn() };
-    const app = express();
-    app.use((_, response, next) => {
+    const app = createRouter();
+    app.use((_request, response, next) => {
       response.locals.requestId = 'request-auth';
       next();
     });
@@ -86,7 +137,7 @@ describe('authentication HTTP protections', () => {
       ),
     );
 
-    const response = await request(app)
+    const response = await request(httpTestClient(app))
       .get('/api/v1/auth/callback?code=code&state=state')
       .set(
         'cookie',
@@ -101,7 +152,7 @@ describe('authentication HTTP protections', () => {
   });
 
   it('treats malformed cookie encoding as invalid input instead of throwing', async () => {
-    const response = await request(csrfApp())
+    const response = await request(httpTestClient(csrfApp()))
       .post('/protected')
       .set('cookie', 'learnspace_csrf=%')
       .set('x-csrf-token', 'different');
@@ -110,11 +161,11 @@ describe('authentication HTTP protections', () => {
   });
 
   it('rejects missing and mismatched CSRF tokens', async () => {
-    const missing = await request(csrfApp()).post('/protected');
+    const missing = await request(httpTestClient(csrfApp())).post('/protected');
     expect(missing.status).toBe(403);
     expect(missing.body.error.code).toBe('CSRF_VALIDATION_FAILED');
 
-    const mismatched = await request(csrfApp())
+    const mismatched = await request(httpTestClient(csrfApp()))
       .post('/protected')
       .set('cookie', 'learnspace_csrf=cookie-token')
       .set('x-csrf-token', 'header-token');
@@ -122,7 +173,7 @@ describe('authentication HTTP protections', () => {
   });
 
   it('accepts the double-submit token only when both values match', async () => {
-    const response = await request(csrfApp())
+    const response = await request(httpTestClient(csrfApp()))
       .post('/protected')
       .set('cookie', 'learnspace_csrf=matching-token')
       .set('x-csrf-token', 'matching-token');

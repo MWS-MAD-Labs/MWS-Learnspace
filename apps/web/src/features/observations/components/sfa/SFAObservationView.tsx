@@ -68,6 +68,16 @@ function provisionalParticipation(scores: Record<string, number>) {
   return { total, average: values.length ? total / values.length : 0 };
 }
 
+function definedNumberRecord(
+  values: Record<string, number | undefined>,
+): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(values).filter(
+      (entry): entry is [string, number] => entry[1] !== undefined,
+    ),
+  );
+}
+
 export const SFAObservationView: React.FC<Props> = ({ assignment }) => {
   const { organizationId, students, currentUser, showToast, navigateToIEP } =
     useApp();
@@ -126,8 +136,10 @@ export const SFAObservationView: React.FC<Props> = ({ assignment }) => {
     setConditionsAffectingPerformance(
       existing?.conditionsAffectingPerformance || '',
     );
-    setParticipationScores(existing?.participationScores ?? {});
-    setTaskSupports(existing?.taskSupports ?? {});
+    setParticipationScores(
+      definedNumberRecord(existing?.participationScores ?? {}),
+    );
+    setTaskSupports(definedNumberRecord(existing?.taskSupports ?? {}));
     setActivityPerformance(existing?.activityPerformance ?? {});
     setAdaptations(existing?.adaptations ?? []);
     setNotes(existing?.notes || '');
@@ -199,8 +211,8 @@ export const SFAObservationView: React.FC<Props> = ({ assignment }) => {
     setConditionsAffectingPerformance(
       saved.conditionsAffectingPerformance || '',
     );
-    setParticipationScores(saved.participationScores);
-    setTaskSupports(saved.taskSupports);
+    setParticipationScores(definedNumberRecord(saved.participationScores));
+    setTaskSupports(definedNumberRecord(saved.taskSupports));
     setActivityPerformance(saved.activityPerformance);
     setAdaptations(saved.adaptations);
     setNotes(saved.notes || '');

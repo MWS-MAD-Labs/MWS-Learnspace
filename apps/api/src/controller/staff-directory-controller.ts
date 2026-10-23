@@ -1,10 +1,10 @@
 import { staffDirectoryResponseSchema } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
 import {
   requireResourcePermission,
   resourceMembershipFor,
 } from '../utils/resource-access.js';
 import type { StaffDirectoryService } from '../service/staff-directory-service.js';
+import type { RequestHandler } from '../type/http.js';
 
 export function createStaffDirectoryController(service: StaffDirectoryService) {
   const list: RequestHandler = async (request, response, next) => {

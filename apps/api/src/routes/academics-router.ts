@@ -1,6 +1,5 @@
 import type { DatabaseClient } from '../lib/database.js';
-import type { Router } from 'express';
-import { Router as createRouter } from 'express';
+import { createRouter, type Router } from '../type/http.js';
 import { createAcademicsController } from '../controller/academics-controller.js';
 import { createAcademicsService } from '../service/academics-service.js';
 

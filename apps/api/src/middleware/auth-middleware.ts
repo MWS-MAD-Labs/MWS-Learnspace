@@ -1,15 +1,19 @@
-import type { RequestHandler, Response } from 'express';
 import { safeEqual } from '../utils/auth-crypto.js';
-import {
-  csrfCookieName,
-  parseCookies,
-  sessionCookieName,
-} from '../utils/http-cookies.js';
+import { csrfCookieName, parseCookies } from '../utils/http-cookies.js';
 import type { SessionService } from '../service/session-service.js';
-import type { AuthenticatedRequest } from '../type/http.js';
+import type {
+  AuthenticatedRequest,
+  HttpResponse,
+  RequestHandler,
+} from '../type/http.js';
+import type { ShadowSessionObserver } from '../service/shared-session-shadow-service.js';
+import {
+  LocalRequestAuthenticationService,
+  type RequestAuthenticationService,
+} from '../service/request-authentication-service.js';
 
 function safeError(
-  response: Response,
+  response: HttpResponse,
   status: number,
   code: string,
   message: string,
@@ -24,47 +28,26 @@ function safeError(
 }
 
 export function createRequiredAuthentication(
-  sessions: SessionService,
+  service: SessionService | RequestAuthenticationService,
+  shadowObserver?: ShadowSessionObserver,
 ): RequestHandler {
+  const authentication =
+    'authenticate' in service
+      ? service
+      : new LocalRequestAuthenticationService(service, shadowObserver);
   return async (request: AuthenticatedRequest, response, next) => {
     try {
-      const token = parseCookies(request)[sessionCookieName];
-      const session = await sessions.lookup(token);
-      if (!session) {
+      const result = await authentication.authenticate(request);
+      if (!result.ok) {
         safeError(
           response,
-          401,
-          'AUTHENTICATION_REQUIRED',
-          'Authentication is required.',
+          result.failure.status,
+          result.failure.code,
+          result.failure.message,
         );
         return;
       }
-      request.auth = {
-        sessionId: session.id,
-        userId: session.userId,
-        memberships: session.user.memberships.map((membership) => ({
-          organizationId: membership.organizationId,
-          role: membership.role,
-          unitIds: membership.unitScopes.map((scope) => scope.unitId),
-          gradeIds: membership.gradeScopes.map((scope) => scope.gradeId),
-          subjectIds: membership.subjectScopes.map((scope) => scope.subjectId),
-          assignedStudentIds: membership.staffAssignments.map(
-            (assignment) => assignment.studentId,
-          ),
-          observationAssignedStudentIds: membership.observationAssignments.map(
-            (assignment) => assignment.studentId,
-          ),
-          assignedStudentScopes: membership.staffAssignments.map(
-            (assignment) => ({
-              organizationId: assignment.organizationId,
-              studentId: assignment.studentId,
-              startsOn: assignment.startsOn,
-              endsOn: assignment.endsOn,
-            }),
-          ),
-        })),
-      };
-      response.locals.session = session;
+      response.locals.session = result.session;
       next();
     } catch (error) {
       next(error);

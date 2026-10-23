@@ -1,6 +1,5 @@
 import type { DatabaseClient } from '../lib/database.js';
-import type { Router } from 'express';
-import { Router as createRouter } from 'express';
+import { createRouter, type Router } from '../type/http.js';
 import { createCsrfProtection } from '../routes/auth-router.js';
 import { createOrganizationsController } from '../controller/organizations-controller.js';
 import { createOrganizationsService } from '../service/organizations-service.js';

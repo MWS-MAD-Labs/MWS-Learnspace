@@ -464,7 +464,7 @@ async function commandFor(
   signal?: AbortSignal,
 ): Promise<IEPCommand> {
   let academicYearId = iep.academicYearId;
-  let semesterId = iep.semesterId;
+  let semesterId: string | null | undefined = iep.semesterId;
   let startsOn = iep.startsOn;
   let endsOn = iep.endsOn;
   if (

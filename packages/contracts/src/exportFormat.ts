@@ -155,7 +155,7 @@ export const learnspaceExportWeeklyReportRecordSchema =
 export const learnspaceExportOrganizationMappingSchema = z
   .object({
     sourceKey: z.string().trim().min(1).max(200),
-    targetOrganizationId: z.string().uuid().nullable(),
+    targetOrganizationId: z.string().guid({ error: 'Invalid uuid' }).nullable(),
     academicYears: collection(textSchema),
     semesters: collection(textSchema),
     units: collection(textSchema),
@@ -391,7 +391,7 @@ export const learnspaceExportSchema = z
     }
     const result = learnspaceExportV1Schema.safeParse(input);
     if (!result.success) {
-      result.error.issues.forEach((issue) => context.addIssue(issue));
+      result.error.issues.forEach((issue) => context.addIssue(issue as never));
     }
   })
   .transform((input) => input as LearnspaceExportV1);

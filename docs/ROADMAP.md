@@ -43,33 +43,35 @@ At the end of each task, report:
 
 These decisions reduce ambiguity for implementation agents. Change them only through a documented architecture decision record (ADR).
 
-| Area            | Decision                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------- |
-| Runtime         | Node.js 20 LTS or newer compatible LTS                                                                        |
-| Package manager | npm with a committed `package-lock.json`                                                                      |
-| Repository      | npm workspaces with `apps/web`, `apps/api`, and `packages/contracts`                                          |
-| Web             | React, TypeScript, Vite, Tailwind CSS                                                                         |
-| API             | Express and TypeScript                                                                                        |
-| Validation      | Zod schemas shared through `packages/contracts` where appropriate                                             |
-| Database        | PostgreSQL 16+                                                                                                |
-| ORM             | Prisma with committed migrations                                                                              |
-| Authentication  | Google OAuth 2.0/OpenID Connect authorization-code flow with PKCE                                             |
-| Session model   | Opaque, revocable server-side sessions stored in PostgreSQL; secure cookie contains only a session identifier |
-| API namespace   | `/api/v1`                                                                                                     |
-| Testing         | Vitest, React Testing Library, API integration tests, and Playwright E2E tests                                |
-| Containers      | Separate web and API images plus PostgreSQL in Docker Compose                                                 |
-| Authorization   | API-enforced role-based and record-level authorization                                                        |
-| Production data | PostgreSQL is authoritative; browser storage may hold only non-sensitive UI preferences                       |
+| Area            | Decision                                                                                                                              |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime         | Bun 1.3 or newer                                                                                                                      |
+| Package manager | Bun with a committed `bun.lock`                                                                                                       |
+| Repository      | Bun workspaces with `apps/web`, `apps/api`, and `packages/contracts`                                                                  |
+| Web             | React, TypeScript, Vite, Tailwind CSS                                                                                                 |
+| API             | Hono and TypeScript, with an internal compatibility boundary for existing controllers and middleware                                  |
+| Validation      | Zod schemas shared through `packages/contracts` where appropriate                                                                     |
+| Database        | PostgreSQL 16+                                                                                                                        |
+| ORM             | Prisma 6 with committed migrations; Prisma 7 is separate future work                                                                  |
+| Authentication  | Central/Hub shared-session identity is implemented behind `SHARED_SESSION_MODE=shared`; local Google OAuth remains for rollback       |
+| Session model   | Hub parent-domain session plus Central entitlements in shared mode; local PostgreSQL sessions remain available until rollback closure |
+| API namespace   | `/api/v1`                                                                                                                             |
+| Testing         | Vitest, React Testing Library, API integration tests, and Playwright E2E tests                                                        |
+| Containers      | Separate web and API images plus PostgreSQL in Docker Compose                                                                         |
+| Authorization   | API-enforced role-based and record-level authorization                                                                                |
+| Production data | PostgreSQL is authoritative; browser storage may hold only non-sensitive UI preferences                                               |
 
 ## Current baseline
 
 The current application has a useful React UI and domain inventory, but its educator workflows remain a prototype:
 
-- the npm workspace contains `apps/web`, `apps/api`, and `packages/contracts`;
+- the Bun workspace contains `apps/web`, `apps/api`, and `packages/contracts`;
 - all sensitive product domains, including Learning Journeys, observations, IEPs, weekly reports, dashboards, reporting, search, and notifications, are API/PostgreSQL-backed; production web paths do not persist domain records in browser storage;
-- authenticated identity, memberships, permissions, and record scopes come from Google OAuth and PostgreSQL-backed server sessions; the prototype role switcher, automatic web seed initialization, and reset control have been removed;
+- authenticated identity can come from local Google OAuth/PostgreSQL sessions or from authoritative Hub/Central shared mode selected by environment; shared mode projects verified employees locally, requires exact Central role-permission parity, and retains PostgreSQL record scopes;
 - authorization is enforced by the API for protected resources; frontend role checks are presentation behavior only;
-- the Express API, shared response contracts, PostgreSQL Compose service, Prisma lifecycle, production-oriented images, OAuth, sessions, and authorization foundation are implemented;
+- the Hono API on Bun, shared response contracts, PostgreSQL Compose service, Prisma 6 lifecycle, production-oriented images, OAuth, sessions, and authorization foundation are implemented;
+- the Hono migration uses a repository-owned HTTP compatibility boundary so existing controller and middleware contracts remain internal and framework-neutral;
+- Vitest and Playwright remain the intentional test runners; Prisma 7 and TanStack Query remain separate future work;
 - PostgreSQL is authoritative for attendance, Learning Journeys, observation definitions and assignments, FEDC, Sensory Profile, SFA, IEP plans and transitions, weekly reports, dashboards, reporting, search, and notifications;
 - `apps/web/src/types.ts` retains compatibility view models for UI mapping while shared contracts validate API wire data;
 - no active Gemini integration exists; Google AI Studio provenance remains only in `metadata.json`;
@@ -80,6 +82,8 @@ Existing documentation:
 - [x] DOC-001 — Add production-oriented project overview in `README.md`.
 - [x] DOC-002 — Add release and migration policy in `docs/VERSIONING.md`.
 - [x] DOC-003 — Add release history baseline in `CHANGELOG.md`.
+
+The completed Milestone 0 and Milestone 1 entries below preserve the Node/npm/Express commands and wording that were accurate when those tasks were performed in August 2026. They are historical evidence, not current setup instructions. Use the Bun/Hono decisions and current commands above for new work.
 
 ---
 
@@ -111,11 +115,11 @@ Existing documentation:
 - [x] **Dependencies:** P0-001
 - **Change:**
   - Run `npm install` using the pinned toolchain.
-  - Commit the generated `package-lock.json`.
+  - Commit the generated `bun.lock`.
   - Do not update dependency ranges unless installation requires a documented compatibility fix.
 - **Acceptance:**
   - `npm ci` succeeds from a clean dependency directory.
-  - `package-lock.json` is the only package-manager lockfile.
+  - `bun.lock` is the only package-manager lockfile.
 - **Validate:**
   - `npm ci`
   - `npm run build`
@@ -124,7 +128,7 @@ Existing documentation:
 
 - [x] **Dependencies:** P0-002
 - **Change:**
-  - Add Prettier and ESLint with TypeScript/React support.
+  - Add Prettier and a dedicated syntax/semantic linter with TypeScript/React support.
   - Add scripts: `format`, `format:check`, `lint`, and `typecheck`.
   - Change the current `lint` script so it no longer aliases `tsc --noEmit`.
   - Add focused ignore files for generated output.
@@ -137,6 +141,8 @@ Existing documentation:
   - `npm run lint`
   - `npm run typecheck`
   - `npm run build`
+
+The current implementation uses Oxlint's correctness category and native React/Vitest plugins for syntax and semantic linting. The separate `typecheck` command runs TypeScript 7 `tsc` as the required type gate; no typescript-eslint layer is used.
 
 ## P0-004 — Add frontend smoke tests
 
@@ -903,6 +909,113 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ---
 
+# Milestone 6.5 — Central shared-session migration
+
+**Target release:** `0.10.0`
+
+**Milestone exit gate:** staging and production use Hub shared-session identity and Central application entitlements as the authentication and coarse authorization authority; local Google OAuth and PostgreSQL session issuance are removed only after rehearsed cutover and rollback evidence.
+
+**Migration runbook:** [`auth/shared-session-migration.md`](auth/shared-session-migration.md)
+
+> **Implementation status (updated 2026-10-23):** authoritative shared login is implemented behind `SHARED_SESSION_MODE=shared`, including the canonical application-ID alias check, persisted one-organization mapping, verified employee first-login projection, exact role-permission parity, empty local-scope safety, public bootstrap, one-attempt restore, stable CSRF cookie, passive dependency readiness, positive-only 30-second cache, manual Central-access sync, and `401`/`403`/`503` browser UX. Local `.env` can use shared mode while Google OAuth and PostgreSQL sessions remain for rollback. Local migration and permission-sync evidence are complete. Real browser login, Central role assignments, token rotation, rate-limited backfill, shared E2E fixtures, staging/production evidence, organization/invitation migration, and local-auth removal remain incomplete.
+
+## P6.5-001 — Register Learnspace in Central staging
+
+- [ ] **Dependencies:** P6-004
+- **Change:** register application ID `learnspace`, the staging entry and logout URLs, Shared Hub Session sign-in, the staging organization, API client credentials, and the approved application owners in Central.
+- **Acceptance:** Central exposes the expected application and entitlement records; staging operators record non-secret IDs and URLs, while credentials remain only in the deployment secret store.
+- **Owner input required:** Central administrator, Learnspace staging URL, Hub parent-domain topology, application owner, rollback approver, and secret-store owner.
+- **Validate:** follow the Central registration procedure in the migration runbook and perform a non-secret configuration review.
+
+## P6.5-002 — Adopt `mws-central-auth` 0.10.0 and Zod 4
+
+- [x] **Dependencies:** P0-002
+- **Change:** pin `mws-central-auth` to tag `v0.10.0`, upgrade all workspaces to Zod 4, and retain a deterministic lockfile resolution.
+- **Acceptance:** API, web, and shared contracts build and test against Zod 4; the lockfile resolves the reviewed `mws-central-auth` commit.
+- **Evidence (2026-10-21):** `apps/api/package.json` uses `github:MWS-MAD-Labs/mws-central-auth#v0.10.0`; API, web, and contracts use Zod `^4.6.7`; `bun.lock` resolves commit `ecde97da31492bf4bc0ecba196a688af4ba466ef`.
+- **Validate:** `bun install --frozen-lockfile`, workspace tests, type checking, and production builds.
+
+## P6.5-003 — Add stable Central principal mapping
+
+- [x] **Dependencies:** P6.5-002, P2-003
+- **Change:** add the `ExternalPrincipal` sidecar keyed by immutable `(issuer, subject)`, preserve the local `User` relation, and provide dry-run/apply backfill from normalized unique email through Central lookup.
+- **Acceptance:** email is used only to establish a reviewed initial link; runtime identity uses Central `Person.id`; duplicate, mismatched, missing, and concurrent links fail closed with counted conflicts.
+- **Evidence (2026-10-21):** migration `20261021000000_external_principals`, schema constraints, backfill CLI, and focused schema/backfill tests are present.
+- **Validate:** migration deployment, `bun run db:backfill-central-principals -- --dry-run`, conflict review, then an explicitly approved `--apply`.
+
+## P6.5-004 — Add Hub verifier and principal-context loader adapters
+
+- [x] **Dependencies:** P6.5-003
+- **Change:** wrap `createHubSession`, adapt verified Hub claims to issuer/subject/source, load the linked local user, and compare the Central application entitlement and organization without retaining raw tokens or email.
+- **Acceptance:** invalid, absent, unlinked, user-mismatched, inactive, wrong-application, and wrong-organization contexts are distinguishable internally without leaking sensitive detail to clients.
+- **Evidence (2026-10-21):** `HubIdentityVerifier`, `LocalSessionAdapter`, and `PrincipalContextLoader` are implemented and unit tested.
+- **Validate:** verifier/context tests and safe-log assertions.
+
+## P6.5-005 — Run rollback-safe shadow comparison
+
+- [x] **Dependencies:** P6.5-004
+- **Change:** add `SHARED_SESSION_MODE=off|shadow`, initialize Hub cookie discovery at startup, compare Hub/Central context after successful local authentication, and emit bounded safe mismatch/failure codes without changing response behavior.
+- **Acceptance:** `off` performs no Hub/Central work; `shadow` never delays or changes locally authenticated responses; rollback is an environment-only change back to `off`.
+- **Evidence (2026-10-21):** shadow initialization, fire-and-forget observation, bounded logs, configuration validation, route wiring, and focused tests are present. Staging observation evidence is still required before P6.5-007.
+- **Validate:** `shared-session-shadow.test.ts`, staging mismatch review, dependency-failure exercise, and rollback to `off`.
+
+## P6.5-006 — Publish the permission manifest and define Central roles
+
+- [x] **Dependencies:** P6.5-002, P3-006
+- **Change:** maintain the typed permission manifest and committed `permissions.json`, detect drift, synchronize additions safely, report removals and affected roles, and document the intended Central role-to-permission assignments.
+- **Acceptance:** runtime keys, committed manifest, and local role assignments cannot drift silently; permission removals require explicit review; deployment tooling never logs the Central token.
+- **Evidence (2026-10-21):** `permissions:check`, `permissions:sync`, retry/redaction behavior, manifest parity tests, and the existing seven-role local mapping are implemented. Creating and assigning the roles in Central staging is operator work under P6.5-001 and remains incomplete.
+- **Validate:** `bun run permissions:check`, reviewed `bun run permissions:sync -- --retries 5 --wait 20`, then a second clean check.
+
+## P6.5-007 — Cut authentication and coarse authorization authority to Central
+
+- [ ] **Dependencies:** P6.5-001, P6.5-003, P6.5-005, P6.5-006
+- **Change:** make verified Hub identity, the sidecar link, and the active Central entitlement authoritative for protected requests; derive application role and coarse permissions from Central while retaining Learnspace record-level scopes and deny-by-default policies.
+- **Acceptance:** a local session alone grants no access; inactive or mismatched Central context is denied; Central outages follow the documented `503` policy; no request may supply its own subject, role, permission, organization, or actor identity.
+- **Implemented foundation (2026-10-21):** `SHARED_SESSION_MODE=shared` verifies Hub identity, resolves a verified local principal, validates active Central entitlement/application/organization, projects Central role and known permissions, retains local record scopes and local actor UUIDs, and distinguishes `401`, `403`, and `503`. The mode is not operationally cut over because staging registration, mappings, roles, and rehearsal evidence are still absent.
+- **Additional evidence (2026-10-23):** shared startup persists a unique `Organization.centralOrganizationId` mapping; first valid employee login can create the local user, verified `ExternalPrincipal`, and one membership; intern/student sources are denied; permissions must exactly match the role; empty local scopes remain empty; valid entitlements alone use the default 30-second cache; readiness is passive; and Central access reconciliation is manual.
+- **Validate:** complete `401`, `403`, `503`, mismatch, outage, cross-tenant, entitlement-change, and rollback integration tests.
+
+## P6.5-008 — Implement browser restore, refresh, and logout behavior
+
+- [ ] **Dependencies:** P6.5-007
+- **Change:** wire the existing browser lifecycle seam to `mws-central-auth/client`, implement Hub restore redirects and bounded loop protection, keep the shared token fresh while the app is open, and make logout return to the Hub without retaining local authentication state.
+- **Acceptance:** expired access with a valid Hub refresh session restores once; an ended Hub session returns the app to the Hub; cross-tab/session-end events recheck application context; logout and refresh failures do not loop or expose tokens.
+- **Implemented foundation (2026-10-23):** public bootstrap advertises shared mode and Hub home without requiring a session; the web makes one automatic restore attempt, uses `keepFresh` and `watchSession`, preserves exact return routes through same-origin `/api/v1/auth/sso`, maps `401`, `403`, and `503` to distinct UX, and exposes Back to MWS Hub only in shared mode. The CSRF cookie remains stable after creation. Real Hub/Central browser and multi-tab evidence remain required.
+- **Validate:** component and Playwright coverage for restore success/failure, refresh end, visibility return, multi-tab logout, direct navigation, and loop prevention.
+
+## P6.5-009 — Migrate organization switching and invitations
+
+- [ ] **Dependencies:** P6.5-007
+- **Change:** add an explicit active organization, reset organization-scoped caches and selections when switching, reconcile Central entitlements with Learnspace record scopes, and replace local invitation admission with the approved Central provisioning/delegated-administration flow.
+- **Acceptance:** the first membership is never selected implicitly; switching cannot retain or expose prior-organization records; invitation create/revoke/resend and admission ownership are documented and tested.
+- **Current gap:** the web still uses `memberships[0]`; local `UserInvitation` admission exists, but invitation administration and Central ownership are incomplete.
+- **Validate:** cross-organization API, component, and E2E tests plus invitation lifecycle tests.
+
+## P6.5-010 — Migrate authentication and authorization tests
+
+- [ ] **Dependencies:** P6.5-007, P6.5-008, P6.5-009
+- **Change:** replace local-session fixtures where authority matters with Hub/Central fixtures; retain focused unit coverage for adapters; cover cookie discovery, principal links, entitlement changes, role manifests, browser lifecycle, organization switching, and rollback mode.
+- **Acceptance:** critical E2E projects exercise the same identity/entitlement path used in staging; test-only authentication cannot enter production; no security assertion depends solely on the retired local session path.
+- **Implemented foundation (2026-10-23):** unit and component suites cover shared identity verification, Central entitlement denial/outage, local mapping and scope projection, shadow noninterference, restore-loop behavior, CSRF, browser refresh/recheck, global `401`, and Hub navigation. Shared-session E2E does not exist yet and still requires dedicated Hub/Central fixtures; existing Playwright projects use local test authentication.
+- **Validate:** full unit, PostgreSQL integration, OpenAPI, web component, and Compose-backed Playwright suites.
+
+## P6.5-011 — Remove local Google OAuth and PostgreSQL sessions
+
+- [ ] **Dependencies:** P6.5-010, P6.5-012
+- **Change:** remove Google OAuth routes/services/configuration, local session issuance/lookup/cleanup, obsolete cookies and CSRF assumptions, and the no-longer-required OAuth/session persistence only after the rollback window closes.
+- **Acceptance:** production has one authentication authority; no local OAuth callback or app-owned login session can grant access; database removal uses a reviewed forward migration and documented backup compatibility.
+- **Validate:** source/configuration search, migration tests, clean install, supported upgrade, full security/E2E suites, and production bundle inspection.
+
+## P6.5-012 — Rehearse staging cutover and rollback
+
+- [ ] **Dependencies:** P6.5-001, P6.5-005, P6.5-006, P6.5-007, P6.5-008, P6.5-009, P6.5-010
+- **Change:** execute registration verification, backup, permission sync, principal dry-run/apply, shadow observation, authority cutover, role/workflow reconciliation, browser validation, outage exercises, and rollback before scheduling local-auth removal.
+- **Acceptance:** named operators reconcile representative users and every role; `401`, `403`, and `503` behavior is evidenced; rollback restores local authority without data loss; secrets and personal data are excluded from the report.
+- **Validate:** publish a sanitized staging report under `docs/operations/` with timestamps, counts, mismatch codes, rollback duration, approvers, and unresolved risks.
+
+---
+
 # Milestone 7 — Production hardening
 
 **Target release:** `1.0.0-rc.1`
@@ -911,7 +1024,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P7-001 — Add security headers, CORS, and rate limits
 
-- [ ] **Dependencies:** P5-013
+- [ ] **Dependencies:** P6.5-011
 - **Change:** add restrictive CSP, frame protection, content-type protection, referrer policy, production CORS rules, authentication rate limits, and API request limits.
 - **Acceptance:** Google OAuth and the app work under the policy without broad wildcards.
 - **Validate:** header tests, CORS tests, rate-limit tests, and browser smoke tests.
@@ -961,7 +1074,7 @@ Each task below is a vertical slice. For every slice, implement contracts, Prism
 
 ## P7-008 — Complete authorization and privacy threat model
 
-- [ ] **Dependencies:** P5-013, P7-001
+- [ ] **Dependencies:** P6.5-011, P7-001
 - **Change:** threat-model OAuth, sessions, organization isolation, student/IEP access, approvals, exports, admin functions, backups, and logs.
 - **Acceptance:** each threat has mitigation, test, owner, or explicit risk acceptance.
 - **Validate:** security review against implemented controls and automated tests.

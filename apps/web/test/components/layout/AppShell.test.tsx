@@ -37,11 +37,15 @@ let searchQuery = '';
 let currentPermissions = ['special-ed:read'];
 let currentRole = 'SPECIAL_ED_TEACHER';
 let currentGradeIds: string[] = [];
+let authMode: 'off' | 'shadow' | 'shared' | undefined;
+const backToHub = vi.fn();
+const logout = vi.fn();
 
 vi.mock('@/src/context/AuthContext', () => ({
   useAuth: () => ({
-    logout: vi.fn(),
-    session: { memberships: [{ permissions: [] }] },
+    backToHub,
+    logout,
+    session: { authMode, memberships: [{ permissions: [] }] },
   }),
 }));
 
@@ -81,11 +85,52 @@ afterEach(() => {
   currentPermissions = ['special-ed:read'];
   currentRole = 'SPECIAL_ED_TEACHER';
   currentGradeIds = [];
+  authMode = undefined;
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
 
 describe('AppShell aggregate navigation', () => {
+  it.each([undefined, 'off', 'shadow'] as const)(
+    'keeps the local sign-out action in %s mode',
+    (mode) => {
+      authMode = mode;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async () =>
+            new Response(JSON.stringify({ data: [], meta: { count: 0 } })),
+        ),
+      );
+      render(<AppShell />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+      expect(logout).toHaveBeenCalledOnce();
+      expect(screen.queryByText('Back to MWS Hub')).not.toBeInTheDocument();
+    },
+  );
+
+  it('offers only Hub navigation in shared mode', () => {
+    authMode = 'shared';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ data: [], meta: { count: 0 } })),
+      ),
+    );
+    render(<AppShell />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to MWS Hub' }));
+    expect(backToHub).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole('button', { name: 'Sign out' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Sign out all MWS apps' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('fetches notification action items before the dropdown opens', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       if (String(input).includes('/notifications')) {

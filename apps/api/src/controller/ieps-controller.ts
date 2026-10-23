@@ -9,9 +9,8 @@ import {
   iepsResponseSchema,
   uuidSchema,
 } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
 import { z } from 'zod';
-import type { AuthenticatedRequest } from '../type/http.js';
+import type { AuthenticatedRequest, RequestHandler } from '../type/http.js';
 import { HttpError, parseRequest } from '../middleware/http-errors.js';
 import { iepMembershipFor } from '../utils/ieps.policy.js';
 import type { IepService } from '../service/ieps-service.js';

@@ -59,6 +59,18 @@ describe('authorization primitives', () => {
     );
   });
 
+  it('uses projected authoritative permissions when present', () => {
+    expect(() =>
+      requirePermission(
+        { ...teacher, permissions: ['organization:admin'] },
+        'organization:admin',
+      ),
+    ).not.toThrow();
+    expect(() =>
+      requirePermission({ ...teacher, permissions: [] }, 'attendance:write'),
+    ).toThrow(AuthorizationDeniedError);
+  });
+
   it('records a safe denial audit event', async () => {
     const events: unknown[] = [];
     await expect(

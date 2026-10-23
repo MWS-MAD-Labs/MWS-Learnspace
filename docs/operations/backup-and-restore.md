@@ -35,7 +35,7 @@ Backups can contain highly sensitive educational and contact data. Keep them enc
 ## Create and verify a backup
 
 ```bash
-npm run db:backup -- \
+bun run db:backup -- \
   --database learnspace \
   --output ./backups/learnspace-20260819T120000Z.dump
 ```
@@ -47,7 +47,7 @@ Archive inspection is necessary but is not a substitute for a restore drill.
 ## Restore to a disposable database
 
 ```bash
-npm run db:restore -- \
+bun run db:restore -- \
   --archive ./backups/learnspace-20260819T120000Z.dump \
   --database learnspace_restore_drill_20260819
 ```

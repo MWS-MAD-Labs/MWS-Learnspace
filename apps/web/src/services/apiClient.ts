@@ -34,6 +34,12 @@ export type ApiRequestOptions<T> = {
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
+const unauthorizedListeners = new Set<() => void>();
+
+export function onApiUnauthorized(listener: () => void): () => void {
+  unauthorizedListeners.add(listener);
+  return () => unauthorizedListeners.delete(listener);
+}
 
 function readCookie(name: string): string | undefined {
   if (typeof document === 'undefined') return undefined;
@@ -122,6 +128,9 @@ export async function apiRequest<T = undefined>(
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      for (const listener of unauthorizedListeners) listener();
+    }
     const payload = await parseJson(response);
     const parsed = apiErrorSchema.safeParse(payload);
     if (!parsed.success) {

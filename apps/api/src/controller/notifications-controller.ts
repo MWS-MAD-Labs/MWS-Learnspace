@@ -1,5 +1,5 @@
 import { aggregateNotificationsResponseSchema } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
+import type { RequestHandler } from '../type/http.js';
 import { aggregateRequestContext } from '../controller/aggregates-controller.js';
 import type { NotificationsQueryService } from '../service/notifications-service.js';
 

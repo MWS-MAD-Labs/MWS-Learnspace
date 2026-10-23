@@ -1,0 +1,76 @@
+{
+  "permissions": [
+    {
+      "key": "attendance:read",
+      "description": "Read attendance records within the authorized scope."
+    },
+    {
+      "key": "attendance:write",
+      "description": "Create and update attendance records within the authorized scope.",
+      "requires": ["attendance:read"]
+    },
+    {
+      "key": "journey:read",
+      "description": "Read Learning Journeys within the authorized scope."
+    },
+    {
+      "key": "journey:write",
+      "description": "Create, update, and submit owned Learning Journey drafts.",
+      "requires": ["journey:read"]
+    },
+    {
+      "key": "journey:review",
+      "description": "Review and return submitted Learning Journeys.",
+      "requires": ["journey:read"]
+    },
+    {
+      "key": "journey:approve",
+      "description": "Approve and return reviewed Learning Journeys.",
+      "requires": ["journey:read"]
+    },
+    {
+      "key": "special-ed:read",
+      "description": "Read authorized special-education records and workflows."
+    },
+    {
+      "key": "special-ed:write",
+      "description": "Create and update authorized special-education records.",
+      "requires": ["special-ed:read"]
+    },
+    {
+      "key": "special-ed:review",
+      "description": "Review special-education records and workflow decisions.",
+      "requires": ["special-ed:read"]
+    },
+    {
+      "key": "report:export",
+      "description": "Export authorized reports."
+    },
+    {
+      "key": "student:admin",
+      "description": "Create and update student records."
+    },
+    {
+      "key": "student:sensitive-read",
+      "description": "Read sensitive student address and guardian contact fields."
+    },
+    {
+      "key": "staff-directory:read",
+      "description": "Read the organization staff directory."
+    },
+    {
+      "key": "staff-assignment:admin",
+      "description": "Manage special-education staff-to-student assignments.",
+      "requires": ["staff-directory:read"]
+    },
+    {
+      "key": "organization:admin",
+      "description": "Manage organization memberships and configuration."
+    },
+    {
+      "key": "observation:manage",
+      "description": "Manage observation definitions and student assignments.",
+      "requires": ["special-ed:read"]
+    }
+  ]
+}

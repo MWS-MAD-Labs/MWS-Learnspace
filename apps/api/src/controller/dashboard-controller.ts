@@ -1,5 +1,5 @@
 import { dashboardSummaryResponseSchema } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
+import type { RequestHandler } from '../type/http.js';
 import { aggregateRequestContext } from '../controller/aggregates-controller.js';
 import type { DashboardQueryService } from '../service/dashboard-service.js';
 

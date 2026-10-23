@@ -124,17 +124,15 @@ const sfaObservationSaveDraftCommandBaseSchema = z
 type SfaRejectedLegacySettings = { settings?: never };
 
 export const sfaObservationCreateDraftCommandSchema =
-  sfaObservationCreateDraftCommandBaseSchema as z.ZodType<
+  sfaObservationCreateDraftCommandBaseSchema as unknown as z.ZodType<
     z.output<typeof sfaObservationCreateDraftCommandBaseSchema> &
       SfaRejectedLegacySettings,
-    z.ZodTypeDef,
     z.input<typeof sfaObservationCreateDraftCommandBaseSchema>
   >;
 export const sfaObservationSaveDraftCommandSchema =
-  sfaObservationSaveDraftCommandBaseSchema as z.ZodType<
+  sfaObservationSaveDraftCommandBaseSchema as unknown as z.ZodType<
     z.output<typeof sfaObservationSaveDraftCommandBaseSchema> &
       SfaRejectedLegacySettings,
-    z.ZodTypeDef,
     z.input<typeof sfaObservationSaveDraftCommandBaseSchema>
   >;
 export const sfaObservationCreateCommandSchema =
@@ -142,10 +140,9 @@ export const sfaObservationCreateCommandSchema =
 export const sfaObservationDraftCommandSchema =
   sfaObservationSaveDraftCommandSchema;
 export const sfaObservationCompleteCommandSchema =
-  sfaObservationSaveDraftCommandBaseSchema as z.ZodType<
+  sfaObservationSaveDraftCommandBaseSchema as unknown as z.ZodType<
     z.output<typeof sfaObservationSaveDraftCommandBaseSchema> &
       SfaRejectedLegacySettings,
-    z.ZodTypeDef,
     z.input<typeof sfaObservationSaveDraftCommandBaseSchema>
   >;
 

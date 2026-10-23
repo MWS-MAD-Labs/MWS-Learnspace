@@ -1,8 +1,14 @@
-import type { Request, Response } from 'express';
+import type { HttpRequest, HttpResponse } from '../type/http.js';
 
 export const sessionCookieName = 'learnspace_session';
 export const csrfCookieName = 'learnspace_csrf';
 export const oauthContextCookieName = 'learnspace_oauth';
+
+const csrfTokenPattern = /^[A-Za-z0-9_-]{43}$/;
+
+export function isValidCsrfToken(value: string | undefined): value is string {
+  return value !== undefined && csrfTokenPattern.test(value);
+}
 
 function decodeCookieValue(value: string): string {
   try {
@@ -12,7 +18,7 @@ function decodeCookieValue(value: string): string {
   }
 }
 
-export function parseCookies(request: Request): Record<string, string> {
+export function parseCookies(request: HttpRequest): Record<string, string> {
   const header = request.header('cookie');
   if (!header) return {};
 
@@ -52,7 +58,7 @@ function serializeCookie(name: string, value: string, options: CookieOptions) {
 }
 
 export function appendCookie(
-  response: Response,
+  response: HttpResponse,
   name: string,
   value: string,
   options: CookieOptions,
@@ -69,7 +75,11 @@ export function appendCookie(
   );
 }
 
-export function clearCookie(response: Response, name: string, secure: boolean) {
+export function clearCookie(
+  response: HttpResponse,
+  name: string,
+  secure: boolean,
+) {
   appendCookie(response, name, '', {
     httpOnly: name !== csrfCookieName,
     maxAgeSeconds: 0,

@@ -1,4 +1,4 @@
-import type { RequestHandler } from 'express';
+import type { RequestHandler } from '../type/http.js';
 import type { AppConfig } from '../lib/config.js';
 import type { Logger } from '../lib/logger.js';
 import { permissionsForRole } from '../utils/authorization.js';
@@ -7,12 +7,17 @@ import {
   appendCookie,
   clearCookie,
   csrfCookieName,
+  isValidCsrfToken,
   oauthContextCookieName,
   parseCookies,
   sessionCookieName,
 } from '../utils/http-cookies.js';
 import { randomToken } from '../utils/auth-crypto.js';
 import { SessionService } from '../service/session-service.js';
+import type {
+  SharedSessionAuthenticationService,
+  SharedSessionContext,
+} from '../service/shared-session-service.js';
 
 const oauthCookieLifetimeSeconds = 10 * 60;
 
@@ -56,13 +61,78 @@ function sessionPayload(
   };
 }
 
+function sharedSessionPayload(
+  context: SharedSessionContext,
+  shared: SharedSessionAuthenticationService,
+) {
+  const assignedStudentIds = [
+    ...new Set([
+      ...context.membership.staffAssignments.map(({ studentId }) => studentId),
+      ...context.membership.observationAssignments.map(
+        ({ studentId }) => studentId,
+      ),
+    ]),
+  ];
+  return {
+    authMode: 'shared' as const,
+    hub: {
+      homeUrl: shared.homeUrl(),
+      refreshUrl: shared.refreshUrl(),
+    },
+    expiresIn: Math.max(1, context.claims.exp - Math.floor(Date.now() / 1_000)),
+    user: {
+      id: context.user.id,
+      email: context.user.email,
+      name: context.user.displayName,
+      avatarUrl: context.user.avatarUrl,
+      status: context.user.status,
+    },
+    memberships: [
+      {
+        id: context.membership.id,
+        organizationId: context.membership.organizationId,
+        organizationName: context.membership.organization.name,
+        role: context.role,
+        roleTitle: context.membership.roleTitle,
+        unitIds: context.membership.unitScopes.map(({ unitId }) => unitId),
+        gradeIds: context.membership.gradeScopes.map(({ gradeId }) => gradeId),
+        subjectIds: context.membership.subjectScopes.map(
+          ({ subjectId }) => subjectId,
+        ),
+        assignedStudentIds,
+        permissions: context.permissions,
+      },
+    ],
+    expiresAt: new Date(context.claims.exp * 1_000).toISOString(),
+  };
+}
+
 export function createAuthController(
   config: AppConfig,
   sessions: SessionService,
   oauth: OAuthService,
   logger: Logger,
-): Record<'login' | 'callback' | 'session' | 'logout', RequestHandler> {
+  shared?: SharedSessionAuthenticationService,
+): Record<
+  'bootstrap' | 'login' | 'sso' | 'callback' | 'session' | 'logout',
+  RequestHandler
+> {
   const secure = secureCookies(config);
+
+  const bootstrap: RequestHandler = (_request, response) => {
+    response.setHeader('cache-control', 'no-store');
+    const authMode = config.sharedSessionMode ?? 'off';
+    if (authMode === 'off') {
+      response.json({ authMode });
+      return;
+    }
+    response.json({
+      authMode,
+      hub: {
+        homeUrl: shared?.homeUrl() ?? new URL(config.hubBaseUrl!).toString(),
+      },
+    });
+  };
 
   const login: RequestHandler = async (request, response, next) => {
     try {
@@ -70,6 +140,12 @@ export function createAuthController(
         typeof request.query.returnTo === 'string'
           ? request.query.returnTo
           : '/';
+      if (shared) {
+        const entry = new URL('/api/v1/auth/sso', config.appUrl);
+        entry.searchParams.set('returnTo', redirectPath);
+        response.redirect(302, entry.toString());
+        return;
+      }
       const login = await oauth.begin(redirectPath);
       appendCookie(response, oauthContextCookieName, login.sealedContext, {
         httpOnly: true,
@@ -78,6 +154,35 @@ export function createAuthController(
         secure,
       });
       response.redirect(302, login.authorizationUrl);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  const sso: RequestHandler = async (request, response, next) => {
+    if (!shared) {
+      response.status(404).end();
+      return;
+    }
+    try {
+      const app = new URL(config.appUrl);
+      const requestedReturn =
+        typeof request.query.returnTo === 'string'
+          ? request.query.returnTo
+          : '/';
+      const target = new URL(requestedReturn, app);
+      const returnTo =
+        target.origin === app.origin ? target.toString() : app.toString();
+      const result = await shared.ssoStep(request);
+      if (result.step === 'ok') {
+        response.redirect(302, returnTo);
+      } else if (result.step === 'restore') {
+        const callback = new URL('/api/v1/auth/sso', app);
+        callback.searchParams.set('returnTo', returnTo);
+        response.redirect(302, shared.restoreUrl(callback.toString()));
+      } else {
+        response.redirect(302, shared.homeUrl());
+      }
     } catch (error) {
       next(error);
     }
@@ -136,13 +241,41 @@ export function createAuthController(
     }
   };
 
-  const session: RequestHandler = (_request, response) => {
+  const session: RequestHandler = (request, response) => {
     response.setHeader('cache-control', 'no-store');
+    if (shared) {
+      const csrfToken = parseCookies(request)[csrfCookieName];
+      if (!isValidCsrfToken(csrfToken)) {
+        appendCookie(response, csrfCookieName, randomToken(), {
+          httpOnly: false,
+          maxAgeSeconds: Math.max(
+            1,
+            (response.locals.session as SharedSessionContext).claims.exp -
+              Math.floor(Date.now() / 1_000),
+          ),
+          sameSite: 'Strict',
+          secure,
+        });
+      }
+      response.json(
+        sharedSessionPayload(
+          response.locals.session as SharedSessionContext,
+          shared,
+        ),
+      );
+      return;
+    }
     response.json(sessionPayload(response.locals.session));
   };
 
   const logout: RequestHandler = async (request, response, next) => {
     try {
+      if (shared) {
+        clearCookie(response, sessionCookieName, secure);
+        clearCookie(response, csrfCookieName, secure);
+        response.status(204).end();
+        return;
+      }
       const token = parseCookies(request)[sessionCookieName];
       await sessions.revoke(token);
       clearCookie(response, sessionCookieName, secure);
@@ -153,5 +286,5 @@ export function createAuthController(
     }
   };
 
-  return { login, callback, session, logout };
+  return { bootstrap, login, sso, callback, session, logout };
 }

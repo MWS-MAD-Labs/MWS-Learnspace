@@ -1,7 +1,7 @@
 dist/
 coverage/
 node_modules/
-package-lock.json
+bun.lock
 docs/api/openapi.json
 graphify-out/
 tools/oxlint/anti-slop/

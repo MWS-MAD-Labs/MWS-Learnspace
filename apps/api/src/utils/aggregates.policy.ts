@@ -1,12 +1,11 @@
-import type { Request } from 'express';
 import {
   AuthorizationDeniedError,
   requireOrganizationScope,
 } from '../utils/authorization.js';
-import type { AuthenticatedRequest } from '../type/http.js';
+import type { AuthenticatedRequest, HttpRequest } from '../type/http.js';
 import { HttpError } from '../middleware/http-errors.js';
 
-export function requireAggregateAuth(request: Request) {
+export function requireAggregateAuth(request: HttpRequest) {
   const auth = (request as AuthenticatedRequest).auth;
   if (!auth) {
     throw new HttpError(
@@ -19,7 +18,7 @@ export function requireAggregateAuth(request: Request) {
 }
 
 export function aggregateMembershipFor(
-  request: Request,
+  request: HttpRequest,
   organizationId: string,
 ) {
   try {

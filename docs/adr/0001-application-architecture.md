@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-19
+- **Amended:** 2026-10-23 for the Bun/Hono tooling migration
 - **Decision owners:** Learnspace maintainers
 - **Scope:** Target production architecture for the workspace, API boundary, persistence, sessions, containers, and prototype migration
 
@@ -15,13 +16,13 @@ The production foundation needs an explicit separation between browser code and 
 
 ### Workspace layout and ownership
 
-The repository will use npm workspaces with these target locations:
+The repository uses Bun workspaces with these locations:
 
 ```text
 .
 ├── apps/
 │   ├── web/                       # React, TypeScript, Vite, and Tailwind browser application
-│   └── api/                       # Express and TypeScript HTTP API
+│   └── api/                       # Hono and TypeScript HTTP API on Bun
 ├── packages/
 │   └── contracts/                 # Shared Zod wire schemas and inferred TypeScript types
 ├── prisma/
@@ -31,6 +32,7 @@ The repository will use npm workspaces with these target locations:
 ├── docker/                        # Container and reverse-proxy supporting files
 ├── docs/                          # Architecture, operations, and domain documentation
 ├── compose.yaml                   # Local/self-hosted service orchestration
+├── bun.lock                       # Committed Bun dependency lockfile
 └── package.json                   # Root workspace and orchestration scripts
 ```
 
@@ -54,6 +56,14 @@ Frontend role checks may hide, disable, or explain controls for usability, but *
 
 The web and API should be exposed through the same trusted ingress where practical so browser API traffic can use same-origin routing without permissive production CORS. TLS terminates at the production ingress or reverse proxy, and forwarded-header trust must be explicitly configured.
 
+### Runtime, framework, and compatibility boundary
+
+Bun is the supported JavaScript runtime, package manager, workspace runner, and script entry point. Hono is the API HTTP framework. The API keeps a repository-owned compatibility boundary in `apps/api/src/type/http.ts` that adapts Hono contexts to the internal request, response, router, middleware, and next-function contracts used by existing controllers. This boundary is internal architecture, not a promise of Express compatibility for external consumers. New API code must not add Express runtime dependencies or bypass the boundary without an explicit architecture change.
+
+Vitest remains the unit, component, and API test runner, and Playwright remains the browser E2E runner. Prisma remains on major version 6 for client generation, schema management, and committed migrations. Moving to Prisma 7 or adopting TanStack Query would affect different layers and remains separate future work rather than part of the Bun/Hono migration.
+
+Oxlint is the syntax and semantic lint engine, using its correctness category and native React and Vitest plugins. The TypeScript 7 compiler remains a separate required type gate through `tsc`; ESLint and typescript-eslint are not part of the supported toolchain. Repository-specific anti-slop rules run as a distinct Oxlint policy pass.
+
 ### PostgreSQL ownership
 
 PostgreSQL 16 or newer is the authoritative system of record for production application data, including users, OAuth identities, sessions, roles, permissions, organization ownership, domain records, workflow state, and audit events. The API is the only application component permitted to read or write PostgreSQL during normal operation.
@@ -75,7 +85,7 @@ For every protected request, the API resolves the session from PostgreSQL, loads
 The target Compose stack contains three required services:
 
 - `web`: builds the Vite application and serves static assets through a hardened, non-root-capable web server or reverse proxy. It contains no runtime secrets.
-- `api`: runs the compiled Express service as an unprivileged user, receives server-only configuration, exposes liveness/readiness endpoints, and is the only application service connected to PostgreSQL.
+- `api`: runs the Hono service on Bun as an unprivileged user, receives server-only configuration, exposes liveness/readiness endpoints, and is the only application service connected to PostgreSQL.
 - `db`: runs PostgreSQL 16+ with a named persistent volume, an internal network, and a health check. Its port is not published by default in the production-oriented configuration.
 
 Compose will define health checks, dependency-aware startup, restart policies, and separate development overrides where host access or live development behavior is needed. Browser traffic should reach the API through same-origin ingress routing. Redis is not part of the initial architecture; it may be introduced only if a measured session, queue, cache, or rate-limiting requirement justifies another stateful service.
@@ -108,7 +118,7 @@ If existing prototype records need preservation, a later task must define a one-
 
 ### Keep the single frontend package and add ad hoc server files
 
-Rejected because it obscures the trust boundary, complicates independent build and test lifecycles, and encourages browser and server concerns to share modules accidentally. npm workspaces make ownership explicit while preserving one repository and one package manager.
+Rejected because it obscures the trust boundary, complicates independent build and test lifecycles, and encourages browser and server concerns to share modules accidentally. Bun workspaces make ownership explicit while preserving one repository and one package manager.
 
 ### Continue using browser storage as the system of record
 
@@ -165,8 +175,8 @@ Rejected because redesigning while relocating code would increase migration risk
 - Shared contracts reduce wire-format duplication but do not eliminate the need for separate persistence models and server-only policy code.
 - Expand-and-contract migrations can require temporary duplicate fields, backfills, and multiple releases.
 - Prototype browser data is not automatically trusted or preserved; importing it requires a deliberate, validated process.
-- Local development becomes a multi-service workflow, although npm workspace commands and Docker Compose will provide consistent orchestration.
+- Local development becomes a multi-service workflow, although Bun workspace commands and Docker Compose provide consistent orchestration.
 
 ## Follow-up
 
-This ADR authorizes the architecture described above but does not implement workspace relocation, API endpoints, Prisma, authentication, Docker images, Compose services, or prototype-data import. Those changes remain separate roadmap tasks beginning with P1-002.
+The original 2026-08-19 decision authorized workspace relocation, API endpoints, Prisma, authentication, Docker images, Compose services, and prototype-data import as later tasks; those historical tasks are now implemented. The 2026-10-23 amendment changes only the supported runtime/package manager and HTTP framework boundary. Prisma 7 and TanStack Query remain outside this amendment.

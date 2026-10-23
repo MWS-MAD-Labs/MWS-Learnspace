@@ -32,7 +32,7 @@ const StateCard: React.FC<{
 export const AuthGate: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { status, login, retry } = useAuth();
+  const { status, isSharedSession, login, backToHub, retry } = useAuth();
 
   if (status === 'loading') {
     return (
@@ -51,8 +51,17 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({
     return (
       <StateCard
         title="Sign in to Learnspace"
-        message="Use your approved Google Workspace account. Your access and role are assigned by the school, not by this browser."
-        action={{ label: 'Continue with Google', onClick: login }}
+        message={
+          isSharedSession
+            ? 'Return through MWS Hub to restore your shared session and continue on this page.'
+            : 'Use your approved Google Workspace account. Your access and role are assigned by the school, not by this browser.'
+        }
+        action={{
+          label: isSharedSession
+            ? 'Continue with MWS Hub'
+            : 'Continue with Google',
+          onClick: login,
+        }}
       />
     );
   }
@@ -68,8 +77,15 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({
     return (
       <StateCard
         title="Access denied"
-        message="Your Google identity was verified, but it has not been admitted to this Learnspace environment."
-        action={{ label: 'Try another account', onClick: login }}
+        message={
+          isSharedSession
+            ? 'Your MWS identity was verified, but it does not currently have access to Learnspace.'
+            : 'Your Google identity was verified, but it has not been admitted to this Learnspace environment.'
+        }
+        action={{
+          label: isSharedSession ? 'Return to MWS Hub' : 'Try another account',
+          onClick: isSharedSession ? backToHub : login,
+        }}
       />
     );
   }

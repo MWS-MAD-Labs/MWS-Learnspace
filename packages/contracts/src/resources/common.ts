@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const uuidSchema = z.string().uuid();
+export const uuidSchema = z.string().guid({ error: 'Invalid uuid' });
 export const schoolDateSchema = z
   .string()
   .regex(

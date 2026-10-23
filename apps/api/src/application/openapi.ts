@@ -73,9 +73,10 @@ import {
 
 type JsonSchema = Record<string, unknown>;
 type SchemaDefinition = {
-  _def: Record<string, unknown>;
+  _def: ZodDefinition;
   isOptional(): boolean;
 };
+type ZodDefinition = Record<string, unknown> & { type?: string };
 
 const components: Record<string, ZodTypeAny> = {
   ApiError: apiErrorSchema,
@@ -160,70 +161,87 @@ function zodDefinition(schema: ZodTypeAny): SchemaDefinition {
   return schema as unknown as SchemaDefinition;
 }
 
+function zodCheckDefinition(check: unknown): Record<string, unknown> {
+  return ((check as { _zod?: { def?: Record<string, unknown> } })?._zod?.def ??
+    {}) as Record<string, unknown>;
+}
+
 function stringSchema(definition: Record<string, unknown>): JsonSchema {
   const result: JsonSchema = { type: 'string' };
-  for (const check of (definition.checks ?? []) as Array<
-    Record<string, unknown>
-  >) {
-    if (check.kind === 'min') result.minLength = check.value;
-    if (check.kind === 'max') result.maxLength = check.value;
-    if (check.kind === 'uuid') result.format = 'uuid';
-    if (check.kind === 'email') result.format = 'email';
-    if (check.kind === 'url') result.format = 'uri';
-    if (check.kind === 'datetime') result.format = 'date-time';
-    if (check.kind === 'date') result.format = 'date';
-    if (check.kind === 'regex' && check.regex instanceof RegExp) {
-      result.pattern = check.regex.source;
+  const applyCheck = (check: Record<string, unknown>) => {
+    if (check.check === 'min_length') result.minLength = check.minimum;
+    if (check.check === 'max_length') result.maxLength = check.maximum;
+    if (check.format === 'uuid' || check.format === 'guid') {
+      result.format = 'uuid';
     }
+    if (check.format === 'email') result.format = 'email';
+    if (check.format === 'url') result.format = 'uri';
+    if (check.format === 'datetime') result.format = 'date-time';
+    if (check.format === 'date') result.format = 'date';
+    if (check.format === 'regex' && check.pattern instanceof RegExp) {
+      result.pattern = check.pattern.source;
+    }
+  };
+  applyCheck(definition);
+  for (const check of (definition.checks ?? []) as unknown[]) {
+    applyCheck(zodCheckDefinition(check));
   }
   return result;
 }
 
 function numberSchema(definition: Record<string, unknown>): JsonSchema {
   const result: JsonSchema = { type: 'number' };
-  for (const check of (definition.checks ?? []) as Array<
-    Record<string, unknown>
-  >) {
-    if (check.kind === 'int') result.type = 'integer';
-    if (check.kind === 'min' && typeof check.value === 'number') {
+  for (const rawCheck of (definition.checks ?? []) as unknown[]) {
+    const check = zodCheckDefinition(rawCheck);
+    if (check.check === 'number_format' && check.format === 'safeint') {
+      result.type = 'integer';
+    }
+    if (check.check === 'greater_than' && typeof check.value === 'number') {
       result.minimum = check.value;
     }
-    if (check.kind === 'max' && typeof check.value === 'number') {
+    if (check.check === 'less_than' && typeof check.value === 'number') {
       result.maximum = check.value;
     }
   }
   return result;
 }
 
+function arrayLimits(definition: Record<string, unknown>): JsonSchema {
+  const result: JsonSchema = {};
+  for (const rawCheck of (definition.checks ?? []) as unknown[]) {
+    const check = zodCheckDefinition(rawCheck);
+    if (check.check === 'min_length') result.minItems = check.minimum;
+    if (check.check === 'max_length') result.maxItems = check.maximum;
+  }
+  return result;
+}
+
 export function zodToJsonSchema(schema: ZodTypeAny): JsonSchema {
   const definition = zodDefinition(schema)._def;
-  switch (definition.typeName) {
-    case 'ZodString':
+  switch (definition.type) {
+    case 'string':
       return stringSchema(definition);
-    case 'ZodNumber':
+    case 'number':
       return numberSchema(definition);
-    case 'ZodLiteral':
-      return { const: definition.value };
-    case 'ZodEnum':
-      return { type: 'string', enum: definition.values };
-    case 'ZodArray':
+    case 'literal':
+      return { const: (definition.values as unknown[])[0] };
+    case 'enum':
+      return {
+        type: 'string',
+        enum: Object.values(definition.entries as Record<string, string>),
+      };
+    case 'array':
       return {
         type: 'array',
-        items: zodToJsonSchema(definition.type as ZodTypeAny),
-        ...((definition.minLength as { value?: number } | null)?.value ===
-        undefined
-          ? {}
-          : { minItems: (definition.minLength as { value: number }).value }),
-        ...((definition.maxLength as { value?: number } | null)?.value ===
-        undefined
-          ? {}
-          : { maxItems: (definition.maxLength as { value: number }).value }),
+        items: zodToJsonSchema(definition.element as ZodTypeAny),
+        ...arrayLimits(definition),
       };
-    case 'ZodObject': {
-      const shape = (definition.shape as () => Record<string, ZodTypeAny>)();
+    case 'object': {
+      const shape = definition.shape as Record<string, ZodTypeAny>;
       const required = Object.entries(shape)
         .filter(([, value]) => !zodDefinition(value).isOptional())
         .map(([key]) => key);
+      const catchall = definition.catchall as ZodTypeAny | undefined;
       return {
         type: 'object',
         properties: Object.fromEntries(
@@ -233,44 +251,48 @@ export function zodToJsonSchema(schema: ZodTypeAny): JsonSchema {
           ]),
         ),
         ...(required.length ? { required } : {}),
-        additionalProperties: definition.unknownKeys === 'passthrough',
+        additionalProperties:
+          catchall !== undefined &&
+          zodDefinition(catchall)._def.type === 'unknown',
       };
     }
-    case 'ZodRecord':
+    case 'record':
       return {
         type: 'object',
         additionalProperties: zodToJsonSchema(
           definition.valueType as ZodTypeAny,
         ),
       };
-    case 'ZodOptional':
-    case 'ZodDefault':
+    case 'optional':
+    case 'default':
       return zodToJsonSchema(definition.innerType as ZodTypeAny);
-    case 'ZodNullable':
+    case 'nullable':
       return {
         anyOf: [
           zodToJsonSchema(definition.innerType as ZodTypeAny),
           { type: 'null' },
         ],
       };
-    case 'ZodUnion':
+    case 'union':
       return {
         anyOf: (definition.options as ZodTypeAny[]).map(zodToJsonSchema),
       };
-    case 'ZodLazy':
+    case 'lazy':
       return {};
-    case 'ZodEffects':
-      return zodToJsonSchema(definition.schema as ZodTypeAny);
-    case 'ZodBoolean':
+    case 'custom':
+      return {};
+    case 'pipe':
+      return zodToJsonSchema(definition.in as ZodTypeAny);
+    case 'boolean':
       return { type: 'boolean' };
-    case 'ZodNull':
+    case 'null':
       return { type: 'null' };
-    case 'ZodUnknown':
-    case 'ZodAny':
+    case 'unknown':
+    case 'any':
       return {};
     default:
       throw new Error(
-        `Unsupported Zod OpenAPI type: ${String(definition.typeName)}`,
+        `Unsupported Zod OpenAPI type: ${String(definition.type)}`,
       );
   }
 }
@@ -290,6 +312,12 @@ const errorResponses = {
   },
   '403': {
     description: 'Authorization denied without resource enumeration',
+    content: {
+      'application/json': { schema: { $ref: '#/components/schemas/ApiError' } },
+    },
+  },
+  '503': {
+    description: 'Required authentication dependency unavailable',
     content: {
       'application/json': { schema: { $ref: '#/components/schemas/ApiError' } },
     },
@@ -440,6 +468,8 @@ export function generateOpenApiDocument() {
           responses: {
             '200': jsonResponse('CurrentSessionResponse'),
             '401': errorResponses['401'],
+            '403': errorResponses['403'],
+            '503': errorResponses['503'],
             '500': errorResponses['500'],
           },
         },

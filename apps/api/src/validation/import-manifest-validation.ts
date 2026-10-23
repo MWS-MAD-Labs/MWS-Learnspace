@@ -1,19 +1,20 @@
 import { z } from 'zod';
 
-const uuidMapSchema = z.record(z.string().trim().min(1), z.string().uuid());
+const uuidSchema = z.string().guid({ error: 'Invalid uuid' });
+const uuidMapSchema = z.record(z.string().trim().min(1), uuidSchema);
 
 export const importManifestSchema = z
   .object({
-    targetOrganizationId: z.string().uuid(),
+    targetOrganizationId: uuidSchema,
     sourceKey: z.string().trim().min(1).max(200),
-    operatorUserId: z.string().uuid(),
+    operatorUserId: uuidSchema,
     enrollmentAcademicYear: z.string().trim().min(1),
     users: z.record(
       z.string().trim().min(1),
       z
         .object({
-          targetUserId: z.string().uuid(),
-          targetMembershipId: z.string().uuid(),
+          targetUserId: uuidSchema,
+          targetMembershipId: uuidSchema,
         })
         .strict(),
     ),

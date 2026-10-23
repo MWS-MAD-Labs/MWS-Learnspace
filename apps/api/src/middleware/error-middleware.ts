@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { apiErrorSchema } from '@learnspace/contracts';
-import type { ErrorRequestHandler, RequestHandler } from 'express';
 import type { AppConfig } from '../lib/config.js';
 import type { Logger } from '../lib/logger.js';
+import type { ErrorRequestHandler, RequestHandler } from '../type/http.js';
 import { HttpError } from './http-errors.js';
 
 export const notFoundMiddleware: RequestHandler = (_request, response) => {

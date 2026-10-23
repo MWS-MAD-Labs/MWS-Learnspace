@@ -88,6 +88,7 @@ beforeEach(() => {
   } as unknown as ReturnType<typeof useApp>);
   mockedUseAuth.mockReturnValue({
     status: 'authenticated',
+    isSharedSession: false,
     currentUser: {
       id: '11111111-1111-4111-8111-111111111111',
       name: 'Teacher One',
@@ -125,6 +126,7 @@ beforeEach(() => {
     },
     login: vi.fn(),
     logout: vi.fn(),
+    backToHub: vi.fn(),
     retry: vi.fn(),
   });
   vi.useFakeTimers({ now: new Date(2026, 7, 24, 12), shouldAdvanceTime: true });

@@ -1,12 +1,11 @@
 import { Prisma, type MembershipRole } from '@prisma/client';
-import type { Request } from 'express';
 import {
   AuthorizationDeniedError,
   requireOrganizationScope,
   requirePermission,
   type MembershipScope,
 } from '../utils/authorization.js';
-import type { AuthenticatedRequest } from '../type/http.js';
+import type { AuthenticatedRequest, HttpRequest } from '../type/http.js';
 import { HttpError } from '../middleware/http-errors.js';
 
 const leadershipRoles: readonly MembershipRole[] = ['DIRECTOR', 'PRINCIPAL'];
@@ -17,7 +16,7 @@ const assignedStudentRoles: readonly MembershipRole[] = [
 ];
 
 export function requireResourceAuth(
-  request: Request,
+  request: HttpRequest,
 ): NonNullable<AuthenticatedRequest['auth']> {
   const auth = (request as AuthenticatedRequest).auth;
   if (!auth) {
@@ -31,7 +30,7 @@ export function requireResourceAuth(
 }
 
 export function resourceMembershipFor(
-  request: Request,
+  request: HttpRequest,
   organizationId: string,
 ): MembershipScope {
   try {

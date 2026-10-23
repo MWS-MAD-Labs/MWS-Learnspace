@@ -10,7 +10,7 @@ singletons or duplicating API schemas.
 ```text
 apps/api/src/
   application/  application composition and executable entry points
-  routes/       Express paths, methods, and middleware registration
+  routes/       HTTP paths, methods, and middleware registration
   controller/   HTTP request and response adapters
   service/      use cases, Prisma operations, transactions, and audits
   model/        Prisma projections, internal DTOs, and response mappers
@@ -39,7 +39,7 @@ application -> routes -> middleware -> controller -> service -> Prisma
 `apps/api/src/application/` owns application assembly and executable entry
 points:
 
-- create the Express application;
+- create the Hono application and internal HTTP compatibility adapters;
 - construct and inject routers, services, the database, and the logger;
 - mount global middleware and API routers;
 - start and stop the HTTP process;
@@ -121,7 +121,7 @@ Models own:
 - pure audit snapshot mapping;
 - pure request-to-persistence data builders.
 
-Models must not query the database, import Express, or call services.
+Models must not query the database, import HTTP framework types, or call services.
 
 Database entities remain defined in `prisma/schema.prisma`. Public request and
 response types remain in `packages/contracts`.
@@ -154,11 +154,11 @@ must not fork them.
 - cryptographic and cookie helpers;
 - organization-time calculations.
 
-Utilities must not perform database operations or mutate Express responses.
+Utilities must not perform database operations or mutate HTTP responses.
 
 ## Middleware
 
-`apps/api/src/middleware/` contains Express pipeline concerns:
+`apps/api/src/middleware/` contains HTTP pipeline concerns:
 
 - required authentication;
 - CSRF protection;
@@ -228,7 +228,24 @@ Primary routes include:
 Collection filters and stable workspace selections use URL search parameters.
 Unsaved form fields, mutation progress, validation errors, and toast state remain
 local React state. Authentication preserves the full pathname, query string, and
-hash as the OAuth return target.
+hash as the local OAuth or shared Hub return target. `/api/v1/auth/bootstrap` is
+public and reports only the auth mode and Hub home URL. In shared mode the browser
+attempts automatic restore at most once, then renders the status-specific auth UX
+rather than entering a redirect loop.
+
+Shared mode is composed in the application layer from Hub verification, Central
+employee/entitlement lookup, persisted organization mapping, first-login local
+projection, and local record-scope loading. Readiness is passive:
+`/health/ready` reports recently observed Hub/Central failures without issuing a
+dependency probe. Valid active entitlements are cached for 30 seconds by default;
+missing, inactive, malformed, or mismatched entitlements and lookup failures are
+not cached.
+
+Shared browser navigation exposes Back to MWS Hub only. Learnspace does not
+present an app-owned shared sign-out control; ending the global Hub session
+remains a Hub concern. The local logout endpoint only clears Learnspace cookies
+when called. The readable host-only CSRF cookie is created when absent or
+malformed and remains stable across repeated session reads.
 
 `AppShell` is a protected layout route and renders child pages through an
 `Outlet`. Sidebar links use route-aware navigation, so refresh, deep links, and

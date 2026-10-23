@@ -1,6 +1,6 @@
 # Authorization matrix
 
-Server authorization is deny-by-default. Browser fields such as `role`, `permissions`, `isGPK`, `isSpecialEdCoordinator`, organization IDs, or actor IDs are never accepted as identity. The API loads active memberships and scopes from the authenticated PostgreSQL session.
+Server authorization is deny-by-default. Browser fields such as `role`, `permissions`, `isGPK`, `isSpecialEdCoordinator`, organization IDs, or actor IDs are never accepted as identity. Local mode loads the active membership from the PostgreSQL session. Shared mode takes the role and coarse permissions from a verified Central entitlement, requires exact parity with the canonical role mapping below, and loads record scopes from the local PostgreSQL membership.
 
 ## Canonical roles
 
@@ -15,6 +15,8 @@ Server authorization is deny-by-default. Browser fields such as `role`, `permiss
 | Specialist                      | `SPECIALIST`             |
 
 `roleTitle` is display-only and must not grant permissions. GPK and coordinator behavior formerly represented by `isGPK` and `isSpecialEdCoordinator` is mapped to canonical server roles above.
+
+Shared login currently supports Hub identities whose verified source is `employee`. `intern` and `student` identities are denied before projection or authorization.
 
 ## Permission matrix
 
@@ -59,8 +61,44 @@ The initial authorization primitives expose these coarse permissions:
 - `student:admin`, `student:sensitive-read`
 - `staff-directory:read`, `staff-assignment:admin`
 - `organization:admin`
+- `observation:manage`
+
+`apps/api/src/utils/authorization.ts` is the runtime source of truth for these keys, their role assignments, and the typed Central permission manifest. The committed root `permissions.json` mirrors that manifest for Central setup tooling, and the API test suite fails if the JSON or role assignments drift from the runtime constants.
+
+## Central permission deployment
+
+Permission registration is a deployment step, not an API startup task. Configure `CENTRAL_API_BASE_URL` with either the Central origin or its `/api/internal` URL, `CENTRAL_API_TOKEN` with the API-client token for this application, and canonical `HUB_SSO_APP_ID` (default `learnspace`). `CENTRAL_APPLICATION_ID` is a legacy alias; startup and CLIs fail if both variables are set to different values. Never commit or print the token.
+
+Run the read-only comparison in CI before deployment:
+
+```bash
+bun run permissions:check
+```
+
+Run synchronization after Central is deployed and before the Learnspace release goes live:
+
+```bash
+bun run permissions:sync -- --retries 5 --wait 20
+```
+
+`--retries` counts additional attempts and `--wait` is seconds between retries. Only connection failures, HTTP `429`, and HTTP `5xx` responses are retried. Authentication, authorization, validation, and other Central rejections fail immediately.
+
+Use `--confirm-removals` only during an explicitly reviewed removal deployment. Use `permissions:check -- --allow-removals` when a check may accept registered permissions that the code intentionally dropped, provided no active Central role still carries an unknown key. `permissions:sync -- --check` is an equivalent read-only check. `--soft` reports failures but exits successfully and is intended only for optional local development workflows, never deployment gates.
+
+Permission removal should span two releases: first move Central roles away from the old key, then remove the key from Learnspace and synchronize. The sync output identifies deprecated keys and active affected roles. Deployment automation must provide environment-specific Central credentials and must not run these commands against another environment's Central instance.
 
 A permission alone is insufficient. Every tenant-owned repository query must also include `organizationId`, and scoped roles must pass the applicable unit, grade, subject, class, or assigned-student check.
+
+Central entitlements must contain exactly the permission set for their role: no missing key, no extra or unknown key, and no duplicate key. The seven role rows in the permission table are the required parity contract. Local membership scopes are independent of Central permissions. A scoped role may be projected with empty unit, grade, subject, or assigned-student scopes; this does not widen access, and endpoints requiring those scopes continue to deny or return no records.
+
+Central access reconciliation is manual, not a request-time background mutation:
+
+```bash
+bun run central-access:sync -- --dry-run
+bun run central-access:sync -- --apply
+```
+
+The command updates local membership roles to valid active Central entitlements and can disable active local memberships whose entitlements are missing or inactive. It never re-enables a locally disabled membership. Run and review it under an operational change process.
 
 Organization account administration distinguishes global user identity from tenant-local membership configuration. A Director may update the role, role title, membership status, and unit/grade/subject scopes for a membership in their organization. Email, display name, avatar URL, and user status belong to the shared `User` row; the API rejects changes to those fields with `SHARED_USER_IDENTITY_CONFLICT` when the user has a membership in another organization. This prevents one organization administrator from renaming, disabling, or changing the login email of a user across tenants.
 

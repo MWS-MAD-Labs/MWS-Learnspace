@@ -1,4 +1,3 @@
-import express from 'express';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import type { AppConfig } from '../lib/config.js';
@@ -7,6 +6,8 @@ import {
   e2eAuthHeaderName,
   e2eAuthUserHeaderName,
 } from '../routes/test-auth-router.js';
+import { createRouter } from '../type/http.js';
+import { httpTestClient } from './http-test-client.js';
 
 const testConfig: AppConfig = {
   nodeEnv: 'test',
@@ -40,8 +41,8 @@ function testApp(config: AppConfig = testConfig) {
       expiresAt: new Date('2026-08-25T00:00:00.000Z'),
     })),
   };
-  const app = express();
-  app.use((_, response, next) => {
+  const app = createRouter();
+  app.use((_request, response, next) => {
     response.locals.requestId = 'test-auth-request';
     next();
   });
@@ -62,8 +63,10 @@ describe('test-only authentication router', () => {
   it('returns a non-enumerating 404 for a missing or wrong secret', async () => {
     const { app, sessions } = testApp();
 
-    const missing = await request(app).post('/api/v1/test-auth/session');
-    const wrong = await request(app)
+    const missing = await request(httpTestClient(app)).post(
+      '/api/v1/test-auth/session',
+    );
+    const wrong = await request(httpTestClient(app))
       .post('/api/v1/test-auth/session')
       .set(e2eAuthHeaderName, 'wrong-secret-with-at-least-32-characters');
 
@@ -76,7 +79,7 @@ describe('test-only authentication router', () => {
   it('creates a real session and non-secure local CSRF cookies for the configured fixture user', async () => {
     const { app, prisma, sessions } = testApp();
 
-    const response = await request(app)
+    const response = await request(httpTestClient(app))
       .post('/api/v1/test-auth/session')
       .set(e2eAuthHeaderName, testConfig.e2eAuthSecret!);
 
@@ -104,7 +107,7 @@ describe('test-only authentication router', () => {
   it('allows the secret-gated test harness to select another seeded fixture user', async () => {
     const { app, prisma } = testApp();
 
-    const response = await request(app)
+    const response = await request(httpTestClient(app))
       .post('/api/v1/test-auth/session')
       .set(e2eAuthHeaderName, testConfig.e2eAuthSecret!)
       .set(e2eAuthUserHeaderName, 'director@example.test');

@@ -2,7 +2,7 @@ import {
   aggregateSearchQuerySchema,
   aggregateSearchResponseSchema,
 } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
+import type { RequestHandler } from '../type/http.js';
 import { parseRequest } from '../middleware/http-errors.js';
 import { aggregateOrganizationId } from '../controller/aggregates-controller.js';
 import { aggregateMembershipFor } from '../utils/aggregates.policy.js';

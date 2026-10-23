@@ -2,17 +2,20 @@
 
 ## Prerequisites
 
-- Node.js `20.20.2` (see [`.nvmrc`](.nvmrc))
-- npm `10.8.2` or newer
+- Bun `1.3` or newer
+- Docker with the Compose plugin for database, integration, and E2E workflows
 
-Using `nvm`:
+Install the committed workspace dependencies:
 
 ```bash
-nvm use
-npm ci
+bun install --frozen-lockfile
 ```
 
-Use `npm ci` for reproducible installs. Start the prototype with `npm run dev` and open <http://localhost:3000>.
+Use `bun install --frozen-lockfile` for reproducible installs. Start the web application with `bun run dev` and open <http://localhost:3000>.
+
+The API development script loads the repository root `.env`, so either `bun run dev:api` from the repository root or `bun run dev` from `apps/api` starts the same local configuration.
+
+The migration to Bun and Hono intentionally does not replace the test or data layers. Vitest remains the unit, component, and API test runner; Playwright remains the browser E2E runner; and Prisma 6 remains the ORM and migration tool. Prisma 7 and TanStack Query are separate future work and must not be bundled into unrelated contributions.
 
 ## Branches and changes
 
@@ -26,15 +29,17 @@ Use `npm ci` for reproducible installs. Start the prototype with `npm run dev` a
 Run all checks before opening a pull request:
 
 ```bash
-npm run format:check
-npm run lint
-npm run lint:anti-slop
-npm run typecheck
-npm test
-npm run build
+bun run format:check
+bun run lint
+bun run lint:anti-slop
+bun run typecheck
+bun run test
+bun run build
 ```
 
-Use `npm run format` to apply repository formatting.
+`bun run lint` runs Oxlint's correctness checks with its native React and Vitest plugins. `bun run lint:anti-slop` is a separate repository-specific policy pass. Oxlint is not the type gate: `bun run typecheck` must pass the TypeScript 7 `tsc` checks for the root and workspaces.
+
+Use `bun run format` to apply repository formatting.
 
 ## Pull requests
 

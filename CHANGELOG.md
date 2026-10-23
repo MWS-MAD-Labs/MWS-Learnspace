@@ -8,8 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Reproducible Node.js and npm toolchain metadata with a committed dependency lockfile.
-- Independent Prettier formatting, ESLint, TypeScript checking, Vitest smoke testing, and production-build commands.
+- Reproducible Bun toolchain metadata with a committed `bun.lock` dependency lockfile.
+- Independent Prettier formatting, Oxlint syntax/semantic linting, required TypeScript 7 `tsc` checking, Vitest smoke testing, and production-build commands.
 - GitHub Actions validation for formatting, linting, root/workspace type checking, tests, application builds, and API runtime/migration Docker targets.
 - Contributor guidance, private vulnerability-reporting policy, and a pull-request checklist.
 - Production-oriented project README with current-state and target-architecture documentation.
@@ -46,9 +46,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Dedicated persistent local PostgreSQL integration-test Compose service and `npm run test:integration:local` migration/test command.
 - Assignment-bound Sensory Profile APIs and web workflows with strict pinned-definition contracts, server-validated `0`–`5` ratings, trusted section/total scoring, transactional completion and audits, API-backed history/reference/reporting, and dedicated PostgreSQL and Compose-backed browser coverage.
 - Strict IEP aggregate contracts and organization-scoped list/detail/create/update APIs for team members, performance areas, accommodations, goals, services, parent approval metadata, and plan dates, with session-derived actors, transactional audits, draft-only mutation, integer optimistic concurrency, assigned-student scope, PostgreSQL historical-content immutability, generated OpenAPI operations, and dedicated contract, integration, component, service, and Compose-backed authoring coverage.
+- Exima-style Hub shared login behind `SHARED_SESSION_MODE=shared`: canonical `HUB_SSO_APP_ID` conflict checking, persisted one-to-one Central organization mapping, automatic employee first-login projection with a verified `ExternalPrincipal`, exact role-permission parity, public auth bootstrap, one-attempt restore, stable CSRF cookie handling, positive-only 30-second entitlement caching, passive dependency readiness, and manual Central-access synchronization.
+- Shared-login web states for unauthenticated `401`, denied `403`, and retryable dependency `503` outcomes, with shared mode exposing Back to MWS Hub rather than an app-owned sign-out action.
 
 ### Changed
 
+- Migrated the supported repository runtime and package-manager workflow from Node.js/npm to Bun, including current install, workspace, validation, test, and operational commands.
+- Retained local Google OAuth and PostgreSQL sessions as rollback infrastructure while local `.env` deployments can opt into shared mode; local migrations and permission synchronization are evidenced, while real browser login, Central role assignments, token rotation, rate-limited backfill, shared E2E fixtures, staging/production evidence, and local-auth removal remain outstanding.
+- Migrated the API framework from Express to Hono while retaining an internal compatibility boundary for existing controller and middleware contracts.
+- Retained Vitest and Playwright as the test runners and Prisma 6 as the ORM/migration layer; Prisma 7 and TanStack Query remain separate future work.
 - Migrated the Learning Journey calendar, tracker, editor, dashboard, curriculum-report reads, and submit/review/approval workflow away from browser persistence; returned-review comments and reviewer attribution now remain visible after refresh.
 - Formatted the existing prototype source and fixed conditional React Hook execution in the observation workspace.
 - Documented the retained Google AI Studio metadata and active Express API tooling.

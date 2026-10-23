@@ -95,13 +95,14 @@ enum AuditResult {
 }
 
 model Organization {
-  id                  String                      @id @default(uuid()) @db.Uuid
-  slug                String                      @unique
-  name                String
-  timezone            String                      @default("UTC")
-  status              AccountStatus               @default(ACTIVE)
-  createdAt           DateTime                    @default(now())
-  updatedAt           DateTime                    @updatedAt
+  id                    String                      @id @default(uuid()) @db.Uuid
+  centralOrganizationId String?                     @unique
+  slug                  String                      @unique
+  name                  String
+  timezone              String                      @default("UTC")
+  status                AccountStatus               @default(ACTIVE)
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
   memberships         Membership[]
   academicYears       AcademicYear[]
   semesters           Semester[]
@@ -156,6 +157,25 @@ model User {
   auditEvents           AuditEvent[]
   goalEvents            GoalAchievementEvent[]
   importRuns            ImportRun[]
+  externalPrincipals    ExternalPrincipal[]
+}
+
+model ExternalPrincipal {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  issuer      String
+  subject     String
+  source      String
+  linkSource  String
+  verified    Boolean  @default(false)
+  verifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issuer, subject])
+  @@unique([userId, issuer])
+  @@index([userId])
 }
 
 model Membership {

@@ -289,7 +289,9 @@ export const WeeklyReportStatusTracker: React.FC<
     return studentReportRows.filter(({ student, report }) => {
       if (
         searchFilter &&
-        !student.name.toLowerCase().includes(searchFilter.toLowerCase())
+        !(student.name ?? student.fullName)
+          .toLowerCase()
+          .includes(searchFilter.toLowerCase())
       )
         return false;
       if (gradeFilter !== 'All Grades' && student.grade !== gradeFilter)

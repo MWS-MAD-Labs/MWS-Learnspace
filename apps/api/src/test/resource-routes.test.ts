@@ -1,7 +1,8 @@
-import express from 'express';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { createResourceRouter } from '../routes/resources-router.js';
+import { createRouter } from '../type/http.js';
+import { httpTestClient } from './http-test-client.js';
 
 const organizationId = '11111111-1111-4111-8111-111111111111';
 
@@ -26,8 +27,8 @@ function authenticatedSession() {
 }
 
 function resourceApp(prisma: object, sessions: object) {
-  const app = express();
-  app.use((_, response, next) => {
+  const app = createRouter();
+  app.use((_request, response, next) => {
     response.locals.requestId = 'resource-router-test';
     next();
   });
@@ -40,7 +41,7 @@ describe('resource router composition', () => {
     const findMany = vi.fn();
     const sessions = { lookup: vi.fn(async () => null) };
     const response = await request(
-      resourceApp({ organization: { findMany } }, sessions),
+      httpTestClient(resourceApp({ organization: { findMany } }, sessions)),
     ).get('/api/v1/organizations');
 
     expect(response.status).toBe(401);
@@ -70,7 +71,7 @@ describe('resource router composition', () => {
     ];
 
     for (const path of paths) {
-      const response = await request(app)
+      const response = await request(httpTestClient(app))
         .get(`/api/v1/organizations/${organizationId}/${path}`)
         .set('cookie', 'learnspace_session=session-token');
       expect(response.status, path).toBe(200);

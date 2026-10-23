@@ -1,7 +1,9 @@
 # Learnspace Roadmap Gap Analysis
 
-**Audit date:** 2026-10-21  
-**Source of truth reviewed:** [`ROADMAP.md`](ROADMAP.md)  
+**Audit date:** 2026-10-23
+
+**Source of truth reviewed:** [`ROADMAP.md`](ROADMAP.md)
+
 **Purpose:** identify remaining implementation, operational, owner-decision, and documentation work without prematurely marking roadmap acceptance criteria complete.
 
 ## Status Categories
@@ -15,16 +17,19 @@ This document uses four classifications:
 
 ## Executive Summary
 
-| Area                        | Current status                                                                                                                                                         |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Milestones 0-5              | Product and platform foundations are implemented and validated.                                                                                                        |
-| Milestone 6                 | Export/import tooling and local rehearsal are implemented; staging rehearsal and approval remain outstanding.                                                          |
-| Milestone 7                 | No task is fully complete; four have partial foundations.                                                                                                              |
-| Milestone 8                 | Release engineering and production approval remain incomplete.                                                                                                         |
-| Post-1.0 product backlog    | Mostly unimplemented; configurable observation instruments are substantially complete and the backlog entry is stale.                                                  |
-| Production-ready definition | Several technical controls are implemented, but operational hardening, release controls, accessibility, backup automation, and accountable approval remain incomplete. |
+| Area                        | Current status                                                                                                                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Milestones 0-5              | Product and platform foundations are implemented and validated.                                                                                                                         |
+| Milestone 6                 | Export/import tooling and local rehearsal are implemented; staging rehearsal and approval remain outstanding.                                                                           |
+| Milestone 6.5               | Shared authority and browser foundations are implemented locally; external Central configuration, real-browser/shared-E2E, staging/production, and removal evidence remain outstanding. |
+| Milestone 7                 | No task is fully complete; four have partial foundations.                                                                                                                               |
+| Milestone 8                 | Release engineering and production approval remain incomplete.                                                                                                                          |
+| Post-1.0 product backlog    | Mostly unimplemented; configurable observation instruments are substantially complete and the backlog entry is stale.                                                                   |
+| Production-ready definition | Several technical controls are implemented, but operational hardening, release controls, accessibility, backup automation, and accountable approval remain incomplete.                  |
 
-The next implementation task whose dependencies are complete is **P7-001: security headers, production CORS policy, and rate limits**.
+The next migration task requiring external action is **P6.5-001: register Learnspace in Central staging and assign the approved roles**. The authoritative code path already exists, but operational cutover remains blocked on real-browser login, token rotation, rate-limited backfill, shared E2E fixtures, and staging evidence. P7-001 still follows the local-auth removal gate.
+
+The current application/tooling baseline is Bun plus Hono. Oxlint provides syntax and semantic linting through its correctness, React, and Vitest rules, while TypeScript 7 `tsc` remains the required type gate; ESLint and typescript-eslint are not part of the baseline. Vitest, Playwright, and Prisma 6 are intentionally retained. Hono is isolated behind the internal HTTP compatibility boundary used by existing controllers and middleware. Prisma 7 and TanStack Query are independent future migrations and are not gaps in the Bun/Hono work.
 
 ## Immediate Roadmap Corrections
 
@@ -73,6 +78,36 @@ Known inconsistencies include:
 - an outdated P5-009 IEP workflow deferral;
 - a `pre-alpha` description that no longer matches project progression;
 - a hard-coded sidebar version that does not match package version `0.2.0`.
+
+## Milestone 6.5: Central Shared-Session Migration
+
+### Implemented Foundations
+
+- `mws-central-auth` is pinned to `v0.10.0`, with the reviewed commit recorded in the lockfile.
+- API, web, and contracts use Zod 4.
+- `ExternalPrincipal` provides immutable issuer/subject sidecar links and a guarded dry-run/apply backfill.
+- `Organization.centralOrganizationId` persists the unique Central-to-local organization mapping.
+- Verified employee first-login projection creates or reuses the local user, verified principal, and one membership; intern and student identities are denied.
+- Hub identity verification, Central entitlement loading, exact role-permission parity, authoritative shared requests, and bounded fail-open shadow comparison are implemented and tested.
+- The permission manifest, committed JSON mirror, drift checks, synchronization, retry behavior, token redaction, and local role mappings are implemented.
+- Scoped roles may have empty local scopes without receiving broad access.
+- Public auth bootstrap, one-attempt restore, `keepFresh`, `watchSession`, stable CSRF handling, `401`/`403`/`503` UX, and Back to MWS Hub-only navigation are implemented and tested at unit/component level.
+- Shared readiness is passive, the default entitlement cache is positive-only for 30 seconds, and Central access synchronization is manual.
+- Local migration deployment and permission synchronization evidence are complete.
+
+### Incomplete Cutover Work
+
+- register Learnspace and its staging/production organizations in Central;
+- create and assign the approved Central roles;
+- evidence real browser login against Hub/Central;
+- rotate the Central API token and record the non-secret evidence;
+- run a rate-limited principal backfill and approve conflicts;
+- implement organization switching and decide invitation ownership;
+- add dedicated shared-session Hub/Central E2E fixtures and runs; no shared-session E2E currently exists;
+- rehearse `401`, `403`, `503`, dependency outage, cutover, and rollback behavior in staging and production;
+- remove local Google OAuth and PostgreSQL sessions only after the rollback window.
+
+The detailed procedure and ownership matrix are in [`auth/shared-session-migration.md`](auth/shared-session-migration.md).
 
 ## Deferred Product Work Without Dedicated Roadmap Tasks
 
@@ -165,7 +200,7 @@ CI currently runs validation, tests, builds, and Docker builds, but does not inc
 
 - secret scanning;
 - dependency review;
-- an `npm audit` failure policy;
+- a `bun audit` failure policy or an explicitly selected equivalent dependency scanner;
 - CodeQL or equivalent SAST;
 - container scanning;
 - documented scanner exception handling.
@@ -466,19 +501,26 @@ The project must continue to be described as **pre-production** until the incomp
 
 ## Recommended Execution Order
 
-1. Correct stale roadmap and related documentation.
-2. Implement P7-001 security headers, CORS policy, and rate limits.
-3. Implement P7-002 asset privacy fixes.
-4. Implement P7-003 CI security scanning and dependency policy.
-5. Implement P7-005 metrics and tracing.
-6. Implement P7-007 backup automation after owner decisions.
-7. Implement P7-009 accessibility review.
-8. Implement P7-010 performance budgets.
-9. Complete P7-008 threat model and risk acceptance.
-10. Implement P7-004 SBOMs, provenance, and signing.
-11. Implement P7-006 alerts and runbooks.
-12. Execute P7-011 release-candidate matrix.
-13. Complete Milestone 8 release engineering and approvals.
+1. Assign the Central platform owner, Learnspace service owner, data owner, secret-store owner, and rollback approver.
+2. Complete P6.5-001 Central staging registration and create the approved roles without placing credentials in the repository.
+3. Run P6.5-006 permission sync/check and P6.5-003 principal dry-run; resolve every conflict before apply.
+4. Activate P6.5-005 shadow mode in staging, exercise every role, and review mismatch/dependency-failure evidence.
+5. Validate the implemented P6.5-007/P6.5-008 path with real browser login, token rotation, and rate-limited backfill evidence.
+6. Implement P6.5-009 explicit organization switching and decide Central versus Learnspace ownership for invitations/delegated administration.
+7. Add shared Hub/Central E2E fixtures, then complete P6.5-010 and the P6.5-012 staging/production cutover and rollback evidence.
+8. Close the rollback window, then execute P6.5-011 local OAuth/session removal.
+9. Implement P7-001 security headers, CORS policy, and rate limits against the final Central auth flow.
+10. Implement P7-002 asset privacy fixes.
+11. Implement P7-003 CI security scanning and dependency policy.
+12. Implement P7-005 metrics and tracing, including Central dependency and auth outcome telemetry.
+13. Implement P7-007 backup automation after owner decisions.
+14. Implement P7-009 accessibility review.
+15. Implement P7-010 performance budgets.
+16. Complete P7-008 threat model and risk acceptance.
+17. Implement P7-004 SBOMs, provenance, and signing.
+18. Implement P7-006 alerts and runbooks.
+19. Execute P7-011 release-candidate matrix.
+20. Complete Milestone 8 release engineering and approvals.
 
 ## Owner Decisions Required
 
@@ -492,5 +534,14 @@ The project must continue to be described as **pre-production** until the incomp
 - incident-response and support ownership;
 - deployment jurisdiction and legal/compliance requirements;
 - whether Learning Journey draft deletion remains desired;
-- whether organization switching is required before 1.0;
 - whether configurable observation instruments need scope beyond the implemented immutable definition/version system.
+- Central platform owner and Central staging administrator;
+- Learnspace staging URL and confirmation that Hub and Learnspace share the required parent domain;
+- Central application owner, organization ID, API-client scope, credential rotation owner, and secret-store location;
+- approved Central role-to-permission assignments and role-change approver;
+- principal-backfill data owner and conflict-resolution authority;
+- shadow observation duration and acceptable mismatch/error thresholds;
+- Central outage policy, authoritative-context cache/revocation interval, and `503` readiness/alerting policy;
+- authority-cutover operator, rollback approver, rollback window, and local-auth removal approval;
+- whether invitations and delegated administration are owned by Central or Learnspace;
+- organization-switching UX, active-organization persistence policy, and URL behavior.

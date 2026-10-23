@@ -3,7 +3,10 @@ import {
   type AggregateNotification,
   type AggregateSearchItem,
 } from '@learnspace/contracts';
-import { hasPermission, type MembershipScope } from '../utils/authorization.js';
+import {
+  membershipHasPermission,
+  type MembershipScope,
+} from '../utils/authorization.js';
 export { schoolDateInTimezone } from '../utils/organization-time.js';
 
 const leadershipRoles = new Set<MembershipRole>(['DIRECTOR', 'PRINCIPAL']);
@@ -157,7 +160,7 @@ export async function journeySummary(
   organizationId: string,
   membership: MembershipScope,
 ) {
-  if (!hasPermission(membership.role, 'journey:read')) return undefined;
+  if (!membershipHasPermission(membership, 'journey:read')) return undefined;
   const scope = aggregateJourneyScopeWhere(membership);
   if (!scope) return { total: 0, approved: 0, inReview: 0, draft: 0 };
   const groups = await prisma.learningJourney.groupBy({
@@ -184,7 +187,7 @@ export async function specialEducationSummary(
   membership: MembershipScope,
   schoolDate: Date,
 ) {
-  if (!hasPermission(membership.role, 'special-ed:read')) return undefined;
+  if (!membershipHasPermission(membership, 'special-ed:read')) return undefined;
   const studentWhere = specialEducationStudentWhere(membership, schoolDate);
   if (!studentWhere) {
     return {
@@ -235,7 +238,7 @@ export async function aggregateAttendanceSummary(
   membership: MembershipScope,
   schoolDate: Date,
 ) {
-  if (!hasPermission(membership.role, 'attendance:read')) return undefined;
+  if (!membershipHasPermission(membership, 'attendance:read')) return undefined;
   const studentWhere = aggregateStudentScopeWhere(membership, schoolDate);
   if (!studentWhere) {
     return {
@@ -348,7 +351,7 @@ export async function recentJourneys(
   organizationId: string,
   membership: MembershipScope,
 ) {
-  if (!hasPermission(membership.role, 'journey:read')) return [];
+  if (!membershipHasPermission(membership, 'journey:read')) return [];
   const scope = aggregateJourneyScopeWhere(membership);
   if (!scope) return [];
   const rows = await prisma.learningJourney.findMany({
@@ -421,9 +424,10 @@ export async function aggregateSearchItems(
     schoolDate,
   );
   const canSearchJourneys =
-    hasPermission(membership.role, 'journey:read') && journeyWhere;
+    membershipHasPermission(membership, 'journey:read') && journeyWhere;
   const canSearchSpecialEducation =
-    hasPermission(membership.role, 'special-ed:read') && specialStudentWhere;
+    membershipHasPermission(membership, 'special-ed:read') &&
+    specialStudentWhere;
 
   const [students, journeys, ieps, goals, reports] = await Promise.all([
     studentWhere
@@ -544,7 +548,7 @@ export async function aggregateSearchItems(
           },
         })
       : Promise.resolve([]),
-    hasPermission(membership.role, 'special-ed:read') &&
+    membershipHasPermission(membership, 'special-ed:read') &&
     (reportStudentIds === undefined || reportStudentIds.length)
       ? prisma.weeklyReport.findMany({
           where: {

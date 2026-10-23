@@ -22,6 +22,7 @@ import {
   FileSignature,
   ClipboardList,
   LogOut,
+  House,
   UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -46,7 +47,8 @@ export const AppShell: React.FC<{ children?: React.ReactNode }> = ({
     navigateToAttendanceStudent,
   } = useApp();
 
-  const { logout, session } = useAuth();
+  const { backToHub, logout, session } = useAuth();
+  const sharedSession = session?.authMode === 'shared';
   const canAdminOrganization =
     session?.memberships[0]?.permissions.includes('organization:admin') ??
     false;
@@ -552,14 +554,25 @@ export const AppShell: React.FC<{ children?: React.ReactNode }> = ({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => void logout()}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#E8DFC8] px-3 py-2 text-xs font-bold text-[#6E161E] hover:bg-white"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </button>
+            {sharedSession ? (
+              <button
+                type="button"
+                onClick={backToHub}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#E8DFC8] px-3 py-2 text-xs font-bold text-stone-700 hover:bg-white"
+              >
+                <House className="h-3.5 w-3.5" />
+                Back to MWS Hub
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void logout()}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#E8DFC8] px-3 py-2 text-xs font-bold text-[#6E161E] hover:bg-white"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </button>
+            )}
 
             <div className="flex items-center justify-between text-[11px] text-stone-500 px-1">
               <span>

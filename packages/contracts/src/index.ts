@@ -19,7 +19,7 @@ export type ApiError = z.infer<typeof apiErrorSchema>;
 
 export const healthResponseSchema = z.object({
   status: z.enum(['live', 'ready', 'unavailable']),
-  dependencies: z.record(z.enum(['up', 'down'])).optional(),
+  dependencies: z.record(z.string(), z.enum(['up', 'down'])).optional(),
 });
 
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
@@ -41,9 +41,37 @@ export const membershipRoleSchema = z.enum([
   'SPECIALIST',
 ]);
 
+export const authModeSchema = z.enum(['off', 'shadow', 'shared']);
+
+const authHubBootstrapSchema = z.object({
+  homeUrl: z.string().url(),
+});
+
+export const authBootstrapResponseSchema = z.discriminatedUnion('authMode', [
+  z.object({ authMode: z.literal('off') }),
+  z.object({
+    authMode: z.literal('shadow'),
+    hub: authHubBootstrapSchema,
+  }),
+  z.object({
+    authMode: z.literal('shared'),
+    hub: authHubBootstrapSchema,
+  }),
+]);
+
+export type AuthBootstrapResponse = z.infer<typeof authBootstrapResponseSchema>;
+
 export const currentSessionResponseSchema = z.object({
+  authMode: authModeSchema.optional(),
+  hub: z
+    .object({
+      homeUrl: z.string().url(),
+      refreshUrl: z.string().url(),
+    })
+    .optional(),
+  expiresIn: z.number().int().positive().optional(),
   user: z.object({
-    id: z.string().uuid(),
+    id: z.string().guid({ error: 'Invalid uuid' }),
     email: z.string().email(),
     name: z.string().min(1),
     avatarUrl: z.string().url().nullable(),
@@ -51,15 +79,15 @@ export const currentSessionResponseSchema = z.object({
   }),
   memberships: z.array(
     z.object({
-      id: z.string().uuid(),
-      organizationId: z.string().uuid(),
+      id: z.string().guid({ error: 'Invalid uuid' }),
+      organizationId: z.string().guid({ error: 'Invalid uuid' }),
       organizationName: z.string().min(1),
       role: membershipRoleSchema,
       roleTitle: z.string().nullable(),
-      unitIds: z.array(z.string().uuid()),
-      gradeIds: z.array(z.string().uuid()),
-      subjectIds: z.array(z.string().uuid()),
-      assignedStudentIds: z.array(z.string().uuid()),
+      unitIds: z.array(z.string().guid({ error: 'Invalid uuid' })),
+      gradeIds: z.array(z.string().guid({ error: 'Invalid uuid' })),
+      subjectIds: z.array(z.string().guid({ error: 'Invalid uuid' })),
+      assignedStudentIds: z.array(z.string().guid({ error: 'Invalid uuid' })),
       permissions: z.array(z.string()),
     }),
   ),

@@ -33,10 +33,10 @@ const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
   z.union([
     jsonPrimitiveSchema,
     z.array(jsonValueSchema),
-    z.record(jsonValueSchema),
+    z.record(z.string(), jsonValueSchema),
   ]),
 );
-const observationDefinitionBodySchema = z.record(jsonValueSchema);
+const observationDefinitionBodySchema = z.record(z.string(), jsonValueSchema);
 
 const observationDefinitionBodyFields = {
   title: z.string().trim().min(1).max(256),

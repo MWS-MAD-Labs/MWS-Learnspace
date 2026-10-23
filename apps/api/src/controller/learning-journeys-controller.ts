@@ -10,9 +10,8 @@ import {
   learningJourneysResponseSchema,
   uuidSchema,
 } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
 import { z } from 'zod';
-import type { AuthenticatedRequest } from '../type/http.js';
+import type { AuthenticatedRequest, RequestHandler } from '../type/http.js';
 import { HttpError, parseRequest } from '../middleware/http-errors.js';
 import { learningJourneyMembershipFor } from '../utils/learning-journeys.policy.js';
 import type { LearningJourneyService } from '../service/learning-journeys-service.js';

@@ -1,18 +1,20 @@
 import type { DatabaseClient } from '../lib/database.js';
-import type { Router } from 'express';
-import { Router as createRouter } from 'express';
+import { createRouter, type Router } from '../type/http.js';
 import {
   createCsrfProtection,
   createRequiredAuthentication,
 } from '../routes/auth-router.js';
 import { organizationSchoolDate } from '../utils/organization-time.js';
 import type { SessionService } from '../service/session-service.js';
+import type { ShadowSessionObserver } from '../service/shared-session-shadow-service.js';
+import type { RequestAuthenticationService } from '../service/request-authentication-service.js';
 import { createIepController } from '../controller/ieps-controller.js';
 import { createIepService } from '../service/ieps-service.js';
 
 export function createIepRouter(
   prisma: DatabaseClient,
-  sessions: SessionService,
+  sessions: SessionService | RequestAuthenticationService,
+  shadowObserver?: ShadowSessionObserver,
 ): Router {
   const router = createRouter();
   const service = createIepService(prisma, async (organizationId) => {
@@ -22,7 +24,7 @@ export function createIepRouter(
   const collectionPath = '/organizations/:organizationId/ieps';
   const iepPath = `${collectionPath}/:iepId`;
 
-  router.use(createRequiredAuthentication(sessions));
+  router.use(createRequiredAuthentication(sessions, shadowObserver));
   router.get(collectionPath, controller.list);
   router.get(iepPath, controller.get);
   router.post(collectionPath, createCsrfProtection(), controller.create);

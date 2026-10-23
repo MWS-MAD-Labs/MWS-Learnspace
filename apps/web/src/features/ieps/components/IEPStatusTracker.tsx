@@ -17,6 +17,16 @@ interface IEPStatusTrackerProps {
   onSelectIEPForEdit?: (studentId: string) => void;
 }
 
+type IEPTrackerRecord = Pick<
+  IEPRecord,
+  | 'id'
+  | 'studentId'
+  | 'draftStatus'
+  | 'coordinatorReviewStatus'
+  | 'directorApprovalStatus'
+  | 'workflowHistory'
+>;
+
 export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
   onSelectIEPForEdit,
 }) => {
@@ -34,14 +44,16 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
   const [stageFilter, setStageFilter] = useState('All Stages');
 
   // Review Modal state
-  const [reviewingIEP, setReviewingIEP] = useState<IEPRecord | null>(null);
+  const [reviewingIEP, setReviewingIEP] = useState<IEPTrackerRecord | null>(
+    null,
+  );
   const [reviewAction, setReviewAction] = useState<'Approve' | 'Return'>(
     'Approve',
   );
   const [reviewComment, setReviewComment] = useState('');
 
   // Timeline / History Modal state
-  const [historyIEP, setHistoryIEP] = useState<IEPRecord | null>(null);
+  const [historyIEP, setHistoryIEP] = useState<IEPTrackerRecord | null>(null);
 
   // Fetch all special needs students and their IEPs
   const isCoordinator = currentUser.isSpecialEdCoordinator;
@@ -70,36 +82,16 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
   // Build combined rows for all special needs students
   const studentIEPRows = useMemo(() => {
     return specialStudents.map((student) => {
-      const record =
-        iepRecords.find((r) => r.studentId === student.id) ||
-        ({
-          id: `iep-${student.id}-2026`,
-          studentId: student.id,
-          year: '2026',
-          academicYear: '2026-2027',
-          semester: 'Semester 1',
-          unit: 'Elementary',
-          status: 'Draft' as const,
-          draftStatus: 'Not Started' as const,
-          coordinatorReviewStatus: 'Not Started' as LJReviewStatus,
-          directorApprovalStatus: 'Not Started' as LJApprovalStatus,
-          primaryClassification: student.primaryDiagnosis || 'Special Support',
-          currentPlacement: 'General Education with GPK Support',
-          teamMembers: [],
-          performanceAreas: [],
-          academicAccommodations: {
-            math: 'A',
-            science: 'A',
-            english: 'A',
-            pe: 'M',
-            makerspace: 'A',
-          },
-          instructionalAccommodations: [],
-          environmentalAccommodations: [],
-          assessmentAccommodations: [],
-          goals: [],
-          workflowHistory: [],
-        } as IEPRecord);
+      const record: IEPTrackerRecord = iepRecords.find(
+        (r) => r.studentId === student.id,
+      ) || {
+        id: `iep-${student.id}-2026`,
+        studentId: student.id,
+        draftStatus: 'Not Started',
+        coordinatorReviewStatus: 'Not Started',
+        directorApprovalStatus: 'Not Started',
+        workflowHistory: [],
+      };
       return { student, iep: record };
     });
   }, [specialStudents, iepRecords]);
@@ -109,7 +101,9 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
     return studentIEPRows.filter(({ student, iep }) => {
       if (
         searchFilter &&
-        !student.name.toLowerCase().includes(searchFilter.toLowerCase()) &&
+        !(student.name ?? student.fullName)
+          .toLowerCase()
+          .includes(searchFilter.toLowerCase()) &&
         !student.studentNumber.includes(searchFilter)
       ) {
         return false;
@@ -154,7 +148,7 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
   ).length;
 
   // Handle Submit Draft (Teacher Action)
-  const handleSubmitDraft = (_iep: IEPRecord) => {
+  const handleSubmitDraft = (_iep: IEPTrackerRecord) => {
     showToast(
       'info',
       'Workflow Unavailable',
@@ -163,7 +157,7 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
   };
 
   // Handle Open Review
-  const handleOpenReview = (iep: IEPRecord) => {
+  const handleOpenReview = (iep: IEPTrackerRecord) => {
     setReviewingIEP(iep);
     setReviewAction('Approve');
     setReviewComment('');

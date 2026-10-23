@@ -1,6 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import type { Router } from 'express';
-import { Router as createRouter } from 'express';
+import { createRouter, type Router } from '../type/http.js';
 import { z } from 'zod';
 import { uuidSchema } from '@learnspace/contracts';
 import { createAuditService } from '../service/audit-service.js';

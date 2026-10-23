@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-export const requiredMigration = '20260827050000_aggregate_search_indexes';
+export const requiredMigration = '20261021000000_external_principals';
 const databaseTimeoutMs = 2_000;
 
 export class IncompatibleDatabaseSchemaError extends Error {

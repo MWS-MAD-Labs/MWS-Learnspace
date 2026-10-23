@@ -6,8 +6,8 @@ import {
   studentsResponseSchema,
   studentUpdateCommandSchema,
 } from '@learnspace/contracts';
-import type { RequestHandler } from 'express';
 import { parseRequest } from '../middleware/http-errors.js';
+import type { RequestHandler } from '../type/http.js';
 import {
   requireResourceAuth,
   requireResourcePermission,

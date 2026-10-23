@@ -47,6 +47,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockedUseAuth.mockReturnValue({
     status: 'authenticated',
+    isSharedSession: false,
     currentUser: {
       id: account.userId,
       name: account.displayName,
@@ -84,6 +85,7 @@ beforeEach(() => {
     },
     login: vi.fn(),
     logout: vi.fn(),
+    backToHub: vi.fn(),
     retry: vi.fn(),
   });
   service.getSettings.mockResolvedValue({

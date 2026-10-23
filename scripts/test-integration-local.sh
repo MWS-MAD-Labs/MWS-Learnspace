@@ -10,5 +10,5 @@ if [ "$DATABASE_URL" = "$DEFAULT_DATABASE_URL" ]; then
 fi
 
 printf '%s\n' 'Running database migrations for the local integration database.'
-npm run db:migrate:deploy
-npm run test:integration -w @learnspace/api
+bun run db:migrate:deploy
+bun run --filter @learnspace/api test:integration

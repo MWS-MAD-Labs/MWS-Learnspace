@@ -1,6 +1,6 @@
-import type { Response } from 'express';
 import type { ZodError, ZodType } from 'zod';
 import { apiErrorSchema } from '@learnspace/contracts';
+import type { HttpResponse } from '../type/http.js';
 
 export class HttpError extends Error {
   constructor(
@@ -30,7 +30,7 @@ export function parseRequest<T>(schema: ZodType<T>, value: unknown): T {
 }
 
 export function sendSafeError(
-  response: Response,
+  response: HttpResponse,
   status: number,
   code: string,
   message: string,
