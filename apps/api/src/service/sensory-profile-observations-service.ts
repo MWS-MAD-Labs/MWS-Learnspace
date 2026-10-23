@@ -11,6 +11,7 @@ import {
   uuidSchema,
 } from '@learnspace/contracts';
 import { createAuditService } from '../service/audit-service.js';
+import { membershipHasPermission } from '../utils/authorization.js';
 import { createCsrfProtection } from '../middleware/auth-middleware.js';
 import { HttpError, parseRequest } from '../middleware/http-errors.js';
 import { scoreSensoryProfileResponses } from '../utils/sensory-profile-scoring.js';
@@ -485,7 +486,7 @@ export function createSensoryProfileObservationsService(
           select: sensoryProfileObservationSelect,
         });
         const canReadEmptyStudent =
-          membership.role === 'SPECIAL_ED_COORDINATOR' ||
+          membershipHasPermission(membership, 'scope.special-ed') ||
           (membership.assignedStudentScopes ?? []).some(
             (scope) =>
               scope.organizationId === membership.organizationId &&
@@ -554,7 +555,7 @@ export function createSensoryProfileObservationsService(
             ),
         );
         const canReadEmptyStudent =
-          membership.role === 'SPECIAL_ED_COORDINATOR' ||
+          membershipHasPermission(membership, 'scope.special-ed') ||
           (membership.assignedStudentScopes ?? []).some(
             (scope) =>
               scope.organizationId === membership.organizationId &&

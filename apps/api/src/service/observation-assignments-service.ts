@@ -10,6 +10,7 @@ import {
   uuidSchema,
 } from '@learnspace/contracts';
 import { createAuditService } from '../service/audit-service.js';
+import { membershipHasPermission } from '../utils/authorization.js';
 import { createCsrfProtection } from '../middleware/auth-middleware.js';
 import { parseRequest } from '../middleware/http-errors.js';
 import {
@@ -43,7 +44,7 @@ export function createObservationAssignmentsService(
         const rows = await prisma.observationAssignment.findMany({
           where: {
             organizationId: path.organizationId,
-            ...(membership.role === 'SPECIAL_ED_COORDINATOR'
+            ...(membershipHasPermission(membership, 'scope.special-ed')
               ? {}
               : {
                   assignedTo: {

@@ -1,5 +1,8 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
-import type { MembershipScope } from '../utils/authorization.js';
+import {
+  membershipHasPermission,
+  type MembershipScope,
+} from '../utils/authorization.js';
 import { HttpError } from '../middleware/http-errors.js';
 import {
   isLeadership,
@@ -46,7 +49,10 @@ export function createAcademicsService(prisma: PrismaClient) {
     async listUnits(organizationId: string, membership: MembershipScope) {
       requireAcademicCollectionAccess(membership, 'units');
       const where: Prisma.UnitWhereInput = { organizationId };
-      if (!isLeadership(membership) && membership.role !== 'SUBJECT_TEACHER') {
+      if (
+        !isLeadership(membership) &&
+        !membershipHasPermission(membership, 'scope.subject')
+      ) {
         const unitIds = new Set(membership.unitIds);
         if (membership.gradeIds.length) {
           const gradeUnits = await prisma.grade.findMany({
@@ -73,7 +79,10 @@ export function createAcademicsService(prisma: PrismaClient) {
     async listGrades(organizationId: string, membership: MembershipScope) {
       requireAcademicCollectionAccess(membership, 'grades');
       const where: Prisma.GradeWhereInput = { organizationId };
-      if (!isLeadership(membership) && membership.role !== 'SUBJECT_TEACHER') {
+      if (
+        !isLeadership(membership) &&
+        !membershipHasPermission(membership, 'scope.subject')
+      ) {
         const scopes: Prisma.GradeWhereInput[] = [];
         if (membership.gradeIds.length) {
           scopes.push({ id: { in: membership.gradeIds } });
@@ -115,7 +124,10 @@ export function createAcademicsService(prisma: PrismaClient) {
     async listSubjects(organizationId: string, membership: MembershipScope) {
       requireAcademicCollectionAccess(membership, 'subjects');
       const where: Prisma.SubjectWhereInput = { organizationId };
-      if (!isLeadership(membership) && membership.role === 'SUBJECT_TEACHER') {
+      if (
+        !isLeadership(membership) &&
+        membershipHasPermission(membership, 'scope.subject')
+      ) {
         if (!membership.subjectIds.length) {
           throw new HttpError(
             403,

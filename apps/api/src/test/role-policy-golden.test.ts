@@ -1,10 +1,11 @@
 import { MembershipRole } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 import {
-  PERMISSIONS,
   membershipHasPermission,
   permissionsForRole,
+  roleDerivedPermissions,
   type MembershipScope,
+  type Permission,
 } from '../utils/authorization.js';
 import {
   aggregateActiveAssignedStudentIds,
@@ -20,7 +21,7 @@ import {
   activeAssignedStudentIds,
   assertIepStudentScope,
   canRoleRunIepWorkflowCommand,
-  iepWorkflowRoles,
+  iepWorkflowPermissions,
   requireIepPermission,
   requireIepRole,
   type IepWorkflowCommandName,
@@ -57,6 +58,25 @@ import {
 const ORGANIZATION = 'organization-a';
 const DAY = new Date('2026-03-10T00:00:00.000Z');
 const ROLES = Object.values(MembershipRole);
+// The permissions that existed when the snapshot was taken. Newer keys are checked in their own test.
+const LEGACY_PERMISSIONS: readonly Permission[] = [
+  'attendance:read',
+  'attendance:write',
+  'journey:read',
+  'journey:write',
+  'journey:review',
+  'journey:approve',
+  'special-ed:read',
+  'special-ed:write',
+  'special-ed:review',
+  'report:export',
+  'student:admin',
+  'student:sensitive-read',
+  'staff-directory:read',
+  'staff-assignment:admin',
+  'organization:admin',
+  'observation:manage',
+];
 
 function membership(
   role: MembershipRole,
@@ -104,7 +124,9 @@ function outcome(call: () => unknown): unknown {
   }
 }
 
-const COMMANDS = Object.keys(iepWorkflowRoles) as IepWorkflowCommandName[];
+const COMMANDS = Object.keys(
+  iepWorkflowPermissions,
+) as IepWorkflowCommandName[];
 const TRANSITIONS: WeeklyReportTransitionKind[] = [
   'submit',
   'coordinator',
@@ -130,7 +152,10 @@ function decisionsFor(role: MembershipRole) {
   return {
     permissions: permissionsForRole(role),
     permissionChecks: Object.fromEntries(
-      PERMISSIONS.map((key) => [key, membershipHasPermission(scoped, key)]),
+      LEGACY_PERMISSIONS.map((key) => [
+        key,
+        membershipHasPermission(scoped, key),
+      ]),
     ),
     leadership: isLeadership(scoped),
     attendance: {
@@ -317,4 +342,59 @@ describe('what each built-in role is allowed today', () => {
       expect(JSON.parse(JSON.stringify(decisionsFor(role)))).toMatchSnapshot();
     });
   }
+});
+
+describe('what the role name gives as permissions', () => {
+  it('matches the table of ADR 0002', () => {
+    expect(roleDerivedPermissions).toEqual({
+      DIRECTOR: [
+        'scope.organization',
+        'iep:director-approve',
+        'iep:director-return',
+        'iep:activate',
+        'iep:archive',
+        'weekly-report:direct',
+      ],
+      PRINCIPAL: ['scope.organization'],
+      GRADE_TEACHER: ['scope.grade'],
+      SUBJECT_TEACHER: ['scope.subject'],
+      SPECIAL_ED_COORDINATOR: [
+        'scope.special-ed',
+        'iep:submit',
+        'iep:coordinator-approve',
+        'iep:coordinator-return',
+        'weekly-report:coordinate',
+      ],
+      SPECIAL_ED_TEACHER: [
+        'scope.assigned',
+        'iep:submit',
+        'weekly-report:teach',
+      ],
+      SPECIALIST: ['scope.assigned', 'iep:submit', 'weekly-report:teach'],
+    });
+  });
+
+  it('never adds a key the role did not have before to the old permissions', () => {
+    for (const role of ROLES) {
+      const before = new Set(permissionsForRole(role));
+      for (const key of LEGACY_PERMISSIONS) {
+        expect(membershipHasPermission(membership(role), key)).toBe(
+          before.has(key),
+        );
+      }
+    }
+  });
+
+  it('gives a Central permission list its own keys and still the ones the role implies', () => {
+    const fromCentral = membership('GRADE_TEACHER', {
+      permissions: ['attendance:read', 'scope.organization'],
+    });
+    expect(membershipHasPermission(fromCentral, 'scope.organization')).toBe(
+      true,
+    );
+    expect(membershipHasPermission(fromCentral, 'scope.grade')).toBe(true);
+    expect(membershipHasPermission(fromCentral, 'attendance:write')).toBe(
+      false,
+    );
+  });
 });

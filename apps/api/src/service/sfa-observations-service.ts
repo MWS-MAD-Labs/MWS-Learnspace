@@ -11,6 +11,7 @@ import {
   uuidSchema,
 } from '@learnspace/contracts';
 import { createAuditService } from '../service/audit-service.js';
+import { membershipHasPermission } from '../utils/authorization.js';
 import { createCsrfProtection } from '../middleware/auth-middleware.js';
 import { HttpError, parseRequest } from '../middleware/http-errors.js';
 import { scoreSfaResponses } from '../utils/sfa-scoring.js';
@@ -572,7 +573,7 @@ export function createSfaObservationsService(prisma: PrismaClient): Router {
           select: sfaObservationSelect,
         });
         const canReadEmptyStudent =
-          membership.role === 'SPECIAL_ED_COORDINATOR' ||
+          membershipHasPermission(membership, 'scope.special-ed') ||
           (membership.assignedStudentScopes ?? []).some(
             (scope) =>
               scope.organizationId === membership.organizationId &&
@@ -641,7 +642,7 @@ export function createSfaObservationsService(prisma: PrismaClient): Router {
             ),
         );
         const canReadEmptyStudent =
-          membership.role === 'SPECIAL_ED_COORDINATOR' ||
+          membershipHasPermission(membership, 'scope.special-ed') ||
           (membership.assignedStudentScopes ?? []).some(
             (scope) =>
               scope.organizationId === membership.organizationId &&

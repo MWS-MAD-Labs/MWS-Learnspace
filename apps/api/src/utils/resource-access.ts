@@ -1,19 +1,13 @@
-import { Prisma, type MembershipRole } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   AuthorizationDeniedError,
+  membershipHasPermission,
   requireOrganizationScope,
   requirePermission,
   type MembershipScope,
 } from '../utils/authorization.js';
 import type { AuthenticatedRequest, HttpRequest } from '../type/http.js';
 import { HttpError } from '../middleware/http-errors.js';
-
-const leadershipRoles: readonly MembershipRole[] = ['DIRECTOR', 'PRINCIPAL'];
-const assignedStudentRoles: readonly MembershipRole[] = [
-  'SPECIAL_ED_COORDINATOR',
-  'SPECIAL_ED_TEACHER',
-  'SPECIALIST',
-];
 
 export function requireResourceAuth(
   request: HttpRequest,
@@ -74,7 +68,7 @@ export function requireResourcePermission(
 }
 
 export function isLeadership(membership: MembershipScope): boolean {
-  return leadershipRoles.includes(membership.role);
+  return membershipHasPermission(membership, 'scope.organization');
 }
 
 export function requireAcademicCollectionAccess(
@@ -82,8 +76,15 @@ export function requireAcademicCollectionAccess(
   resource:
     'academicYears' | 'semesters' | 'units' | 'grades' | 'classes' | 'subjects',
 ): void {
-  if (isLeadership(membership) || membership.role === 'GRADE_TEACHER') return;
-  if (membership.role === 'SUBJECT_TEACHER' && resource !== 'classes') {
+  if (
+    isLeadership(membership) ||
+    membershipHasPermission(membership, 'scope.grade')
+  )
+    return;
+  if (
+    membershipHasPermission(membership, 'scope.subject') &&
+    resource !== 'classes'
+  ) {
     return;
   }
   throw new HttpError(403, 'AUTHORIZATION_DENIED', 'The request was denied.');
@@ -93,7 +94,7 @@ export function scopedClassWhere(
   membership: MembershipScope,
 ): Prisma.SchoolClassWhereInput | undefined {
   if (isLeadership(membership)) return {};
-  if (membership.role === 'GRADE_TEACHER') {
+  if (membershipHasPermission(membership, 'scope.grade')) {
     const scopes: Prisma.SchoolClassWhereInput[] = [];
     if (membership.unitIds.length) {
       scopes.push({ unitId: { in: membership.unitIds } });
@@ -121,10 +122,10 @@ export function studentScopeWhere(
   enrollmentFilter: Prisma.EnrollmentWhereInput = {},
 ): Prisma.StudentWhereInput | undefined {
   if (isLeadership(membership)) return {};
-  if (membership.role === 'SPECIAL_ED_COORDINATOR') {
+  if (membershipHasPermission(membership, 'scope.special-ed')) {
     return { specialNeedsFlag: true };
   }
-  if (membership.role === 'GRADE_TEACHER') {
+  if (membershipHasPermission(membership, 'scope.grade')) {
     const classScope = scopedClassWhere(membership);
     if (!classScope) return undefined;
     return {
@@ -141,7 +142,10 @@ export function studentScopeWhere(
       },
     };
   }
-  if (assignedStudentRoles.includes(membership.role)) {
+  if (
+    membershipHasPermission(membership, 'scope.special-ed') ||
+    membershipHasPermission(membership, 'scope.assigned')
+  ) {
     const datedStudentIds = membership.assignedStudentScopes
       ? membership.assignedStudentScopes
           .filter(

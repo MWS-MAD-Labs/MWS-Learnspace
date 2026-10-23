@@ -62,6 +62,11 @@ Each role keeps today's permissions and adds:
 
 `apps/api/src/test/role-policy-golden.test.ts` pins every decision the seven roles get today from each function above, with a snapshot. Whatever replaces a role check must keep the snapshot unchanged. A decision may only change in a commit that says why.
 
+## Status of the change
+
+- Done: the new permissions are in the manifest and `permissions.json`; every access rule (attendance, resources, journeys, weekly reports, IEPs, observations, aggregates, and the services that scoped by role) asks for a permission. The role still supplies them through `roleDerivedPermissions`, so the snapshot is unchanged.
+- Next: store the permissions of the entitlement on the membership, drop the exact-match rule in the Central login, turn the role enum into text, and remove `roleDerivedPermissions`.
+
 ## Consequences
 
 - Central can add a role or change a role's permissions without a Learnspace release.

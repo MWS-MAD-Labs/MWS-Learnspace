@@ -19,6 +19,22 @@ export const PERMISSIONS = [
   'staff-assignment:admin',
   'organization:admin',
   'observation:manage',
+  // What the role name used to decide: how far a person reaches, and who may take each workflow step.
+  'scope.organization',
+  'scope.grade',
+  'scope.subject',
+  'scope.special-ed',
+  'scope.assigned',
+  'iep:submit',
+  'iep:coordinator-approve',
+  'iep:coordinator-return',
+  'iep:director-approve',
+  'iep:director-return',
+  'iep:activate',
+  'iep:archive',
+  'weekly-report:teach',
+  'weekly-report:coordinate',
+  'weekly-report:direct',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -102,6 +118,81 @@ export const PERMISSION_MANIFEST = [
     description: 'Manage observation definitions and student assignments.',
     requires: ['special-ed:read'],
   },
+  {
+    key: 'scope.organization',
+    description:
+      'Reach every record of the organization, without a unit, grade, subject, or assignment limit.',
+  },
+  {
+    key: 'scope.grade',
+    description:
+      'Reach the classes, students, and Learning Journeys of the units and grades assigned in Learnspace.',
+  },
+  {
+    key: 'scope.subject',
+    description:
+      'Reach the Learning Journeys of the subjects assigned in Learnspace.',
+  },
+  {
+    key: 'scope.special-ed',
+    description:
+      'Reach every special-needs student, observation, and IEP of the organization.',
+  },
+  {
+    key: 'scope.assigned',
+    description:
+      'Reach only the students assigned in Learnspace, for the dates of the assignment.',
+  },
+  {
+    key: 'iep:submit',
+    description: 'Submit an IEP for review.',
+    requires: ['special-ed:write'],
+  },
+  {
+    key: 'iep:coordinator-approve',
+    description: 'Approve an IEP as the special-education coordinator.',
+    requires: ['special-ed:review'],
+  },
+  {
+    key: 'iep:coordinator-return',
+    description: 'Return an IEP as the special-education coordinator.',
+    requires: ['special-ed:review'],
+  },
+  {
+    key: 'iep:director-approve',
+    description: 'Approve an IEP as the director.',
+    requires: ['special-ed:review'],
+  },
+  {
+    key: 'iep:director-return',
+    description: 'Return an IEP as the director.',
+    requires: ['special-ed:review'],
+  },
+  {
+    key: 'iep:activate',
+    description: 'Activate an approved IEP.',
+    requires: ['special-ed:review'],
+  },
+  {
+    key: 'iep:archive',
+    description: 'Archive an IEP.',
+    requires: ['special-ed:review'],
+  },
+  {
+    key: 'weekly-report:teach',
+    description: 'Write, edit, and submit own weekly reports.',
+    requires: ['special-ed:write'],
+  },
+  {
+    key: 'weekly-report:coordinate',
+    description: 'Take the coordinator step of a weekly report.',
+    requires: ['special-ed:review'],
+  },
+  {
+    key: 'weekly-report:direct',
+    description: 'Take the director step of a weekly report.',
+    requires: ['special-ed:review'],
+  },
 ] satisfies LearnspacePermissionManifestEntry[];
 
 export const permissionsByRole: Record<MembershipRole, readonly Permission[]> =
@@ -154,6 +245,34 @@ export const permissionsByRole: Record<MembershipRole, readonly Permission[]> =
     ],
     SPECIALIST: ['special-ed:read', 'special-ed:write'],
   };
+
+// What the role name used to decide, as permissions. A Central role will carry these itself; until it does, the role
+// gives them, so nobody gains or loses anything. The golden test pins the result.
+export const roleDerivedPermissions: Record<
+  MembershipRole,
+  readonly Permission[]
+> = {
+  DIRECTOR: [
+    'scope.organization',
+    'iep:director-approve',
+    'iep:director-return',
+    'iep:activate',
+    'iep:archive',
+    'weekly-report:direct',
+  ],
+  PRINCIPAL: ['scope.organization'],
+  GRADE_TEACHER: ['scope.grade'],
+  SUBJECT_TEACHER: ['scope.subject'],
+  SPECIAL_ED_COORDINATOR: [
+    'scope.special-ed',
+    'iep:submit',
+    'iep:coordinator-approve',
+    'iep:coordinator-return',
+    'weekly-report:coordinate',
+  ],
+  SPECIAL_ED_TEACHER: ['scope.assigned', 'iep:submit', 'weekly-report:teach'],
+  SPECIALIST: ['scope.assigned', 'iep:submit', 'weekly-report:teach'],
+};
 
 export function permissionsForRole(
   role: MembershipRole,
@@ -209,9 +328,13 @@ export function membershipHasPermission(
   membership: MembershipScope,
   permission: Permission,
 ): boolean {
-  return membership.permissions
+  const own = membership.permissions
     ? membership.permissions.includes(permission)
     : hasPermission(membership.role, permission);
+  return (
+    own ||
+    roleDerivedPermissions[membership.role]?.includes(permission) === true
+  );
 }
 
 type AuditAppender = {

@@ -1,17 +1,12 @@
-import type { MembershipRole } from '@prisma/client';
 import {
   AuthorizationDeniedError,
+  membershipHasPermission,
   requireOrganizationScope,
   requirePermission,
   type MembershipScope,
 } from '../utils/authorization.js';
 import { HttpError } from '../middleware/http-errors.js';
 import { activeAssignedStudentIds } from '../utils/ieps.policy.js';
-
-const teacherRoles = new Set<MembershipRole>([
-  'SPECIAL_ED_TEACHER',
-  'SPECIALIST',
-]);
 
 export type WeeklyReportTransitionKind = 'submit' | 'coordinator' | 'director';
 
@@ -62,7 +57,8 @@ export function assertWeeklyReportStudentScope(
 }
 
 export function requireWeeklyReportTeacher(membership: MembershipScope) {
-  if (!teacherRoles.has(membership.role)) denyWeeklyReportAccess();
+  if (!membershipHasPermission(membership, 'weekly-report:teach'))
+    denyWeeklyReportAccess();
 }
 
 export function requireWeeklyReportEditor(
@@ -70,7 +66,10 @@ export function requireWeeklyReportEditor(
   teacherId: string,
   actorId: string,
 ) {
-  if (!teacherRoles.has(membership.role) || teacherId !== actorId) {
+  if (
+    !membershipHasPermission(membership, 'weekly-report:teach') ||
+    teacherId !== actorId
+  ) {
     denyWeeklyReportAccess();
   }
 }
@@ -83,10 +82,13 @@ export function requireWeeklyReportTransitionActor(
 ) {
   const teacher =
     kind === 'submit' &&
-    teacherRoles.has(membership.role) &&
+    membershipHasPermission(membership, 'weekly-report:teach') &&
     teacherId === actorId;
   const coordinator =
-    kind === 'coordinator' && membership.role === 'SPECIAL_ED_COORDINATOR';
-  const director = kind === 'director' && membership.role === 'DIRECTOR';
+    kind === 'coordinator' &&
+    membershipHasPermission(membership, 'weekly-report:coordinate');
+  const director =
+    kind === 'director' &&
+    membershipHasPermission(membership, 'weekly-report:direct');
   if (!teacher && !coordinator && !director) denyWeeklyReportAccess();
 }

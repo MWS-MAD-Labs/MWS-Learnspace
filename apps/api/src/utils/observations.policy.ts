@@ -1,5 +1,6 @@
 import {
   AuthorizationDeniedError,
+  membershipHasPermission,
   requireOrganizationScope,
   requirePermission,
   type MembershipScope,
@@ -52,7 +53,7 @@ export function canReadObservationStudent(
   studentId: string,
   observationDate: Date,
 ): boolean {
-  if (membership.role === 'SPECIAL_ED_COORDINATOR') return true;
+  if (membershipHasPermission(membership, 'scope.special-ed')) return true;
   return (membership.assignedStudentScopes ?? []).some(
     (scope) =>
       scope.organizationId === membership.organizationId &&

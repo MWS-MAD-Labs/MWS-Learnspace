@@ -1,13 +1,12 @@
-import { Prisma, type MembershipRole } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   AuthorizationDeniedError,
+  membershipHasPermission,
   requireOrganizationScope,
   requirePermission,
   type MembershipScope,
 } from '../utils/authorization.js';
 import { HttpError } from '../middleware/http-errors.js';
-
-const leadershipRoles: readonly MembershipRole[] = ['DIRECTOR', 'PRINCIPAL'];
 
 function deny(): never {
   throw new HttpError(403, 'AUTHORIZATION_DENIED', 'The request was denied.');
@@ -36,8 +35,8 @@ export function requireAttendanceClassScope(
     throw error;
   }
 
-  if (leadershipRoles.includes(membership.role)) return {};
-  if (membership.role !== 'GRADE_TEACHER') deny();
+  if (membershipHasPermission(membership, 'scope.organization')) return {};
+  if (!membershipHasPermission(membership, 'scope.grade')) deny();
 
   const scopes: Prisma.SchoolClassWhereInput[] = [];
   if (membership.unitIds.length)

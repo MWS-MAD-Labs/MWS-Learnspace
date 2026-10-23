@@ -1,4 +1,4 @@
-import { Prisma, type MembershipRole, type PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import {
   type AggregateNotification,
   type AggregateSearchItem,
@@ -9,11 +9,10 @@ import {
 } from '../utils/authorization.js';
 export { schoolDateInTimezone } from '../utils/organization-time.js';
 
-const leadershipRoles = new Set<MembershipRole>(['DIRECTOR', 'PRINCIPAL']);
-const assignedStudentRoles = new Set<MembershipRole>([
-  'SPECIAL_ED_TEACHER',
-  'SPECIALIST',
-]);
+const hasScope = (
+  membership: MembershipScope,
+  key: Parameters<typeof membershipHasPermission>[1],
+) => membershipHasPermission(membership, key);
 const activeIepStates = ['ACTIVE'] as const;
 const openObservationStates = ['PENDING', 'IN_PROGRESS'] as const;
 
@@ -22,13 +21,12 @@ export function aggregateActiveAssignedStudentIds(
   onDate: Date,
 ): string[] | undefined {
   if (
-    membership.role === 'DIRECTOR' ||
-    membership.role === 'PRINCIPAL' ||
-    membership.role === 'SPECIAL_ED_COORDINATOR'
+    hasScope(membership, 'scope.organization') ||
+    hasScope(membership, 'scope.special-ed')
   ) {
     return undefined;
   }
-  if (!assignedStudentRoles.has(membership.role)) return [];
+  if (!hasScope(membership, 'scope.assigned')) return [];
   return [
     ...new Set(
       (membership.assignedStudentScopes ?? [])
@@ -47,11 +45,11 @@ export function aggregateStudentScopeWhere(
   membership: MembershipScope,
   schoolDate: Date,
 ): Prisma.StudentWhereInput | undefined {
-  if (leadershipRoles.has(membership.role)) return {};
-  if (membership.role === 'SPECIAL_ED_COORDINATOR') {
+  if (hasScope(membership, 'scope.organization')) return {};
+  if (hasScope(membership, 'scope.special-ed')) {
     return { specialNeedsFlag: true };
   }
-  if (membership.role === 'GRADE_TEACHER') {
+  if (hasScope(membership, 'scope.grade')) {
     const classScopes: Prisma.SchoolClassWhereInput[] = [];
     if (membership.unitIds.length) {
       classScopes.push({ unitId: { in: membership.unitIds } });
@@ -70,7 +68,7 @@ export function aggregateStudentScopeWhere(
       },
     };
   }
-  if (assignedStudentRoles.has(membership.role)) {
+  if (hasScope(membership, 'scope.assigned')) {
     const ids = [
       ...new Set([
         ...(aggregateActiveAssignedStudentIds(membership, schoolDate) ?? []),
@@ -85,8 +83,8 @@ export function aggregateStudentScopeWhere(
 export function aggregateJourneyScopeWhere(
   membership: MembershipScope,
 ): Prisma.LearningJourneyWhereInput | undefined {
-  if (leadershipRoles.has(membership.role)) return {};
-  if (membership.role === 'GRADE_TEACHER') {
+  if (hasScope(membership, 'scope.organization')) return {};
+  if (hasScope(membership, 'scope.grade')) {
     const scopes: Prisma.LearningJourneyWhereInput[] = [];
     if (membership.unitIds.length)
       scopes.push({ unitId: { in: membership.unitIds } });
@@ -94,7 +92,7 @@ export function aggregateJourneyScopeWhere(
       scopes.push({ gradeId: { in: membership.gradeIds } });
     return scopes.length ? { OR: scopes } : undefined;
   }
-  if (membership.role === 'SUBJECT_TEACHER') {
+  if (hasScope(membership, 'scope.subject')) {
     return membership.subjectIds.length
       ? { subjectId: { in: membership.subjectIds } }
       : undefined;
@@ -116,10 +114,10 @@ export function observationAssignmentWhere(
   organizationId: string,
   userId: string,
 ): Prisma.ObservationAssignmentWhereInput | undefined {
-  if (membership.role === 'SPECIAL_ED_COORDINATOR') {
+  if (hasScope(membership, 'scope.special-ed')) {
     return { organizationId };
   }
-  if (!assignedStudentRoles.has(membership.role)) return undefined;
+  if (!hasScope(membership, 'scope.assigned')) return undefined;
   return {
     organizationId,
     assignedTo: { userId, organizationId, status: 'ACTIVE' },
@@ -128,8 +126,8 @@ export function observationAssignmentWhere(
 
 export function canReportObservationAggregates(membership: MembershipScope) {
   return (
-    membership.role === 'SPECIAL_ED_COORDINATOR' ||
-    assignedStudentRoles.has(membership.role)
+    hasScope(membership, 'scope.special-ed') ||
+    hasScope(membership, 'scope.assigned')
   );
 }
 
@@ -138,7 +136,7 @@ export function aggregateDatedObservationScope(
   userId: string,
   dateField: 'observationDate' | 'assessmentDate',
 ) {
-  if (membership.role === 'SPECIAL_ED_COORDINATOR') return {};
+  if (hasScope(membership, 'scope.special-ed')) return {};
   const scopes: Array<Record<string, unknown>> = [
     { assignment: { assignedTo: { userId } } },
   ];
@@ -250,19 +248,18 @@ export async function aggregateAttendanceSummary(
       absent: 0,
     };
   }
-  const classScope =
-    membership.role === 'GRADE_TEACHER'
-      ? (() => {
-          const scopes: Prisma.SchoolClassWhereInput[] = [];
-          if (membership.unitIds.length) {
-            scopes.push({ unitId: { in: membership.unitIds } });
-          }
-          if (membership.gradeIds.length) {
-            scopes.push({ gradeId: { in: membership.gradeIds } });
-          }
-          return scopes.length ? { OR: scopes } : undefined;
-        })()
-      : {};
+  const classScope = hasScope(membership, 'scope.grade')
+    ? (() => {
+        const scopes: Prisma.SchoolClassWhereInput[] = [];
+        if (membership.unitIds.length) {
+          scopes.push({ unitId: { in: membership.unitIds } });
+        }
+        if (membership.gradeIds.length) {
+          scopes.push({ gradeId: { in: membership.gradeIds } });
+        }
+        return scopes.length ? { OR: scopes } : undefined;
+      })()
+    : {};
   if (classScope === undefined) {
     return {
       schoolDate: schoolDate.toISOString().slice(0, 10),
@@ -401,19 +398,21 @@ export async function aggregateSearchItems(
   schoolDate: Date,
 ) {
   const studentWhere = aggregateStudentScopeWhere(membership, schoolDate);
-  const studentClassScope: Prisma.SchoolClassWhereInput =
-    membership.role === 'GRADE_TEACHER'
-      ? {
-          OR: [
-            ...(membership.unitIds.length
-              ? [{ unitId: { in: membership.unitIds } }]
-              : []),
-            ...(membership.gradeIds.length
-              ? [{ gradeId: { in: membership.gradeIds } }]
-              : []),
-          ],
-        }
-      : {};
+  const studentClassScope: Prisma.SchoolClassWhereInput = hasScope(
+    membership,
+    'scope.grade',
+  )
+    ? {
+        OR: [
+          ...(membership.unitIds.length
+            ? [{ unitId: { in: membership.unitIds } }]
+            : []),
+          ...(membership.gradeIds.length
+            ? [{ gradeId: { in: membership.gradeIds } }]
+            : []),
+        ],
+      }
+    : {};
   const journeyWhere = aggregateJourneyScopeWhere(membership);
   const specialStudentWhere = specialEducationStudentWhere(
     membership,
@@ -670,12 +669,20 @@ export async function aggregateNotifications(
   schoolDate: Date,
 ) {
   const items: AggregateNotification[] = [];
+  const approvesJourneys = hasScope(membership, 'journey:approve');
   const addJourneyReviews =
-    membership.role === 'PRINCIPAL' || membership.role === 'DIRECTOR';
-  const journeyState =
-    membership.role === 'PRINCIPAL' ? 'PRINCIPAL_REVIEW' : 'DIRECTOR_APPROVAL';
+    approvesJourneys || hasScope(membership, 'journey:review');
+  const journeyState = approvesJourneys
+    ? 'DIRECTOR_APPROVAL'
+    : 'PRINCIPAL_REVIEW';
+  const coordinatesIeps = hasScope(membership, 'iep:coordinator-approve');
+  const approvesIeps =
+    coordinatesIeps || hasScope(membership, 'iep:director-approve');
+  const coordinatesReports = hasScope(membership, 'weekly-report:coordinate');
+  const approvesReports =
+    coordinatesReports || hasScope(membership, 'weekly-report:direct');
   const specialIds = aggregateActiveAssignedStudentIds(membership, schoolDate);
-  const activeDraftStudentIds = assignedStudentRoles.has(membership.role)
+  const activeDraftStudentIds = hasScope(membership, 'scope.assigned')
     ? (specialIds ?? [])
     : undefined;
   const observationWhere = observationAssignmentWhere(
@@ -693,15 +700,11 @@ export async function aggregateNotifications(
           select: { id: true, title: true, updatedAt: true },
         })
       : Promise.resolve([]),
-    membership.role === 'SPECIAL_ED_COORDINATOR' ||
-    membership.role === 'DIRECTOR'
+    approvesIeps
       ? prisma.iEP.findMany({
           where: {
             organizationId,
-            state:
-              membership.role === 'SPECIAL_ED_COORDINATOR'
-                ? 'COORDINATOR_REVIEW'
-                : 'DIRECTOR_APPROVAL',
+            state: coordinatesIeps ? 'COORDINATOR_REVIEW' : 'DIRECTOR_APPROVAL',
             ...(specialIds ? { studentId: { in: specialIds } } : {}),
             student: { status: 'ACTIVE' },
           },
@@ -715,15 +718,13 @@ export async function aggregateNotifications(
           },
         })
       : Promise.resolve([]),
-    membership.role === 'SPECIAL_ED_COORDINATOR' ||
-    membership.role === 'DIRECTOR'
+    approvesReports
       ? prisma.weeklyReport.findMany({
           where: {
             organizationId,
-            state:
-              membership.role === 'SPECIAL_ED_COORDINATOR'
-                ? 'COORDINATOR_REVIEW'
-                : 'DIRECTOR_APPROVAL',
+            state: coordinatesReports
+              ? 'COORDINATOR_REVIEW'
+              : 'DIRECTOR_APPROVAL',
             ...(specialIds ? { studentId: { in: specialIds } } : {}),
             student: { status: 'ACTIVE' },
           },
@@ -756,7 +757,7 @@ export async function aggregateNotifications(
           },
         })
       : Promise.resolve([]),
-    assignedStudentRoles.has(membership.role) && activeDraftStudentIds?.length
+    hasScope(membership, 'scope.assigned') && activeDraftStudentIds?.length
       ? prisma.weeklyReport.findMany({
           where: {
             organizationId,

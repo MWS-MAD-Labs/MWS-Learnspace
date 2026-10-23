@@ -1,14 +1,14 @@
 import type { MembershipRole } from '@prisma/client';
 import {
   AuthorizationDeniedError,
+  membershipHasPermission,
   requireOrganizationScope,
   requirePermission,
+  roleDerivedPermissions,
   type MembershipScope,
+  type Permission,
 } from '../utils/authorization.js';
 import { HttpError } from '../middleware/http-errors.js';
-
-const broadRoles = new Set(['DIRECTOR', 'PRINCIPAL', 'SPECIAL_ED_COORDINATOR']);
-const assignedRoles = new Set(['SPECIAL_ED_TEACHER', 'SPECIALIST']);
 
 export type IepWorkflowCommandName =
   | 'SUBMIT'
@@ -19,17 +19,18 @@ export type IepWorkflowCommandName =
   | 'ACTIVATE'
   | 'ARCHIVE';
 
-export const iepWorkflowRoles: Record<
+// The permission that lets a person take each step of the IEP workflow.
+export const iepWorkflowPermissions: Record<
   IepWorkflowCommandName,
-  readonly MembershipRole[]
+  Permission
 > = {
-  SUBMIT: ['SPECIAL_ED_COORDINATOR', 'SPECIAL_ED_TEACHER', 'SPECIALIST'],
-  COORDINATOR_APPROVE: ['SPECIAL_ED_COORDINATOR'],
-  COORDINATOR_RETURN: ['SPECIAL_ED_COORDINATOR'],
-  DIRECTOR_APPROVE: ['DIRECTOR'],
-  DIRECTOR_RETURN: ['DIRECTOR'],
-  ACTIVATE: ['DIRECTOR'],
-  ARCHIVE: ['DIRECTOR'],
+  SUBMIT: 'iep:submit',
+  COORDINATOR_APPROVE: 'iep:coordinator-approve',
+  COORDINATOR_RETURN: 'iep:coordinator-return',
+  DIRECTOR_APPROVE: 'iep:director-approve',
+  DIRECTOR_RETURN: 'iep:director-return',
+  ACTIVATE: 'iep:activate',
+  ARCHIVE: 'iep:archive',
 };
 
 export function denyIepAccess(): never {
@@ -64,8 +65,12 @@ export function activeAssignedStudentIds(
   membership: MembershipScope,
   onDate = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`),
 ): string[] | undefined {
-  if (broadRoles.has(membership.role)) return undefined;
-  if (!assignedRoles.has(membership.role)) return [];
+  if (
+    membershipHasPermission(membership, 'scope.organization') ||
+    membershipHasPermission(membership, 'scope.special-ed')
+  )
+    return undefined;
+  if (!membershipHasPermission(membership, 'scope.assigned')) return [];
   return [
     ...new Set(
       (membership.assignedStudentScopes ?? [])
@@ -96,12 +101,13 @@ export function canRoleRunIepWorkflowCommand(
   role: MembershipRole,
   command: IepWorkflowCommandName,
 ): boolean {
-  return iepWorkflowRoles[command].includes(role);
+  return roleDerivedPermissions[role].includes(iepWorkflowPermissions[command]);
 }
 
 export function requireIepRole(
   membership: MembershipScope,
   command: IepWorkflowCommandName,
 ) {
-  if (!canRoleRunIepWorkflowCommand(membership.role, command)) denyIepAccess();
+  if (!membershipHasPermission(membership, iepWorkflowPermissions[command]))
+    denyIepAccess();
 }

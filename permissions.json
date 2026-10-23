@@ -71,6 +71,76 @@
       "key": "observation:manage",
       "description": "Manage observation definitions and student assignments.",
       "requires": ["special-ed:read"]
+    },
+    {
+      "key": "scope.organization",
+      "description": "Reach every record of the organization, without a unit, grade, subject, or assignment limit."
+    },
+    {
+      "key": "scope.grade",
+      "description": "Reach the classes, students, and Learning Journeys of the units and grades assigned in Learnspace."
+    },
+    {
+      "key": "scope.subject",
+      "description": "Reach the Learning Journeys of the subjects assigned in Learnspace."
+    },
+    {
+      "key": "scope.special-ed",
+      "description": "Reach every special-needs student, observation, and IEP of the organization."
+    },
+    {
+      "key": "scope.assigned",
+      "description": "Reach only the students assigned in Learnspace, for the dates of the assignment."
+    },
+    {
+      "key": "iep:submit",
+      "description": "Submit an IEP for review.",
+      "requires": ["special-ed:write"]
+    },
+    {
+      "key": "iep:coordinator-approve",
+      "description": "Approve an IEP as the special-education coordinator.",
+      "requires": ["special-ed:review"]
+    },
+    {
+      "key": "iep:coordinator-return",
+      "description": "Return an IEP as the special-education coordinator.",
+      "requires": ["special-ed:review"]
+    },
+    {
+      "key": "iep:director-approve",
+      "description": "Approve an IEP as the director.",
+      "requires": ["special-ed:review"]
+    },
+    {
+      "key": "iep:director-return",
+      "description": "Return an IEP as the director.",
+      "requires": ["special-ed:review"]
+    },
+    {
+      "key": "iep:activate",
+      "description": "Activate an approved IEP.",
+      "requires": ["special-ed:review"]
+    },
+    {
+      "key": "iep:archive",
+      "description": "Archive an IEP.",
+      "requires": ["special-ed:review"]
+    },
+    {
+      "key": "weekly-report:teach",
+      "description": "Write, edit, and submit own weekly reports.",
+      "requires": ["special-ed:write"]
+    },
+    {
+      "key": "weekly-report:coordinate",
+      "description": "Take the coordinator step of a weekly report.",
+      "requires": ["special-ed:review"]
+    },
+    {
+      "key": "weekly-report:direct",
+      "description": "Take the director step of a weekly report.",
+      "requires": ["special-ed:review"]
     }
   ]
 }

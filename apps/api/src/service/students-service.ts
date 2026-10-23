@@ -4,7 +4,10 @@ import type {
   StudentListQuery,
   StudentUpdateCommand,
 } from '@learnspace/contracts';
-import type { MembershipScope } from '../utils/authorization.js';
+import {
+  membershipHasPermission,
+  type MembershipScope,
+} from '../utils/authorization.js';
 import { createAuditService } from '../service/audit-service.js';
 import { HttpError } from '../middleware/http-errors.js';
 import {
@@ -95,10 +98,12 @@ export function createStudentsService(prisma: PrismaClient) {
           'The request was denied.',
         );
       }
-      const classScope =
-        input.membership.role === 'GRADE_TEACHER'
-          ? (scopedClassWhere(input.membership) ?? {})
-          : {};
+      const classScope = membershipHasPermission(
+        input.membership,
+        'scope.grade',
+      )
+        ? (scopedClassWhere(input.membership) ?? {})
+        : {};
       const selectedEnrollmentFilter: Prisma.EnrollmentWhereInput = {
         ...(input.query.classId ? { classId: input.query.classId } : {}),
         ...(Object.keys(classScope).length ||
@@ -120,7 +125,7 @@ export function createStudentsService(prisma: PrismaClient) {
           organizationId: input.organizationId,
           status: 'ACTIVE',
           ...scope,
-          ...(input.membership.role === 'GRADE_TEACHER' ||
+          ...(membershipHasPermission(input.membership, 'scope.grade') ||
           !(input.query.classId || input.query.unitId || input.query.gradeId)
             ? {}
             : { enrollments: { some: enrollmentFilter } }),
@@ -148,10 +153,12 @@ export function createStudentsService(prisma: PrismaClient) {
           'The request was denied.',
         );
       }
-      const classScope =
-        input.membership.role === 'GRADE_TEACHER'
-          ? (scopedClassWhere(input.membership) ?? {})
-          : {};
+      const classScope = membershipHasPermission(
+        input.membership,
+        'scope.grade',
+      )
+        ? (scopedClassWhere(input.membership) ?? {})
+        : {};
       const row = await prisma.student.findFirst({
         where: {
           id: input.studentId,

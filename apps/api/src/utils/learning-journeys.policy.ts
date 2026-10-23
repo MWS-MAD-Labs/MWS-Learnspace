@@ -1,13 +1,12 @@
-import { Prisma, type MembershipRole } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   AuthorizationDeniedError,
+  membershipHasPermission,
   requireOrganizationScope,
   requirePermission,
   type MembershipScope,
 } from '../utils/authorization.js';
 import { HttpError } from '../middleware/http-errors.js';
-
-const leadershipRoles: readonly MembershipRole[] = ['DIRECTOR', 'PRINCIPAL'];
 
 export function denyLearningJourneyAccess(): never {
   throw new HttpError(403, 'AUTHORIZATION_DENIED', 'The request was denied.');
@@ -41,8 +40,8 @@ export function requireLearningJourneyPermission(
 export function learningJourneyScopeWhere(
   membership: MembershipScope,
 ): Prisma.LearningJourneyWhereInput | undefined {
-  if (leadershipRoles.includes(membership.role)) return {};
-  if (membership.role === 'GRADE_TEACHER') {
+  if (membershipHasPermission(membership, 'scope.organization')) return {};
+  if (membershipHasPermission(membership, 'scope.grade')) {
     const scopes: Prisma.LearningJourneyWhereInput[] = [];
     if (membership.unitIds.length)
       scopes.push({ unitId: { in: membership.unitIds } });
@@ -50,7 +49,7 @@ export function learningJourneyScopeWhere(
       scopes.push({ gradeId: { in: membership.gradeIds } });
     return scopes.length ? { OR: scopes } : undefined;
   }
-  if (membership.role === 'SUBJECT_TEACHER') {
+  if (membershipHasPermission(membership, 'scope.subject')) {
     return membership.subjectIds.length
       ? { subjectId: { in: membership.subjectIds } }
       : undefined;
@@ -62,7 +61,7 @@ export function assertLearningJourneyWriteScope(
   membership: MembershipScope,
   value: { unitId: string; gradeId: string; subjectId: string },
 ) {
-  if (membership.role === 'GRADE_TEACHER') {
+  if (membershipHasPermission(membership, 'scope.grade')) {
     if (
       membership.unitIds.includes(value.unitId) ||
       membership.gradeIds.includes(value.gradeId)
@@ -71,7 +70,7 @@ export function assertLearningJourneyWriteScope(
     denyLearningJourneyAccess();
   }
   if (
-    membership.role === 'SUBJECT_TEACHER' &&
+    membershipHasPermission(membership, 'scope.subject') &&
     membership.subjectIds.includes(value.subjectId)
   )
     return;
