@@ -1,10 +1,10 @@
 import type { WeeklyReportCreateCommand } from '@learnspace/contracts';
 import {
   Prisma,
-  type MembershipRole,
   type WorkflowAction,
   type WorkflowState,
 } from '@prisma/client';
+import type { MembershipRole } from '../utils/authorization.js';
 
 export const weeklyReportSelect = {
   id: true,

@@ -12,16 +12,6 @@ enum AccountStatus {
   DISABLED
 }
 
-enum MembershipRole {
-  PRINCIPAL
-  DIRECTOR
-  GRADE_TEACHER
-  SUBJECT_TEACHER
-  SPECIAL_ED_COORDINATOR
-  SPECIAL_ED_TEACHER
-  SPECIALIST
-}
-
 enum Gender {
   MALE
   FEMALE
@@ -103,31 +93,31 @@ model Organization {
   status                AccountStatus               @default(ACTIVE)
   createdAt             DateTime                    @default(now())
   updatedAt             DateTime                    @updatedAt
-  memberships         Membership[]
-  academicYears       AcademicYear[]
-  semesters           Semester[]
-  units               Unit[]
-  grades              Grade[]
-  classes             SchoolClass[]
-  subjects            Subject[]
-  students            Student[]
-  enrollments         Enrollment[]
-  guardianContacts    GuardianContact[]
-  staffAssignments    StaffStudentAssignment[]
-  attendanceRecords   AttendanceRecord[]
-  learningJourneys    LearningJourney[]
-  workflowEvents      WorkflowEvent[]
-  definitions         ObservationDefinition[]
-  observationAssigns  ObservationAssignment[]
-  fedcObservations    FEDCObservation[]
-  sensoryObservations SensoryProfileObservation[]
-  sfaObservations     SFAObservation[]
-  ieps                IEP[]
-  weeklyReports       WeeklyReport[]
-  goalEvents          GoalAchievementEvent[]
-  auditEvents         AuditEvent[]
-  invitations         UserInvitation[]
-  importRuns          ImportRun[]
+  memberships           Membership[]
+  academicYears         AcademicYear[]
+  semesters             Semester[]
+  units                 Unit[]
+  grades                Grade[]
+  classes               SchoolClass[]
+  subjects              Subject[]
+  students              Student[]
+  enrollments           Enrollment[]
+  guardianContacts      GuardianContact[]
+  staffAssignments      StaffStudentAssignment[]
+  attendanceRecords     AttendanceRecord[]
+  learningJourneys      LearningJourney[]
+  workflowEvents        WorkflowEvent[]
+  definitions           ObservationDefinition[]
+  observationAssigns    ObservationAssignment[]
+  fedcObservations      FEDCObservation[]
+  sensoryObservations   SensoryProfileObservation[]
+  sfaObservations       SFAObservation[]
+  ieps                  IEP[]
+  weeklyReports         WeeklyReport[]
+  goalEvents            GoalAchievementEvent[]
+  auditEvents           AuditEvent[]
+  invitations           UserInvitation[]
+  importRuns            ImportRun[]
 }
 
 model User {
@@ -161,17 +151,17 @@ model User {
 }
 
 model ExternalPrincipal {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  issuer      String
-  subject     String
-  source      String
-  linkSource  String
-  verified    Boolean  @default(false)
-  verifiedAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  issuer     String
+  subject    String
+  source     String
+  linkSource String
+  verified   Boolean   @default(false)
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([issuer, subject])
   @@unique([userId, issuer])
@@ -182,7 +172,8 @@ model Membership {
   id                     String                   @id @default(uuid()) @db.Uuid
   organizationId         String                   @db.Uuid
   userId                 String                   @db.Uuid
-  role                   MembershipRole
+  role                   String
+  permissions            String[]                 @default([])
   roleTitle              String?
   status                 AccountStatus            @default(ACTIVE)
   createdAt              DateTime                 @default(now())
@@ -201,17 +192,17 @@ model Membership {
 }
 
 model UserInvitation {
-  id             String         @id @default(uuid()) @db.Uuid
-  organizationId String         @db.Uuid
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
   email          String
-  role           MembershipRole
+  role           String
   roleTitle      String?
   expiresAt      DateTime
   acceptedAt     DateTime?
-  createdById    String?        @db.Uuid
-  createdAt      DateTime       @default(now())
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy      User?          @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById    String?      @db.Uuid
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User?        @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([email, expiresAt, acceptedAt])
   @@index([organizationId, email])

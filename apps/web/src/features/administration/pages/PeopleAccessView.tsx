@@ -67,7 +67,8 @@ function formForAccount(account: Account): FormState {
     membershipId: account.membershipId,
     email: account.email,
     displayName: account.displayName,
-    role: account.role,
+    // A role Central made that this form does not list cannot be edited here; the form starts on its default.
+    role: isRole(account.role) ? account.role : emptyForm.role,
     roleTitle: account.roleTitle ?? '',
     userStatus: account.userStatus,
     membershipStatus: account.membershipStatus,
@@ -77,7 +78,11 @@ function formForAccount(account: Account): FormState {
   };
 }
 
-function roleLabel(role: Role): string {
+function isRole(value: string): value is Role {
+  return (roles as readonly string[]).includes(value);
+}
+
+function roleLabel(role: string): string {
   return role
     .toLowerCase()
     .split('_')

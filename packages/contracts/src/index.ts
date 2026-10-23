@@ -31,15 +31,7 @@ export const versionResponseSchema = z.object({
 
 export type VersionResponse = z.infer<typeof versionResponseSchema>;
 
-export const membershipRoleSchema = z.enum([
-  'PRINCIPAL',
-  'DIRECTOR',
-  'GRADE_TEACHER',
-  'SUBJECT_TEACHER',
-  'SPECIAL_ED_COORDINATOR',
-  'SPECIAL_ED_TEACHER',
-  'SPECIALIST',
-]);
+export const membershipRoleSchema = z.string().min(1).max(128);
 
 export const authModeSchema = z.enum(['off', 'shadow', 'shared']);
 

@@ -1,3 +1,4 @@
+import { isPermission } from '../utils/authorization.js';
 import type { SessionService } from './session-service.js';
 import type { ShadowSessionObserver } from './shared-session-shadow-service.js';
 import type { AuthenticatedRequest } from '../type/http.js';
@@ -45,6 +46,9 @@ export class LocalRequestAuthenticationService implements RequestAuthenticationS
       memberships: session.user.memberships.map((membership) => ({
         organizationId: membership.organizationId,
         role: membership.role,
+        ...(membership.permissions?.length
+          ? { permissions: membership.permissions.filter(isPermission) }
+          : {}),
         unitIds: membership.unitScopes.map((scope) => scope.unitId),
         gradeIds: membership.gradeScopes.map((scope) => scope.gradeId),
         subjectIds: membership.subjectScopes.map((scope) => scope.subjectId),

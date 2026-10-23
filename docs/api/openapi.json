@@ -6437,15 +6437,8 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": [
-                    "PRINCIPAL",
-                    "DIRECTOR",
-                    "GRADE_TEACHER",
-                    "SUBJECT_TEACHER",
-                    "SPECIAL_ED_COORDINATOR",
-                    "SPECIAL_ED_TEACHER",
-                    "SPECIALIST"
-                  ]
+                  "minLength": 1,
+                  "maxLength": 128
                 },
                 "roleTitle": {
                   "anyOf": [
@@ -6531,15 +6524,8 @@
               },
               "role": {
                 "type": "string",
-                "enum": [
-                  "PRINCIPAL",
-                  "DIRECTOR",
-                  "GRADE_TEACHER",
-                  "SUBJECT_TEACHER",
-                  "SPECIAL_ED_COORDINATOR",
-                  "SPECIAL_ED_TEACHER",
-                  "SPECIALIST"
-                ]
+                "minLength": 1,
+                "maxLength": 128
               },
               "students": {
                 "type": "object",
@@ -7987,15 +7973,8 @@
                             "anyOf": [
                               {
                                 "type": "string",
-                                "enum": [
-                                  "PRINCIPAL",
-                                  "DIRECTOR",
-                                  "GRADE_TEACHER",
-                                  "SUBJECT_TEACHER",
-                                  "SPECIAL_ED_COORDINATOR",
-                                  "SPECIAL_ED_TEACHER",
-                                  "SPECIALIST"
-                                ]
+                                "minLength": 1,
+                                "maxLength": 128
                               },
                               {
                                 "type": "null"
@@ -8938,15 +8917,8 @@
                           "anyOf": [
                             {
                               "type": "string",
-                              "enum": [
-                                "PRINCIPAL",
-                                "DIRECTOR",
-                                "GRADE_TEACHER",
-                                "SUBJECT_TEACHER",
-                                "SPECIAL_ED_COORDINATOR",
-                                "SPECIAL_ED_TEACHER",
-                                "SPECIALIST"
-                              ]
+                              "minLength": 1,
+                              "maxLength": 128
                             },
                             {
                               "type": "null"
@@ -11125,15 +11097,8 @@
                           "anyOf": [
                             {
                               "type": "string",
-                              "enum": [
-                                "PRINCIPAL",
-                                "DIRECTOR",
-                                "GRADE_TEACHER",
-                                "SUBJECT_TEACHER",
-                                "SPECIAL_ED_COORDINATOR",
-                                "SPECIAL_ED_TEACHER",
-                                "SPECIALIST"
-                              ]
+                              "minLength": 1,
+                              "maxLength": 128
                             },
                             {
                               "type": "null"
@@ -11719,15 +11684,8 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": [
-                    "PRINCIPAL",
-                    "DIRECTOR",
-                    "GRADE_TEACHER",
-                    "SUBJECT_TEACHER",
-                    "SPECIAL_ED_COORDINATOR",
-                    "SPECIAL_ED_TEACHER",
-                    "SPECIALIST"
-                  ]
+                  "minLength": 1,
+                  "maxLength": 128
                 },
                 "roleTitle": {
                   "anyOf": [
@@ -11824,15 +11782,8 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": [
-                    "PRINCIPAL",
-                    "DIRECTOR",
-                    "GRADE_TEACHER",
-                    "SUBJECT_TEACHER",
-                    "SPECIAL_ED_COORDINATOR",
-                    "SPECIAL_ED_TEACHER",
-                    "SPECIALIST"
-                  ]
+                  "minLength": 1,
+                  "maxLength": 128
                 },
                 "roleTitle": {
                   "anyOf": [
@@ -12212,15 +12163,8 @@
               },
               "role": {
                 "type": "string",
-                "enum": [
-                  "PRINCIPAL",
-                  "DIRECTOR",
-                  "GRADE_TEACHER",
-                  "SUBJECT_TEACHER",
-                  "SPECIAL_ED_COORDINATOR",
-                  "SPECIAL_ED_TEACHER",
-                  "SPECIALIST"
-                ]
+                "minLength": 1,
+                "maxLength": 128
               },
               "roleTitle": {
                 "anyOf": [
@@ -15094,15 +15038,8 @@
                     },
                     "role": {
                       "type": "string",
-                      "enum": [
-                        "PRINCIPAL",
-                        "DIRECTOR",
-                        "GRADE_TEACHER",
-                        "SUBJECT_TEACHER",
-                        "SPECIAL_ED_COORDINATOR",
-                        "SPECIAL_ED_TEACHER",
-                        "SPECIALIST"
-                      ]
+                      "minLength": 1,
+                      "maxLength": 128
                     },
                     "roleTitle": {
                       "anyOf": [
@@ -15548,15 +15485,8 @@
                   },
                   "role": {
                     "type": "string",
-                    "enum": [
-                      "PRINCIPAL",
-                      "DIRECTOR",
-                      "GRADE_TEACHER",
-                      "SUBJECT_TEACHER",
-                      "SPECIAL_ED_COORDINATOR",
-                      "SPECIAL_ED_TEACHER",
-                      "SPECIALIST"
-                    ]
+                    "minLength": 1,
+                    "maxLength": 128
                   },
                   "roleTitle": {
                     "anyOf": [

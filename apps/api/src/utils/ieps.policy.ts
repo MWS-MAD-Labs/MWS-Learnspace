@@ -1,4 +1,5 @@
-import type { MembershipRole } from '@prisma/client';
+import type { MembershipRole } from './authorization.js';
+
 import {
   AuthorizationDeniedError,
   membershipHasPermission,
@@ -7,6 +8,7 @@ import {
   roleDerivedPermissions,
   type MembershipScope,
   type Permission,
+  isBuiltInRole,
 } from '../utils/authorization.js';
 import { HttpError } from '../middleware/http-errors.js';
 
@@ -101,7 +103,10 @@ export function canRoleRunIepWorkflowCommand(
   role: MembershipRole,
   command: IepWorkflowCommandName,
 ): boolean {
-  return roleDerivedPermissions[role].includes(iepWorkflowPermissions[command]);
+  return (
+    isBuiltInRole(role) &&
+    roleDerivedPermissions[role].includes(iepWorkflowPermissions[command])
+  );
 }
 
 export function requireIepRole(

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import {
   collectionMetaSchema,
   schoolDateSchema,
-  staffMembershipRoleSchema,
+  roleKeySchema,
   uuidSchema,
   workflowStateSchema,
 } from './resources.js';
@@ -189,7 +189,7 @@ const actorSchema = z
   .object({
     id: uuidSchema,
     displayName: text(256),
-    role: staffMembershipRoleSchema.nullable(),
+    role: roleKeySchema.nullable(),
     roleTitle: z.string().nullable(),
   })
   .strict();

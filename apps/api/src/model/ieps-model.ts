@@ -1,10 +1,10 @@
 import type { IepCreateCommand } from '@learnspace/contracts';
 import {
   Prisma,
-  type MembershipRole,
   type WorkflowAction,
   type WorkflowState,
 } from '@prisma/client';
+import type { MembershipRole } from '../utils/authorization.js';
 import { HttpError } from '../middleware/http-errors.js';
 
 export const iepSelect = {

@@ -6,7 +6,7 @@ import {
   strictBooleanSchema,
   uuidSchema,
 } from './common.js';
-import { staffMembershipRoleSchema, studentSummarySchema } from './people.js';
+import { roleKeySchema, studentSummarySchema } from './people.js';
 
 export const observationTypeSchema = z.enum(['FEDC', 'SENSORY_PROFILE', 'SFA']);
 export type ObservationType = z.infer<typeof observationTypeSchema>;
@@ -94,7 +94,7 @@ const observationAssigneeSummarySchema = z
     membershipId: uuidSchema,
     userId: uuidSchema,
     displayName: z.string().min(1),
-    role: staffMembershipRoleSchema,
+    role: roleKeySchema,
     roleTitle: z.string().nullable(),
   })
   .strict();

@@ -11,7 +11,7 @@ import {
   schoolDateSchema,
   uuidSchema,
 } from './common.js';
-import { staffMembershipRoleSchema } from './people.js';
+import { roleKeySchema } from './people.js';
 
 export const workflowStateSchema = z.enum([
   'DRAFT',
@@ -28,7 +28,7 @@ export const learningJourneyOwnerSummarySchema = z
     membershipId: uuidSchema,
     userId: uuidSchema,
     displayName: z.string().min(1),
-    role: staffMembershipRoleSchema,
+    role: roleKeySchema,
     roleTitle: z.string().nullable(),
   })
   .strict();
@@ -66,7 +66,7 @@ export const learningJourneyWorkflowEventSchema = z
       .object({
         id: uuidSchema,
         displayName: z.string().min(1),
-        role: staffMembershipRoleSchema.nullable(),
+        role: roleKeySchema.nullable(),
         roleTitle: z.string().nullable(),
       })
       .strict(),

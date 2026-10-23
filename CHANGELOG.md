@@ -52,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- A membership's role is text (the key of a Central role) and the membership keeps its permissions. The migration `20261023000000_membership_role_text_and_permissions` fills them from the built-in role, so no one gains or loses access. API responses carry any role key.
 - Migrated the supported repository runtime and package-manager workflow from Node.js/npm to Bun, including current install, workspace, validation, test, and operational commands.
 - Retained local Google OAuth and PostgreSQL sessions as rollback infrastructure while local `.env` deployments can opt into shared mode; local migrations and permission synchronization are evidenced, while real browser login, Central role assignments, token rotation, rate-limited backfill, shared E2E fixtures, staging/production evidence, and local-auth removal remain outstanding.
 - Migrated the API framework from Express to Hono while retaining an internal compatibility boundary for existing controller and middleware contracts.

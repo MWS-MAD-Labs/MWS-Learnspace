@@ -26,6 +26,9 @@ export const staffMembershipRoleSchema = z.enum([
   'SPECIAL_ED_TEACHER',
   'SPECIALIST',
 ]);
+// A role is the key of a Central role, so what the API answers is any text. Only the account commands below still
+// limit it to the built-in roles, until Central owns invitations.
+export const roleKeySchema = z.string().min(1).max(128);
 export const accountStatusSchema = z.enum(['ACTIVE', 'DISABLED']);
 export const genderSchema = z.enum(['MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED']);
 
@@ -36,7 +39,7 @@ export const staffDirectoryItemSchema = z
     organizationId: uuidSchema,
     displayName: z.string().min(1),
     avatarUrl: z.string().url().nullable(),
-    role: staffMembershipRoleSchema,
+    role: roleKeySchema,
     roleTitle: z.string().nullable(),
     status: z.literal('ACTIVE'),
   })
@@ -57,7 +60,7 @@ export const organizationAccountSchema = z
     displayName: z.string().min(1),
     avatarUrl: z.string().url().nullable(),
     userStatus: accountStatusSchema,
-    role: staffMembershipRoleSchema,
+    role: roleKeySchema,
     roleTitle: z.string().nullable(),
     membershipStatus: accountStatusSchema,
     unitIds: z.array(uuidSchema),

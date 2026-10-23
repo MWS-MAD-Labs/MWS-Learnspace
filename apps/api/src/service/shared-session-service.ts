@@ -1,4 +1,4 @@
-import { Prisma, type MembershipRole, type PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import {
   createHubSession,
   type HubSession,
@@ -11,6 +11,8 @@ import {
   PERMISSIONS,
   permissionsByRole,
   type Permission,
+  type MembershipRole,
+  permissionsForRole,
 } from '../utils/authorization.js';
 import {
   centralOrganizationMappingErrorCodes,
@@ -297,11 +299,11 @@ export class SharedSessionAuthenticationService implements RequestAuthentication
         (permission: string) => !knownPermissions.has(permission),
       ) ||
       entitlement.permissions.length !==
-        permissionsByRole[entitlement.role as MembershipRole].length ||
+        permissionsForRole(entitlement.role).length ||
       new Set(entitlement.permissions).size !==
         entitlement.permissions.length ||
-      !permissionsByRole[entitlement.role as MembershipRole].every(
-        (permission) => entitlement.permissions.includes(permission),
+      !permissionsForRole(entitlement.role).every((permission) =>
+        entitlement.permissions.includes(permission),
       )
     ) {
       return this.failure(

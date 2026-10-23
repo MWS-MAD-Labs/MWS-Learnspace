@@ -1,6 +1,24 @@
-import type { MembershipRole, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import type { PermissionManifestEntry } from 'mws-central-auth/data-client';
 import type { CreateAuditEventInput } from '../service/audit-service.js';
+
+// A role is the key of a Central role: any text. These are the roles Learnspace shipped with and still knows the
+// permissions of (see ADR 0002).
+export const BUILT_IN_ROLES = [
+  'PRINCIPAL',
+  'DIRECTOR',
+  'GRADE_TEACHER',
+  'SUBJECT_TEACHER',
+  'SPECIAL_ED_COORDINATOR',
+  'SPECIAL_ED_TEACHER',
+  'SPECIALIST',
+] as const;
+export type BuiltInRole = (typeof BUILT_IN_ROLES)[number];
+export type MembershipRole = string;
+
+export function isBuiltInRole(role: string): role is BuiltInRole {
+  return (BUILT_IN_ROLES as readonly string[]).includes(role);
+}
 
 export const PERMISSIONS = [
   'attendance:read',
@@ -195,61 +213,60 @@ export const PERMISSION_MANIFEST = [
   },
 ] satisfies LearnspacePermissionManifestEntry[];
 
-export const permissionsByRole: Record<MembershipRole, readonly Permission[]> =
-  {
-    DIRECTOR: [
-      'attendance:read',
-      'journey:read',
-      'journey:approve',
-      'special-ed:read',
-      'special-ed:review',
-      'report:export',
-      'student:admin',
-      'student:sensitive-read',
-      'staff-directory:read',
-      'staff-assignment:admin',
-      'organization:admin',
-    ],
-    PRINCIPAL: [
-      'attendance:read',
-      'journey:read',
-      'journey:review',
-      'special-ed:read',
-      'special-ed:review',
-      'report:export',
-      'student:sensitive-read',
-      'staff-directory:read',
-    ],
-    GRADE_TEACHER: [
-      'attendance:read',
-      'attendance:write',
-      'journey:read',
-      'journey:write',
-    ],
-    SUBJECT_TEACHER: ['journey:read', 'journey:write'],
-    SPECIAL_ED_COORDINATOR: [
-      'attendance:read',
-      'special-ed:read',
-      'special-ed:write',
-      'special-ed:review',
-      'report:export',
-      'student:sensitive-read',
-      'staff-directory:read',
-      'staff-assignment:admin',
-      'observation:manage',
-    ],
-    SPECIAL_ED_TEACHER: [
-      'attendance:read',
-      'special-ed:read',
-      'special-ed:write',
-    ],
-    SPECIALIST: ['special-ed:read', 'special-ed:write'],
-  };
+export const permissionsByRole: Record<BuiltInRole, readonly Permission[]> = {
+  DIRECTOR: [
+    'attendance:read',
+    'journey:read',
+    'journey:approve',
+    'special-ed:read',
+    'special-ed:review',
+    'report:export',
+    'student:admin',
+    'student:sensitive-read',
+    'staff-directory:read',
+    'staff-assignment:admin',
+    'organization:admin',
+  ],
+  PRINCIPAL: [
+    'attendance:read',
+    'journey:read',
+    'journey:review',
+    'special-ed:read',
+    'special-ed:review',
+    'report:export',
+    'student:sensitive-read',
+    'staff-directory:read',
+  ],
+  GRADE_TEACHER: [
+    'attendance:read',
+    'attendance:write',
+    'journey:read',
+    'journey:write',
+  ],
+  SUBJECT_TEACHER: ['journey:read', 'journey:write'],
+  SPECIAL_ED_COORDINATOR: [
+    'attendance:read',
+    'special-ed:read',
+    'special-ed:write',
+    'special-ed:review',
+    'report:export',
+    'student:sensitive-read',
+    'staff-directory:read',
+    'staff-assignment:admin',
+    'observation:manage',
+  ],
+  SPECIAL_ED_TEACHER: [
+    'attendance:read',
+    'special-ed:read',
+    'special-ed:write',
+  ],
+  SPECIALIST: ['special-ed:read', 'special-ed:write'],
+};
 
 // What the role name used to decide, as permissions. A Central role will carry these itself; until it does, the role
 // gives them, so nobody gains or loses anything. The golden test pins the result.
 export const roleDerivedPermissions: Record<
-  MembershipRole,
+  BuiltInRole,
   readonly Permission[]
 > = {
   DIRECTOR: [
@@ -277,7 +294,20 @@ export const roleDerivedPermissions: Record<
 export function permissionsForRole(
   role: MembershipRole,
 ): readonly Permission[] {
-  return permissionsByRole[role] ?? [];
+  return isBuiltInRole(role) ? permissionsByRole[role] : [];
+}
+
+// Everything a built-in role gives: what it always had and what the role name used to decide. This is what a
+// membership stores. Unknown roles give nothing.
+export function grantedPermissions(role: MembershipRole): Permission[] {
+  if (!isBuiltInRole(role)) return [];
+  return [
+    ...new Set([...permissionsByRole[role], ...roleDerivedPermissions[role]]),
+  ];
+}
+
+export function isPermission(value: string): value is Permission {
+  return (PERMISSIONS as readonly string[]).includes(value);
 }
 
 export function hasPermission(
@@ -328,12 +358,15 @@ export function membershipHasPermission(
   membership: MembershipScope,
   permission: Permission,
 ): boolean {
+  // Permissions given to the membership win, whether Central's or the ones stored with it. Without any it follows its
+  // built-in role.
   const own = membership.permissions
     ? membership.permissions.includes(permission)
     : hasPermission(membership.role, permission);
   return (
     own ||
-    roleDerivedPermissions[membership.role]?.includes(permission) === true
+    (isBuiltInRole(membership.role) &&
+      roleDerivedPermissions[membership.role].includes(permission))
   );
 }
 

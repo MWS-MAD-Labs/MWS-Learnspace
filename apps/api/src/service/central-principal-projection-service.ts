@@ -1,8 +1,10 @@
-import { Prisma, type MembershipRole, type PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import type { HubSessionClaims } from 'mws-central-auth/server';
 import {
   permissionsByRole,
   permissionsForRole,
+  type MembershipRole,
+  grantedPermissions,
 } from '../utils/authorization.js';
 import type { CentralEntitlement } from './shared-session-shadow-service.js';
 
@@ -221,12 +223,13 @@ export async function projectCentralPrincipal(input: {
                 organizationId: input.localOrganizationId,
                 userId: user.id,
                 role,
+                permissions: grantedPermissions(role),
               },
             });
           } else if (membership.role !== role) {
             await transaction.membership.update({
               where: { id: membership.id },
-              data: { role },
+              data: { role, permissions: grantedPermissions(role) },
             });
           }
           return { ok: true, userId: user.id, entitlement } as const;

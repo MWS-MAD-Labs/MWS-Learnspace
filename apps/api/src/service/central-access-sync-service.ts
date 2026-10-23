@@ -1,6 +1,11 @@
-import { type MembershipRole, Prisma, type PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import { CentralApiError } from 'mws-central-auth/data-client';
-import { permissionsByRole } from '../utils/authorization.js';
+import {
+  permissionsByRole,
+  type MembershipRole,
+  permissionsForRole,
+  grantedPermissions,
+} from '../utils/authorization.js';
 import type {
   CentralEntitlement,
   CentralEntitlementClient,
@@ -57,7 +62,7 @@ function entitlementRole(
 ): MembershipRole | undefined {
   if (!Object.hasOwn(permissionsByRole, entitlement.role)) return undefined;
   const role = entitlement.role as MembershipRole;
-  const expected = new Set<string>(permissionsByRole[role]);
+  const expected = new Set<string>(permissionsForRole(role));
   const actual = new Set<string>(entitlement.permissions);
   if (expected.size !== actual.size) return undefined;
   for (const permission of expected) {
@@ -174,7 +179,7 @@ export async function synchronizeCentralAccess(input: {
       if (input.mode === 'apply') {
         await database.membership.update({
           where: { id: membership.id },
-          data: { role },
+          data: { role, permissions: grantedPermissions(role) },
         });
       }
     }

@@ -1,4 +1,5 @@
-import { Prisma, type MembershipRole, type PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
+import { MembershipRole, grantedPermissions } from '../utils/authorization.js';
 import type {
   OrganizationAccountCreateCommand,
   OrganizationAccountUpdateCommand,
@@ -199,6 +200,7 @@ export function createOrganizationAccountsService(prisma: PrismaClient) {
               organizationId: input.organizationId,
               userId: user.id,
               role: input.command.role,
+              permissions: grantedPermissions(input.command.role),
               roleTitle: input.command.roleTitle ?? null,
             },
             select: { id: true },
@@ -331,7 +333,10 @@ export function createOrganizationAccountsService(prisma: PrismaClient) {
           }
           const membershipData = {
             ...(input.command.role !== undefined
-              ? { role: input.command.role }
+              ? {
+                  role: input.command.role,
+                  permissions: grantedPermissions(input.command.role),
+                }
               : {}),
             ...(input.command.roleTitle !== undefined
               ? { roleTitle: input.command.roleTitle }

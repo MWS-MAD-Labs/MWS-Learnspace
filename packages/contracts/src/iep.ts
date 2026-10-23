@@ -3,7 +3,7 @@ import {
   academicYearSchema,
   collectionMetaSchema,
   schoolDateSchema,
-  staffMembershipRoleSchema,
+  roleKeySchema,
   semesterSchema,
   uuidSchema,
   workflowStateSchema,
@@ -327,7 +327,7 @@ export const iepWorkflowEventSchema = z
       .object({
         id: uuidSchema,
         displayName: requiredText(256),
-        role: staffMembershipRoleSchema.nullable(),
+        role: roleKeySchema.nullable(),
         roleTitle: z.string().nullable(),
       })
       .strict(),

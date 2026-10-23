@@ -1,3 +1,4 @@
+import { grantedPermissions } from '../utils/authorization.js';
 import { CentralApiError } from 'mws-central-auth/data-client';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -93,7 +94,8 @@ describe('Central access synchronization', () => {
     expect(report.counts.rolesUpdated).toBe(1);
     expect(context.database.membership.update).toHaveBeenCalledWith({
       where: { id: 'membership-1' },
-      data: { role: 'DIRECTOR' },
+      // The permissions of the role go with it, so the membership never keeps those of the old one.
+      data: { role: 'DIRECTOR', permissions: grantedPermissions('DIRECTOR') },
     });
     expect(context.database.externalPrincipal.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { issuer: 'mws-hub', verified: true } }),

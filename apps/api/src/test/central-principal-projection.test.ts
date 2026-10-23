@@ -1,3 +1,4 @@
+import { grantedPermissions } from '../utils/authorization.js';
 import { describe, expect, it, vi } from 'vitest';
 import { projectCentralPrincipal } from '../service/central-principal-projection-service.js';
 import { permissionsForRole } from '../utils/authorization.js';
@@ -173,6 +174,7 @@ describe('Central first-login principal projection', () => {
         organizationId: 'local-org-1',
         userId: 'user-new',
         role: 'GRADE_TEACHER',
+        permissions: grantedPermissions('GRADE_TEACHER'),
       },
     });
   });

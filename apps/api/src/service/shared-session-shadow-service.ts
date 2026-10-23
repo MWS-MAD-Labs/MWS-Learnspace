@@ -1,4 +1,4 @@
-import { Prisma, type MembershipRole, type PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import { CentralDataClient } from 'mws-central-auth/data-client';
 import {
   createHubSession,
@@ -13,6 +13,7 @@ import {
   permissionsByRole,
   permissionsForRole,
   type Permission,
+  type MembershipRole,
 } from '../utils/authorization.js';
 import {
   centralOrganizationMappingErrorCodes,
@@ -115,7 +116,7 @@ export function isValidCentralEntitlement(
   ) {
     return false;
   }
-  const expectedPermissions = permissionsByRole[entitlement.role];
+  const expectedPermissions = permissionsForRole(entitlement.role);
   return (
     entitlement.permissions.length === expectedPermissions.length &&
     new Set(entitlement.permissions).size === entitlement.permissions.length &&

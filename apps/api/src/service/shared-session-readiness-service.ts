@@ -1,9 +1,12 @@
-import type { MembershipRole, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import {
   compareCentralAuthorization,
   type CentralEntitlementClient,
 } from './shared-session-shadow-service.js';
-import { permissionsForRole } from '../utils/authorization.js';
+import {
+  permissionsForRole,
+  type MembershipRole,
+} from '../utils/authorization.js';
 
 export const sharedSessionReadinessReasonCodes = [
   'UNMAPPED',

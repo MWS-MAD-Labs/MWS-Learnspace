@@ -1,11 +1,12 @@
-import { MembershipRole } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 import {
+  BUILT_IN_ROLES,
   membershipHasPermission,
   permissionsForRole,
   roleDerivedPermissions,
   type MembershipScope,
   type Permission,
+  type MembershipRole,
 } from '../utils/authorization.js';
 import {
   aggregateActiveAssignedStudentIds,
@@ -57,7 +58,7 @@ import {
 // the same answer here. When a decision changes on purpose, the snapshot changes in the same commit and says why.
 const ORGANIZATION = 'organization-a';
 const DAY = new Date('2026-03-10T00:00:00.000Z');
-const ROLES = Object.values(MembershipRole);
+const ROLES = [...BUILT_IN_ROLES];
 // The permissions that existed when the snapshot was taken. Newer keys are checked in their own test.
 const LEGACY_PERMISSIONS: readonly Permission[] = [
   'attendance:read',

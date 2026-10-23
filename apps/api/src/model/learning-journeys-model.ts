@@ -2,11 +2,8 @@ import type {
   LearningJourneyCreateCommand,
   LearningJourneyDetailResponse,
 } from '@learnspace/contracts';
-import {
-  Prisma,
-  type MembershipRole,
-  type WorkflowState,
-} from '@prisma/client';
+import { Prisma, type WorkflowState } from '@prisma/client';
+import type { MembershipRole } from '../utils/authorization.js';
 
 export const learningJourneySelect = {
   id: true,

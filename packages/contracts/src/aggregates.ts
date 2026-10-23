@@ -1,14 +1,6 @@
 import { z } from 'zod';
 
-const membershipRoleSchema = z.enum([
-  'PRINCIPAL',
-  'DIRECTOR',
-  'GRADE_TEACHER',
-  'SUBJECT_TEACHER',
-  'SPECIAL_ED_COORDINATOR',
-  'SPECIAL_ED_TEACHER',
-  'SPECIALIST',
-]);
+const membershipRoleSchema = z.string().min(1).max(128);
 
 const workflowStateSchema = z.enum([
   'DRAFT',
