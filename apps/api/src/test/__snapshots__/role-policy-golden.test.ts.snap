@@ -1,0 +1,1492 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`what each built-in role is allowed today > gives DIRECTOR the same decisions as before 1`] = `
+{
+  "academicCollections": {
+    "academicYears": "ALLOW",
+    "classes": "ALLOW",
+    "grades": "ALLOW",
+    "semesters": "ALLOW",
+    "subjects": "ALLOW",
+    "units": "ALLOW",
+  },
+  "aggregates": {
+    "assignedStudents": "ALL",
+    "datedObservationScope": {
+      "OR": [
+        {
+          "assignment": {
+            "assignedTo": {
+              "userId": "user-a",
+            },
+          },
+        },
+        {
+          "observationDate": {
+            "gte": "2026-01-01T00:00:00.000Z",
+          },
+          "studentId": "student-a",
+        },
+      ],
+    },
+    "journeyScope": {},
+    "journeyScopeEmpty": {},
+    "observationAssignment": "NONE",
+    "reportsObservations": false,
+    "specialEducationStudents": {},
+    "specialEducationStudentsEmpty": {},
+    "studentScope": {},
+    "studentScopeEmpty": {},
+  },
+  "attendance": {
+    "read": {
+      "value": {},
+    },
+    "readWithoutScope": {
+      "value": {},
+    },
+    "write": "DENY",
+  },
+  "classScope": {
+    "empty": {},
+    "scoped": {},
+  },
+  "ieps": {
+    "assignedStudents": "ALL",
+    "assignedStudentsEmpty": "ALL",
+    "commands": {
+      "ACTIVATE": {
+        "can": true,
+        "require": "ALLOW",
+      },
+      "ARCHIVE": {
+        "can": true,
+        "require": "ALLOW",
+      },
+      "COORDINATOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_APPROVE": {
+        "can": true,
+        "require": "ALLOW",
+      },
+      "DIRECTOR_RETURN": {
+        "can": true,
+        "require": "ALLOW",
+      },
+      "SUBMIT": {
+        "can": false,
+        "require": "DENY",
+      },
+    },
+    "permissions": {
+      "special-ed:read": "ALLOW",
+      "special-ed:review": "ALLOW",
+      "special-ed:write": "DENY",
+    },
+    "studentIn": "ALLOW",
+    "studentOut": "ALLOW",
+  },
+  "journeys": {
+    "permissions": {
+      "journey:approve": "ALLOW",
+      "journey:read": "ALLOW",
+      "journey:review": "DENY",
+      "journey:write": "DENY",
+    },
+    "scope": {},
+    "scopeEmpty": {},
+    "writeElsewhere": "DENY",
+    "writeInGrade": "DENY",
+    "writeInSubject": "DENY",
+    "writeInUnit": "DENY",
+  },
+  "leadership": true,
+  "observations": {
+    "permissions": {
+      "observation:manage": "DENY",
+      "special-ed:read": "ALLOW",
+      "special-ed:write": "DENY",
+    },
+    "readAssigned": true,
+    "readOther": false,
+  },
+  "permissionChecks": {
+    "attendance:read": true,
+    "attendance:write": false,
+    "journey:approve": true,
+    "journey:read": true,
+    "journey:review": false,
+    "journey:write": false,
+    "observation:manage": false,
+    "organization:admin": true,
+    "report:export": true,
+    "special-ed:read": true,
+    "special-ed:review": true,
+    "special-ed:write": false,
+    "staff-assignment:admin": true,
+    "staff-directory:read": true,
+    "student:admin": true,
+    "student:sensitive-read": true,
+  },
+  "permissions": [
+    "attendance:read",
+    "journey:read",
+    "journey:approve",
+    "special-ed:read",
+    "special-ed:review",
+    "report:export",
+    "student:admin",
+    "student:sensitive-read",
+    "staff-directory:read",
+    "staff-assignment:admin",
+    "organization:admin",
+  ],
+  "resourcePermissions": {
+    "organization:admin": "ALLOW",
+    "staff-assignment:admin": "ALLOW",
+    "staff-directory:read": "ALLOW",
+    "student:admin": "ALLOW",
+    "student:sensitive-read": "ALLOW",
+  },
+  "studentScope": {
+    "empty": {},
+    "scoped": {},
+  },
+  "weeklyReports": {
+    "assignedStudentIn": "ALLOW",
+    "assignedStudentOut": "ALLOW",
+    "assignedStudents": "ALL",
+    "editorOther": "DENY",
+    "editorOwn": "DENY",
+    "permissions": {
+      "special-ed:read": "ALLOW",
+      "special-ed:review": "ALLOW",
+      "special-ed:write": "DENY",
+    },
+    "teacher": "DENY",
+    "transitions": {
+      "coordinator": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "director": {
+        "other": "ALLOW",
+        "own": "ALLOW",
+      },
+      "submit": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+    },
+  },
+}
+`;
+
+exports[`what each built-in role is allowed today > gives GRADE_TEACHER the same decisions as before 1`] = `
+{
+  "academicCollections": {
+    "academicYears": "ALLOW",
+    "classes": "ALLOW",
+    "grades": "ALLOW",
+    "semesters": "ALLOW",
+    "subjects": "ALLOW",
+    "units": "ALLOW",
+  },
+  "aggregates": {
+    "assignedStudents": [],
+    "datedObservationScope": {
+      "OR": [
+        {
+          "assignment": {
+            "assignedTo": {
+              "userId": "user-a",
+            },
+          },
+        },
+        {
+          "observationDate": {
+            "gte": "2026-01-01T00:00:00.000Z",
+          },
+          "studentId": "student-a",
+        },
+      ],
+    },
+    "journeyScope": {
+      "OR": [
+        {
+          "unitId": {
+            "in": [
+              "unit-a",
+            ],
+          },
+        },
+        {
+          "gradeId": {
+            "in": [
+              "grade-a",
+            ],
+          },
+        },
+      ],
+    },
+    "journeyScopeEmpty": "NONE",
+    "observationAssignment": "NONE",
+    "reportsObservations": false,
+    "specialEducationStudents": "NONE",
+    "specialEducationStudentsEmpty": "NONE",
+    "studentScope": {
+      "enrollments": {
+        "some": {
+          "OR": [
+            {
+              "endsOn": null,
+            },
+            {
+              "endsOn": {
+                "gte": "2026-03-10T00:00:00.000Z",
+              },
+            },
+          ],
+          "schoolClass": {
+            "OR": [
+              {
+                "unitId": {
+                  "in": [
+                    "unit-a",
+                  ],
+                },
+              },
+              {
+                "gradeId": {
+                  "in": [
+                    "grade-a",
+                  ],
+                },
+              },
+            ],
+          },
+          "startsOn": {
+            "lte": "2026-03-10T00:00:00.000Z",
+          },
+        },
+      },
+    },
+    "studentScopeEmpty": "NONE",
+  },
+  "attendance": {
+    "read": {
+      "value": {
+        "OR": [
+          {
+            "unitId": {
+              "in": [
+                "unit-a",
+              ],
+            },
+          },
+          {
+            "gradeId": {
+              "in": [
+                "grade-a",
+              ],
+            },
+          },
+        ],
+      },
+    },
+    "readWithoutScope": "DENY",
+    "write": {
+      "value": {
+        "OR": [
+          {
+            "unitId": {
+              "in": [
+                "unit-a",
+              ],
+            },
+          },
+          {
+            "gradeId": {
+              "in": [
+                "grade-a",
+              ],
+            },
+          },
+        ],
+      },
+    },
+  },
+  "classScope": {
+    "empty": "NONE",
+    "scoped": {
+      "OR": [
+        {
+          "unitId": {
+            "in": [
+              "unit-a",
+            ],
+          },
+        },
+        {
+          "gradeId": {
+            "in": [
+              "grade-a",
+            ],
+          },
+        },
+      ],
+    },
+  },
+  "ieps": {
+    "assignedStudents": [],
+    "assignedStudentsEmpty": [],
+    "commands": {
+      "ACTIVATE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "ARCHIVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "SUBMIT": {
+        "can": false,
+        "require": "DENY",
+      },
+    },
+    "permissions": {
+      "special-ed:read": "DENY",
+      "special-ed:review": "DENY",
+      "special-ed:write": "DENY",
+    },
+    "studentIn": "DENY",
+    "studentOut": "DENY",
+  },
+  "journeys": {
+    "permissions": {
+      "journey:approve": "DENY",
+      "journey:read": "ALLOW",
+      "journey:review": "DENY",
+      "journey:write": "ALLOW",
+    },
+    "scope": {
+      "OR": [
+        {
+          "unitId": {
+            "in": [
+              "unit-a",
+            ],
+          },
+        },
+        {
+          "gradeId": {
+            "in": [
+              "grade-a",
+            ],
+          },
+        },
+      ],
+    },
+    "scopeEmpty": "NONE",
+    "writeElsewhere": "DENY",
+    "writeInGrade": "ALLOW",
+    "writeInSubject": "DENY",
+    "writeInUnit": "ALLOW",
+  },
+  "leadership": false,
+  "observations": {
+    "permissions": {
+      "observation:manage": "DENY",
+      "special-ed:read": "DENY",
+      "special-ed:write": "DENY",
+    },
+    "readAssigned": true,
+    "readOther": false,
+  },
+  "permissionChecks": {
+    "attendance:read": true,
+    "attendance:write": true,
+    "journey:approve": false,
+    "journey:read": true,
+    "journey:review": false,
+    "journey:write": true,
+    "observation:manage": false,
+    "organization:admin": false,
+    "report:export": false,
+    "special-ed:read": false,
+    "special-ed:review": false,
+    "special-ed:write": false,
+    "staff-assignment:admin": false,
+    "staff-directory:read": false,
+    "student:admin": false,
+    "student:sensitive-read": false,
+  },
+  "permissions": [
+    "attendance:read",
+    "attendance:write",
+    "journey:read",
+    "journey:write",
+  ],
+  "resourcePermissions": {
+    "organization:admin": "DENY",
+    "staff-assignment:admin": "DENY",
+    "staff-directory:read": "DENY",
+    "student:admin": "DENY",
+    "student:sensitive-read": "DENY",
+  },
+  "studentScope": {
+    "empty": "NONE",
+    "scoped": {
+      "enrollments": {
+        "some": {
+          "OR": [
+            {
+              "endsOn": null,
+            },
+            {
+              "endsOn": {
+                "gte": "2026-03-10T00:00:00.000Z",
+              },
+            },
+          ],
+          "schoolClass": {
+            "OR": [
+              {
+                "unitId": {
+                  "in": [
+                    "unit-a",
+                  ],
+                },
+              },
+              {
+                "gradeId": {
+                  "in": [
+                    "grade-a",
+                  ],
+                },
+              },
+            ],
+          },
+          "startsOn": {
+            "lte": "2026-03-10T00:00:00.000Z",
+          },
+        },
+      },
+    },
+  },
+  "weeklyReports": {
+    "assignedStudentIn": "DENY",
+    "assignedStudentOut": "DENY",
+    "assignedStudents": [],
+    "editorOther": "DENY",
+    "editorOwn": "DENY",
+    "permissions": {
+      "special-ed:read": "DENY",
+      "special-ed:review": "DENY",
+      "special-ed:write": "DENY",
+    },
+    "teacher": "DENY",
+    "transitions": {
+      "coordinator": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "director": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "submit": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+    },
+  },
+}
+`;
+
+exports[`what each built-in role is allowed today > gives PRINCIPAL the same decisions as before 1`] = `
+{
+  "academicCollections": {
+    "academicYears": "ALLOW",
+    "classes": "ALLOW",
+    "grades": "ALLOW",
+    "semesters": "ALLOW",
+    "subjects": "ALLOW",
+    "units": "ALLOW",
+  },
+  "aggregates": {
+    "assignedStudents": "ALL",
+    "datedObservationScope": {
+      "OR": [
+        {
+          "assignment": {
+            "assignedTo": {
+              "userId": "user-a",
+            },
+          },
+        },
+        {
+          "observationDate": {
+            "gte": "2026-01-01T00:00:00.000Z",
+          },
+          "studentId": "student-a",
+        },
+      ],
+    },
+    "journeyScope": {},
+    "journeyScopeEmpty": {},
+    "observationAssignment": "NONE",
+    "reportsObservations": false,
+    "specialEducationStudents": {},
+    "specialEducationStudentsEmpty": {},
+    "studentScope": {},
+    "studentScopeEmpty": {},
+  },
+  "attendance": {
+    "read": {
+      "value": {},
+    },
+    "readWithoutScope": {
+      "value": {},
+    },
+    "write": "DENY",
+  },
+  "classScope": {
+    "empty": {},
+    "scoped": {},
+  },
+  "ieps": {
+    "assignedStudents": "ALL",
+    "assignedStudentsEmpty": "ALL",
+    "commands": {
+      "ACTIVATE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "ARCHIVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "SUBMIT": {
+        "can": false,
+        "require": "DENY",
+      },
+    },
+    "permissions": {
+      "special-ed:read": "ALLOW",
+      "special-ed:review": "ALLOW",
+      "special-ed:write": "DENY",
+    },
+    "studentIn": "ALLOW",
+    "studentOut": "ALLOW",
+  },
+  "journeys": {
+    "permissions": {
+      "journey:approve": "DENY",
+      "journey:read": "ALLOW",
+      "journey:review": "ALLOW",
+      "journey:write": "DENY",
+    },
+    "scope": {},
+    "scopeEmpty": {},
+    "writeElsewhere": "DENY",
+    "writeInGrade": "DENY",
+    "writeInSubject": "DENY",
+    "writeInUnit": "DENY",
+  },
+  "leadership": true,
+  "observations": {
+    "permissions": {
+      "observation:manage": "DENY",
+      "special-ed:read": "ALLOW",
+      "special-ed:write": "DENY",
+    },
+    "readAssigned": true,
+    "readOther": false,
+  },
+  "permissionChecks": {
+    "attendance:read": true,
+    "attendance:write": false,
+    "journey:approve": false,
+    "journey:read": true,
+    "journey:review": true,
+    "journey:write": false,
+    "observation:manage": false,
+    "organization:admin": false,
+    "report:export": true,
+    "special-ed:read": true,
+    "special-ed:review": true,
+    "special-ed:write": false,
+    "staff-assignment:admin": false,
+    "staff-directory:read": true,
+    "student:admin": false,
+    "student:sensitive-read": true,
+  },
+  "permissions": [
+    "attendance:read",
+    "journey:read",
+    "journey:review",
+    "special-ed:read",
+    "special-ed:review",
+    "report:export",
+    "student:sensitive-read",
+    "staff-directory:read",
+  ],
+  "resourcePermissions": {
+    "organization:admin": "DENY",
+    "staff-assignment:admin": "DENY",
+    "staff-directory:read": "ALLOW",
+    "student:admin": "DENY",
+    "student:sensitive-read": "ALLOW",
+  },
+  "studentScope": {
+    "empty": {},
+    "scoped": {},
+  },
+  "weeklyReports": {
+    "assignedStudentIn": "ALLOW",
+    "assignedStudentOut": "ALLOW",
+    "assignedStudents": "ALL",
+    "editorOther": "DENY",
+    "editorOwn": "DENY",
+    "permissions": {
+      "special-ed:read": "ALLOW",
+      "special-ed:review": "ALLOW",
+      "special-ed:write": "DENY",
+    },
+    "teacher": "DENY",
+    "transitions": {
+      "coordinator": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "director": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "submit": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+    },
+  },
+}
+`;
+
+exports[`what each built-in role is allowed today > gives SPECIAL_ED_COORDINATOR the same decisions as before 1`] = `
+{
+  "academicCollections": {
+    "academicYears": "DENY",
+    "classes": "DENY",
+    "grades": "DENY",
+    "semesters": "DENY",
+    "subjects": "DENY",
+    "units": "DENY",
+  },
+  "aggregates": {
+    "assignedStudents": "ALL",
+    "datedObservationScope": {},
+    "journeyScope": "NONE",
+    "journeyScopeEmpty": "NONE",
+    "observationAssignment": {
+      "organizationId": "organization-a",
+    },
+    "reportsObservations": true,
+    "specialEducationStudents": {},
+    "specialEducationStudentsEmpty": {},
+    "studentScope": {
+      "specialNeedsFlag": true,
+    },
+    "studentScopeEmpty": {
+      "specialNeedsFlag": true,
+    },
+  },
+  "attendance": {
+    "read": "DENY",
+    "readWithoutScope": "DENY",
+    "write": "DENY",
+  },
+  "classScope": {
+    "empty": "NONE",
+    "scoped": "NONE",
+  },
+  "ieps": {
+    "assignedStudents": "ALL",
+    "assignedStudentsEmpty": "ALL",
+    "commands": {
+      "ACTIVATE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "ARCHIVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_APPROVE": {
+        "can": true,
+        "require": "ALLOW",
+      },
+      "COORDINATOR_RETURN": {
+        "can": true,
+        "require": "ALLOW",
+      },
+      "DIRECTOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "SUBMIT": {
+        "can": true,
+        "require": "ALLOW",
+      },
+    },
+    "permissions": {
+      "special-ed:read": "ALLOW",
+      "special-ed:review": "ALLOW",
+      "special-ed:write": "ALLOW",
+    },
+    "studentIn": "ALLOW",
+    "studentOut": "ALLOW",
+  },
+  "journeys": {
+    "permissions": {
+      "journey:approve": "DENY",
+      "journey:read": "DENY",
+      "journey:review": "DENY",
+      "journey:write": "DENY",
+    },
+    "scope": "NONE",
+    "scopeEmpty": "NONE",
+    "writeElsewhere": "DENY",
+    "writeInGrade": "DENY",
+    "writeInSubject": "DENY",
+    "writeInUnit": "DENY",
+  },
+  "leadership": false,
+  "observations": {
+    "permissions": {
+      "observation:manage": "ALLOW",
+      "special-ed:read": "ALLOW",
+      "special-ed:write": "ALLOW",
+    },
+    "readAssigned": true,
+    "readOther": true,
+  },
+  "permissionChecks": {
+    "attendance:read": true,
+    "attendance:write": false,
+    "journey:approve": false,
+    "journey:read": false,
+    "journey:review": false,
+    "journey:write": false,
+    "observation:manage": true,
+    "organization:admin": false,
+    "report:export": true,
+    "special-ed:read": true,
+    "special-ed:review": true,
+    "special-ed:write": true,
+    "staff-assignment:admin": true,
+    "staff-directory:read": true,
+    "student:admin": false,
+    "student:sensitive-read": true,
+  },
+  "permissions": [
+    "attendance:read",
+    "special-ed:read",
+    "special-ed:write",
+    "special-ed:review",
+    "report:export",
+    "student:sensitive-read",
+    "staff-directory:read",
+    "staff-assignment:admin",
+    "observation:manage",
+  ],
+  "resourcePermissions": {
+    "organization:admin": "DENY",
+    "staff-assignment:admin": "ALLOW",
+    "staff-directory:read": "ALLOW",
+    "student:admin": "DENY",
+    "student:sensitive-read": "ALLOW",
+  },
+  "studentScope": {
+    "empty": {
+      "specialNeedsFlag": true,
+    },
+    "scoped": {
+      "specialNeedsFlag": true,
+    },
+  },
+  "weeklyReports": {
+    "assignedStudentIn": "ALLOW",
+    "assignedStudentOut": "ALLOW",
+    "assignedStudents": "ALL",
+    "editorOther": "DENY",
+    "editorOwn": "DENY",
+    "permissions": {
+      "special-ed:read": "ALLOW",
+      "special-ed:review": "ALLOW",
+      "special-ed:write": "ALLOW",
+    },
+    "teacher": "DENY",
+    "transitions": {
+      "coordinator": {
+        "other": "ALLOW",
+        "own": "ALLOW",
+      },
+      "director": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "submit": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+    },
+  },
+}
+`;
+
+exports[`what each built-in role is allowed today > gives SPECIAL_ED_TEACHER the same decisions as before 1`] = `
+{
+  "academicCollections": {
+    "academicYears": "DENY",
+    "classes": "DENY",
+    "grades": "DENY",
+    "semesters": "DENY",
+    "subjects": "DENY",
+    "units": "DENY",
+  },
+  "aggregates": {
+    "assignedStudents": [
+      "student-a",
+    ],
+    "datedObservationScope": {
+      "OR": [
+        {
+          "assignment": {
+            "assignedTo": {
+              "userId": "user-a",
+            },
+          },
+        },
+        {
+          "observationDate": {
+            "gte": "2026-01-01T00:00:00.000Z",
+          },
+          "studentId": "student-a",
+        },
+      ],
+    },
+    "journeyScope": "NONE",
+    "journeyScopeEmpty": "NONE",
+    "observationAssignment": {
+      "assignedTo": {
+        "organizationId": "organization-a",
+        "status": "ACTIVE",
+        "userId": "user-a",
+      },
+      "organizationId": "organization-a",
+    },
+    "reportsObservations": true,
+    "specialEducationStudents": {
+      "id": {
+        "in": [
+          "student-a",
+        ],
+      },
+    },
+    "specialEducationStudentsEmpty": "NONE",
+    "studentScope": {
+      "id": {
+        "in": [
+          "student-a",
+          "student-b",
+        ],
+      },
+    },
+    "studentScopeEmpty": "NONE",
+  },
+  "attendance": {
+    "read": "DENY",
+    "readWithoutScope": "DENY",
+    "write": "DENY",
+  },
+  "classScope": {
+    "empty": "NONE",
+    "scoped": "NONE",
+  },
+  "ieps": {
+    "assignedStudents": [
+      "student-a",
+    ],
+    "assignedStudentsEmpty": [],
+    "commands": {
+      "ACTIVATE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "ARCHIVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "SUBMIT": {
+        "can": true,
+        "require": "ALLOW",
+      },
+    },
+    "permissions": {
+      "special-ed:read": "ALLOW",
+      "special-ed:review": "DENY",
+      "special-ed:write": "ALLOW",
+    },
+    "studentIn": "ALLOW",
+    "studentOut": "DENY",
+  },
+  "journeys": {
+    "permissions": {
+      "journey:approve": "DENY",
+      "journey:read": "DENY",
+      "journey:review": "DENY",
+      "journey:write": "DENY",
+    },
+    "scope": "NONE",
+    "scopeEmpty": "NONE",
+    "writeElsewhere": "DENY",
+    "writeInGrade": "DENY",
+    "writeInSubject": "DENY",
+    "writeInUnit": "DENY",
+  },
+  "leadership": false,
+  "observations": {
+    "permissions": {
+      "observation:manage": "DENY",
+      "special-ed:read": "ALLOW",
+      "special-ed:write": "ALLOW",
+    },
+    "readAssigned": true,
+    "readOther": false,
+  },
+  "permissionChecks": {
+    "attendance:read": true,
+    "attendance:write": false,
+    "journey:approve": false,
+    "journey:read": false,
+    "journey:review": false,
+    "journey:write": false,
+    "observation:manage": false,
+    "organization:admin": false,
+    "report:export": false,
+    "special-ed:read": true,
+    "special-ed:review": false,
+    "special-ed:write": true,
+    "staff-assignment:admin": false,
+    "staff-directory:read": false,
+    "student:admin": false,
+    "student:sensitive-read": false,
+  },
+  "permissions": [
+    "attendance:read",
+    "special-ed:read",
+    "special-ed:write",
+  ],
+  "resourcePermissions": {
+    "organization:admin": "DENY",
+    "staff-assignment:admin": "DENY",
+    "staff-directory:read": "DENY",
+    "student:admin": "DENY",
+    "student:sensitive-read": "DENY",
+  },
+  "studentScope": {
+    "empty": "NONE",
+    "scoped": {
+      "id": {
+        "in": [
+          "student-a",
+          "student-b",
+        ],
+      },
+    },
+  },
+  "weeklyReports": {
+    "assignedStudentIn": "ALLOW",
+    "assignedStudentOut": "DENY",
+    "assignedStudents": [
+      "student-a",
+    ],
+    "editorOther": "DENY",
+    "editorOwn": "ALLOW",
+    "permissions": {
+      "special-ed:read": "ALLOW",
+      "special-ed:review": "DENY",
+      "special-ed:write": "ALLOW",
+    },
+    "teacher": "ALLOW",
+    "transitions": {
+      "coordinator": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "director": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "submit": {
+        "other": "DENY",
+        "own": "ALLOW",
+      },
+    },
+  },
+}
+`;
+
+exports[`what each built-in role is allowed today > gives SPECIALIST the same decisions as before 1`] = `
+{
+  "academicCollections": {
+    "academicYears": "DENY",
+    "classes": "DENY",
+    "grades": "DENY",
+    "semesters": "DENY",
+    "subjects": "DENY",
+    "units": "DENY",
+  },
+  "aggregates": {
+    "assignedStudents": [
+      "student-a",
+    ],
+    "datedObservationScope": {
+      "OR": [
+        {
+          "assignment": {
+            "assignedTo": {
+              "userId": "user-a",
+            },
+          },
+        },
+        {
+          "observationDate": {
+            "gte": "2026-01-01T00:00:00.000Z",
+          },
+          "studentId": "student-a",
+        },
+      ],
+    },
+    "journeyScope": "NONE",
+    "journeyScopeEmpty": "NONE",
+    "observationAssignment": {
+      "assignedTo": {
+        "organizationId": "organization-a",
+        "status": "ACTIVE",
+        "userId": "user-a",
+      },
+      "organizationId": "organization-a",
+    },
+    "reportsObservations": true,
+    "specialEducationStudents": {
+      "id": {
+        "in": [
+          "student-a",
+        ],
+      },
+    },
+    "specialEducationStudentsEmpty": "NONE",
+    "studentScope": {
+      "id": {
+        "in": [
+          "student-a",
+          "student-b",
+        ],
+      },
+    },
+    "studentScopeEmpty": "NONE",
+  },
+  "attendance": {
+    "read": "DENY",
+    "readWithoutScope": "DENY",
+    "write": "DENY",
+  },
+  "classScope": {
+    "empty": "NONE",
+    "scoped": "NONE",
+  },
+  "ieps": {
+    "assignedStudents": [
+      "student-a",
+    ],
+    "assignedStudentsEmpty": [],
+    "commands": {
+      "ACTIVATE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "ARCHIVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "SUBMIT": {
+        "can": true,
+        "require": "ALLOW",
+      },
+    },
+    "permissions": {
+      "special-ed:read": "ALLOW",
+      "special-ed:review": "DENY",
+      "special-ed:write": "ALLOW",
+    },
+    "studentIn": "ALLOW",
+    "studentOut": "DENY",
+  },
+  "journeys": {
+    "permissions": {
+      "journey:approve": "DENY",
+      "journey:read": "DENY",
+      "journey:review": "DENY",
+      "journey:write": "DENY",
+    },
+    "scope": "NONE",
+    "scopeEmpty": "NONE",
+    "writeElsewhere": "DENY",
+    "writeInGrade": "DENY",
+    "writeInSubject": "DENY",
+    "writeInUnit": "DENY",
+  },
+  "leadership": false,
+  "observations": {
+    "permissions": {
+      "observation:manage": "DENY",
+      "special-ed:read": "ALLOW",
+      "special-ed:write": "ALLOW",
+    },
+    "readAssigned": true,
+    "readOther": false,
+  },
+  "permissionChecks": {
+    "attendance:read": false,
+    "attendance:write": false,
+    "journey:approve": false,
+    "journey:read": false,
+    "journey:review": false,
+    "journey:write": false,
+    "observation:manage": false,
+    "organization:admin": false,
+    "report:export": false,
+    "special-ed:read": true,
+    "special-ed:review": false,
+    "special-ed:write": true,
+    "staff-assignment:admin": false,
+    "staff-directory:read": false,
+    "student:admin": false,
+    "student:sensitive-read": false,
+  },
+  "permissions": [
+    "special-ed:read",
+    "special-ed:write",
+  ],
+  "resourcePermissions": {
+    "organization:admin": "DENY",
+    "staff-assignment:admin": "DENY",
+    "staff-directory:read": "DENY",
+    "student:admin": "DENY",
+    "student:sensitive-read": "DENY",
+  },
+  "studentScope": {
+    "empty": "NONE",
+    "scoped": {
+      "id": {
+        "in": [
+          "student-a",
+          "student-b",
+        ],
+      },
+    },
+  },
+  "weeklyReports": {
+    "assignedStudentIn": "ALLOW",
+    "assignedStudentOut": "DENY",
+    "assignedStudents": [
+      "student-a",
+    ],
+    "editorOther": "DENY",
+    "editorOwn": "ALLOW",
+    "permissions": {
+      "special-ed:read": "ALLOW",
+      "special-ed:review": "DENY",
+      "special-ed:write": "ALLOW",
+    },
+    "teacher": "ALLOW",
+    "transitions": {
+      "coordinator": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "director": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "submit": {
+        "other": "DENY",
+        "own": "ALLOW",
+      },
+    },
+  },
+}
+`;
+
+exports[`what each built-in role is allowed today > gives SUBJECT_TEACHER the same decisions as before 1`] = `
+{
+  "academicCollections": {
+    "academicYears": "ALLOW",
+    "classes": "DENY",
+    "grades": "ALLOW",
+    "semesters": "ALLOW",
+    "subjects": "ALLOW",
+    "units": "ALLOW",
+  },
+  "aggregates": {
+    "assignedStudents": [],
+    "datedObservationScope": {
+      "OR": [
+        {
+          "assignment": {
+            "assignedTo": {
+              "userId": "user-a",
+            },
+          },
+        },
+        {
+          "observationDate": {
+            "gte": "2026-01-01T00:00:00.000Z",
+          },
+          "studentId": "student-a",
+        },
+      ],
+    },
+    "journeyScope": {
+      "subjectId": {
+        "in": [
+          "subject-a",
+        ],
+      },
+    },
+    "journeyScopeEmpty": "NONE",
+    "observationAssignment": "NONE",
+    "reportsObservations": false,
+    "specialEducationStudents": "NONE",
+    "specialEducationStudentsEmpty": "NONE",
+    "studentScope": "NONE",
+    "studentScopeEmpty": "NONE",
+  },
+  "attendance": {
+    "read": "DENY",
+    "readWithoutScope": "DENY",
+    "write": "DENY",
+  },
+  "classScope": {
+    "empty": "NONE",
+    "scoped": "NONE",
+  },
+  "ieps": {
+    "assignedStudents": [],
+    "assignedStudentsEmpty": [],
+    "commands": {
+      "ACTIVATE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "ARCHIVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "COORDINATOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_APPROVE": {
+        "can": false,
+        "require": "DENY",
+      },
+      "DIRECTOR_RETURN": {
+        "can": false,
+        "require": "DENY",
+      },
+      "SUBMIT": {
+        "can": false,
+        "require": "DENY",
+      },
+    },
+    "permissions": {
+      "special-ed:read": "DENY",
+      "special-ed:review": "DENY",
+      "special-ed:write": "DENY",
+    },
+    "studentIn": "DENY",
+    "studentOut": "DENY",
+  },
+  "journeys": {
+    "permissions": {
+      "journey:approve": "DENY",
+      "journey:read": "ALLOW",
+      "journey:review": "DENY",
+      "journey:write": "ALLOW",
+    },
+    "scope": {
+      "subjectId": {
+        "in": [
+          "subject-a",
+        ],
+      },
+    },
+    "scopeEmpty": "NONE",
+    "writeElsewhere": "DENY",
+    "writeInGrade": "DENY",
+    "writeInSubject": "ALLOW",
+    "writeInUnit": "DENY",
+  },
+  "leadership": false,
+  "observations": {
+    "permissions": {
+      "observation:manage": "DENY",
+      "special-ed:read": "DENY",
+      "special-ed:write": "DENY",
+    },
+    "readAssigned": true,
+    "readOther": false,
+  },
+  "permissionChecks": {
+    "attendance:read": false,
+    "attendance:write": false,
+    "journey:approve": false,
+    "journey:read": true,
+    "journey:review": false,
+    "journey:write": true,
+    "observation:manage": false,
+    "organization:admin": false,
+    "report:export": false,
+    "special-ed:read": false,
+    "special-ed:review": false,
+    "special-ed:write": false,
+    "staff-assignment:admin": false,
+    "staff-directory:read": false,
+    "student:admin": false,
+    "student:sensitive-read": false,
+  },
+  "permissions": [
+    "journey:read",
+    "journey:write",
+  ],
+  "resourcePermissions": {
+    "organization:admin": "DENY",
+    "staff-assignment:admin": "DENY",
+    "staff-directory:read": "DENY",
+    "student:admin": "DENY",
+    "student:sensitive-read": "DENY",
+  },
+  "studentScope": {
+    "empty": "NONE",
+    "scoped": "NONE",
+  },
+  "weeklyReports": {
+    "assignedStudentIn": "DENY",
+    "assignedStudentOut": "DENY",
+    "assignedStudents": [],
+    "editorOther": "DENY",
+    "editorOwn": "DENY",
+    "permissions": {
+      "special-ed:read": "DENY",
+      "special-ed:review": "DENY",
+      "special-ed:write": "DENY",
+    },
+    "teacher": "DENY",
+    "transitions": {
+      "coordinator": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "director": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+      "submit": {
+        "other": "DENY",
+        "own": "DENY",
+      },
+    },
+  },
+}
+`;
