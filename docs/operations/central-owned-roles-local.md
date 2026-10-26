@@ -15,6 +15,10 @@ Learnspace takes the role key and the permission list of the Central entitlement
 1. `bun run permissions:check` compares `permissions.json` with Central.
 2. `bun run permissions:sync` publishes it. Application Access, Learnspace, Permissions then lists all 31 keys.
 
+## Create the built-in roles in Central
+
+After `permissions:sync`, run in Central: `bun run seed:application-roles ../MWS-Learnspace/role-presets.json --as <super admin email> --dry-run`, then again without `--dry-run`. It makes Director, Principal, Special Education Coordinator, Grade Teacher, Subject Teacher and Special Education Teacher, and skips what exists. The specialist uses the Special Education Teacher role, because Central keeps one role per set of permissions.
+
 ## Give a role its permissions in Central
 
 Application Access, Learnspace, Roles. Pick the role and tick its permissions. A person signs in with whatever the role holds.
