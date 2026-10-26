@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Students, their enrolment in the current class, their parents as contacts and the special education support assignments come from Central (`central-student:sync`, also part of the scheduled round). A student has the special needs flag when Central has a support assignment for them. With the sync on, the student fields Central owns and the GPK assignment routes are refused (409 `MANAGED_BY_CENTRAL`) (ADR 0002).
 - Units, grades, classes, subjects and academic years come from Central (`central-academic:sync`, with `--adopt` to link existing rows by name), and the scopes of people whose role reaches rows by grade or subject are computed from their class assignments. `CENTRAL_SYNC_INTERVAL_MINUTES` runs the access and academic sync on a schedule inside the API. People and access shows these scopes read-only and marks people with no class in Central (ADR 0002).
 - `role-presets.json`: the six built-in roles with their permissions, ready for Central's `seed:application-roles`, kept in step with the code by a test (ADR 0002).
 - With the shared session, accounts and roles are managed in Central: the account list reports `managedByCentral`, creating an account or changing a person's email, name, avatar or role is refused, and a local invitation admits no one. Scopes, role title and status stay editable. Membership scopes are checked against the permissions of the role (ADR 0002).

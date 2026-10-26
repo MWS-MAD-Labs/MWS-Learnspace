@@ -28,6 +28,16 @@ Central's classes and class teacher assignments need the unit and grade ids (a C
 3. `bun run central-academic:sync -- --apply` writes it. It also sets the scopes of people whose role has `scope.grade` or `scope.subject`.
 4. Set `CENTRAL_SYNC_INTERVAL_MINUTES` (for example 15) to run the access and academic sync from the API itself, once soon after start and then every interval.
 
+## Students and support from Central
+
+The connection of Learnspace needs the scopes for students (`students:read`), the roster export (`students:roster_export:read`, which carries the birth date and the parents) and the student support assignments. Run the class sync first, because an enrolment needs its class.
+
+1. `bun run central-student:sync -- --dry-run` shows what would change. A student here with the same student number and no Central id is a conflict; `--adopt` links it.
+2. `bun run central-student:sync -- --apply` writes it.
+3. The scheduled round (`CENTRAL_SYNC_INTERVAL_MINUTES`) runs access, classes and students in that order.
+
+With the sync on, the student form and the GPK assignment buttons answer "This is managed in Central." Change the data in Central.
+
 ## Give a role its permissions in Central
 
 Application Access, Learnspace, Roles. Pick the role and tick its permissions. A person signs in with whatever the role holds.
