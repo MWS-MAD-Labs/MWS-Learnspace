@@ -87,6 +87,7 @@ describe('studentAdministrationService mapping', () => {
         avatarUrl: null,
         role: 'SPECIAL_ED_TEACHER',
         roleTitle: 'Guru Pendamping Khusus',
+        permissions: ['weekly-report:teach', 'scope.assigned', 'iep:submit'],
         status: 'ACTIVE',
       }),
     ).toMatchObject({
@@ -95,6 +96,29 @@ describe('studentAdministrationService mapping', () => {
       name: 'GPK Teacher',
       email: '',
       role: 'SPECIAL_ED_TEACHER',
+      isGPK: true,
+      isSpecialEdCoordinator: false,
+    });
+  });
+
+  it('tells a coordinator from a teacher by permissions, whatever the role is called', () => {
+    const staff = (permissions: string[]) =>
+      mapStaffDirectoryItemToUser({
+        membershipId,
+        userId,
+        organizationId,
+        displayName: 'Someone',
+        avatarUrl: null,
+        role: 'Reading Coach',
+        roleTitle: null,
+        permissions,
+        status: 'ACTIVE',
+      });
+    expect(staff(['iep:coordinator-approve'])).toMatchObject({
+      isGPK: false,
+      isSpecialEdCoordinator: true,
+    });
+    expect(staff(['weekly-report:teach'])).toMatchObject({
       isGPK: true,
       isSpecialEdCoordinator: false,
     });

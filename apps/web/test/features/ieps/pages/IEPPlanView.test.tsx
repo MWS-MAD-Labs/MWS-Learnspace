@@ -87,7 +87,7 @@ beforeEach(() => {
       name: 'Coordinator One',
       role: 'SPECIAL_ED_COORDINATOR',
       isSpecialEdCoordinator: true,
-      permissions: [],
+      permissions: ['iep:coordinator-approve', 'iep:submit'],
     },
     toggleObservationDrawer: vi.fn(),
     showToast: vi.fn(),

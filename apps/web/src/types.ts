@@ -1,11 +1,5 @@
-export type UserRole =
-  | 'PRINCIPAL'
-  | 'DIRECTOR'
-  | 'GRADE_TEACHER'
-  | 'SUBJECT_TEACHER'
-  | 'SPECIAL_ED_COORDINATOR'
-  | 'SPECIAL_ED_TEACHER'
-  | 'SPECIALIST';
+// The name of a role Central made. It can be anything, so screens ask for permissions instead.
+export type UserRole = string;
 
 export interface User {
   id: string;

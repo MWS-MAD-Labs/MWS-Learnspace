@@ -14,6 +14,7 @@ import type {
 import type { User, UserRole } from '../../../types';
 import { ApiClientError, onApiUnauthorized } from '../../../services/apiClient';
 import { authService } from '../api/authService';
+import { flagsFromPermissions } from '../permissionFlags';
 import {
   fullCurrentRoute,
   goToHub,
@@ -70,8 +71,7 @@ function mapSessionToUser(session: CurrentSessionResponse): User | undefined {
     subjectIds: membership.subjectIds,
     assignedStudentIds: membership.assignedStudentIds,
     assignedSpecialNeedsStudentIds: membership.assignedStudentIds,
-    isGPK: membership.role === 'SPECIAL_ED_TEACHER',
-    isSpecialEdCoordinator: membership.role === 'SPECIAL_ED_COORDINATOR',
+    ...flagsFromPermissions(membership.permissions),
     permissions: membership.permissions,
   };
 }

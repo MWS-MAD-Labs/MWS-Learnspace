@@ -42,6 +42,9 @@ type FormState = {
   email: string;
   displayName: string;
   role: Role;
+  // The role as Central or the account has it, and what it allows. Shown, and used to pick the scopes.
+  roleKey: string;
+  permissions: string[];
   roleTitle: string;
   userStatus: 'ACTIVE' | 'DISABLED';
   membershipStatus: 'ACTIVE' | 'DISABLED';
@@ -54,6 +57,8 @@ const emptyForm: FormState = {
   email: '',
   displayName: '',
   role: 'GRADE_TEACHER',
+  roleKey: '',
+  permissions: [],
   roleTitle: '',
   userStatus: 'ACTIVE',
   membershipStatus: 'ACTIVE',
@@ -69,6 +74,8 @@ function formForAccount(account: Account): FormState {
     displayName: account.displayName,
     // A role Central made that this form does not list cannot be edited here; the form starts on its default.
     role: isRole(account.role) ? account.role : emptyForm.role,
+    roleKey: account.role,
+    permissions: account.permissions,
     roleTitle: account.roleTitle ?? '',
     userStatus: account.userStatus,
     membershipStatus: account.membershipStatus,
@@ -147,6 +154,8 @@ export const PeopleAccessView: React.FC = () => {
   const [timezoneError, setTimezoneError] = useState<string>();
   const [timezoneFeedback, setTimezoneFeedback] = useState<Feedback>();
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  // True when Central makes and changes the accounts. Here only scopes, title and status are set.
+  const [managedByCentral, setManagedByCentral] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>();
   const loadController = useRef<AbortController | undefined>(undefined);
@@ -213,6 +222,7 @@ export const PeopleAccessView: React.FC = () => {
           ),
         ]);
       setAccounts(accountResponse.data);
+      setManagedByCentral(accountResponse.meta.managedByCentral);
       setUnits(unitResponse.data.map(({ id, name }) => ({ id, name })));
       setGrades(gradeResponse.data.map(({ id, name }) => ({ id, name })));
       setSubjects(subjectResponse.data.map(({ id, name }) => ({ id, name })));
@@ -281,10 +291,18 @@ export const PeopleAccessView: React.FC = () => {
 
   const isEditing = Boolean(form.membershipId);
   const scopeMode = useMemo(() => {
+    if (isEditing) {
+      const byGrade = form.permissions.includes('scope.grade');
+      const bySubject = form.permissions.includes('scope.subject');
+      if (byGrade && bySubject) return 'both';
+      if (byGrade) return 'grade';
+      if (bySubject) return 'subject';
+      return 'none';
+    }
     if (form.role === 'GRADE_TEACHER') return 'grade';
     if (form.role === 'SUBJECT_TEACHER') return 'subject';
     return 'none';
-  }, [form.role]);
+  }, [form.role, form.permissions, isEditing]);
 
   const selectRole = (role: Role) => {
     setForm((current) => ({
@@ -302,21 +320,25 @@ export const PeopleAccessView: React.FC = () => {
     setSaving(true);
     setFeedback(undefined);
     try {
-      const common = {
-        email: form.email,
-        displayName: form.displayName,
-        role: form.role,
+      const scopes = {
         roleTitle: form.roleTitle.trim() || null,
         unitIds: form.unitIds,
         gradeIds: form.gradeIds,
         subjectIds: form.subjectIds,
+      };
+      const common = {
+        email: form.email,
+        displayName: form.displayName,
+        role: form.role,
+        ...scopes,
       } satisfies OrganizationAccountCreateCommand;
       const response = form.membershipId
         ? await organizationAdministrationService.updateAccount(
             organizationId,
             form.membershipId,
             {
-              ...common,
+              // Central owns who a person is and their role, so it is not sent.
+              ...(managedByCentral ? scopes : common),
               userStatus: form.userStatus,
               membershipStatus: form.membershipStatus,
             },
@@ -403,8 +425,9 @@ export const PeopleAccessView: React.FC = () => {
           People & access
         </h1>
         <p className="mt-1 text-sm text-stone-600">
-          Manage authoritative staff identities, memberships, roles, statuses,
-          and scopes.
+          {managedByCentral
+            ? 'Who a person is and their role come from Central. Here you set the title, status and scopes.'
+            : 'Manage authoritative staff identities, memberships, roles, statuses, and scopes.'}
         </p>
       </div>
 
@@ -472,16 +495,18 @@ export const PeopleAccessView: React.FC = () => {
         <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-black">Organization accounts</h2>
-            <button
-              type="button"
-              onClick={() => {
-                setForm(emptyForm);
-                setFeedback(undefined);
-              }}
-              className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-3 py-2 text-xs font-bold"
-            >
-              <Plus className="h-3.5 w-3.5" /> New account
-            </button>
+            {!managedByCentral && (
+              <button
+                type="button"
+                onClick={() => {
+                  setForm(emptyForm);
+                  setFeedback(undefined);
+                }}
+                className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-3 py-2 text-xs font-bold"
+              >
+                <Plus className="h-3.5 w-3.5" /> New account
+              </button>
+            )}
           </div>
           <div className="space-y-2">
             {accounts.map((account) => (
@@ -543,6 +568,7 @@ export const PeopleAccessView: React.FC = () => {
                 aria-label="Display name"
                 required
                 value={form.displayName}
+                readOnly={managedByCentral}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
@@ -559,6 +585,7 @@ export const PeopleAccessView: React.FC = () => {
                 required
                 type="email"
                 value={form.email}
+                readOnly={managedByCentral}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
@@ -568,21 +595,32 @@ export const PeopleAccessView: React.FC = () => {
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
               />
             </label>
-            <label className="text-xs font-bold text-stone-700">
-              Role
-              <select
-                aria-label="Role"
-                value={form.role}
-                onChange={(event) => selectRole(event.target.value as Role)}
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
-              >
-                {roles.map((role) => (
-                  <option key={role} value={role}>
-                    {roleLabel(role)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {managedByCentral ? (
+              <div className="text-xs font-bold text-stone-700">
+                Role
+                <p className="mt-1 w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-normal">
+                  {form.roleKey
+                    ? roleLabel(form.roleKey)
+                    : 'No account selected'}
+                </p>
+              </div>
+            ) : (
+              <label className="text-xs font-bold text-stone-700">
+                Role
+                <select
+                  aria-label="Role"
+                  value={form.role}
+                  onChange={(event) => selectRole(event.target.value as Role)}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
+                >
+                  {roles.map((role) => (
+                    <option key={role} value={role}>
+                      {roleLabel(role)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="text-xs font-bold text-stone-700">
               Role title
               <input
@@ -639,7 +677,7 @@ export const PeopleAccessView: React.FC = () => {
             )}
           </div>
 
-          {scopeMode === 'grade' && (
+          {(scopeMode === 'grade' || scopeMode === 'both') && (
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <ScopePicker
                 title="Unit scopes"
@@ -659,7 +697,7 @@ export const PeopleAccessView: React.FC = () => {
               />
             </div>
           )}
-          {scopeMode === 'subject' && (
+          {(scopeMode === 'subject' || scopeMode === 'both') && (
             <div className="mt-4">
               <ScopePicker
                 title="Subject scopes"
@@ -692,7 +730,7 @@ export const PeopleAccessView: React.FC = () => {
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || (managedByCentral && !isEditing)}
             className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#6E161E] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-60"
           >
             {saving ? (

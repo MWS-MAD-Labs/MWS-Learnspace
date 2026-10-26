@@ -1,3 +1,4 @@
+import { reachesOrganization } from '../../auth/permissionFlags';
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { useIEPs } from '../hooks/useIEPs';
@@ -57,12 +58,8 @@ export const IEPStatusTracker: React.FC<IEPStatusTrackerProps> = ({
 
   // Fetch all special needs students and their IEPs
   const isCoordinator = currentUser.isSpecialEdCoordinator;
-  const isDirector =
-    currentUser.role === 'DIRECTOR' || currentUser.role === 'PRINCIPAL';
-  const isSETeacher =
-    currentUser.isGPK ||
-    (currentUser.role === 'SPECIAL_ED_TEACHER' &&
-      !currentUser.isSpecialEdCoordinator);
+  const isDirector = reachesOrganization(currentUser.permissions);
+  const isSETeacher = Boolean(currentUser.isGPK);
 
   const specialStudents = useMemo(() => {
     if (isCoordinator || isDirector) {

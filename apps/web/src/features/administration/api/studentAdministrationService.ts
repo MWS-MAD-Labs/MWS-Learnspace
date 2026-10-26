@@ -1,3 +1,4 @@
+import { flagsFromPermissions } from '../../auth/permissionFlags';
 import {
   gpkAssignmentMutationResponseSchema,
   staffDirectoryResponseSchema,
@@ -30,9 +31,8 @@ export function mapStaffDirectoryItemToUser(
     unitIds: [],
     gradeIds: [],
     subjectIds: [],
-    isGPK: staff.role === 'SPECIAL_ED_TEACHER',
-    isSpecialEdCoordinator: staff.role === 'SPECIAL_ED_COORDINATOR',
-    permissions: [],
+    ...flagsFromPermissions(staff.permissions),
+    permissions: staff.permissions,
   };
 }
 

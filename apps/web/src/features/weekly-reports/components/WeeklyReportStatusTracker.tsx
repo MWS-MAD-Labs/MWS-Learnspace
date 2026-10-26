@@ -1,3 +1,4 @@
+import { reachesOrganization } from '../../auth/permissionFlags';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import type { Student } from '../../../types';
@@ -151,12 +152,8 @@ export const WeeklyReportStatusTracker: React.FC<
   const [isMutating, setIsMutating] = useState(false);
 
   const isCoordinator = currentUser.isSpecialEdCoordinator;
-  const isDirector =
-    currentUser.role === 'DIRECTOR' || currentUser.role === 'PRINCIPAL';
-  const isSETeacher =
-    currentUser.isGPK ||
-    (currentUser.role === 'SPECIAL_ED_TEACHER' &&
-      !currentUser.isSpecialEdCoordinator);
+  const isDirector = reachesOrganization(currentUser.permissions);
+  const isSETeacher = Boolean(currentUser.isGPK);
 
   const specialStudents = useMemo(() => {
     if (isCoordinator || isDirector) {

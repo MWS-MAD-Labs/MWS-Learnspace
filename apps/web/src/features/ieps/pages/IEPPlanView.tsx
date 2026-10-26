@@ -1,3 +1,4 @@
+import { reachesOrganization } from '../../auth/permissionFlags';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { useIEPs } from '../hooks/useIEPs';
@@ -62,17 +63,10 @@ export const IEPPlanView: React.FC = () => {
 
   const isCoordinatorOrLeadership =
     Boolean(currentUser.isSpecialEdCoordinator) ||
-    currentUser.role === 'PRINCIPAL' ||
-    currentUser.role === 'DIRECTOR';
+    reachesOrganization(currentUser.permissions);
 
-  const isSETeacher =
-    currentUser.isGPK ||
-    (currentUser.role === 'SPECIAL_ED_TEACHER' &&
-      !currentUser.isSpecialEdCoordinator);
-  const canAuthorIep =
-    Boolean(currentUser.isSpecialEdCoordinator) ||
-    currentUser.role === 'SPECIAL_ED_TEACHER' ||
-    currentUser.role === 'SPECIALIST';
+  const isSETeacher = Boolean(currentUser.isGPK);
+  const canAuthorIep = currentUser.permissions.includes('iep:submit');
 
   // Filter accessible students: SE teachers can ONLY access SN students assigned to them
   const accessibleStudents = useMemo(() => {

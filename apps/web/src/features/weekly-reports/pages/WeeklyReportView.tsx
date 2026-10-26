@@ -1,3 +1,4 @@
+import { reachesOrganization } from '../../auth/permissionFlags';
 import React, {
   useState,
   useEffect,
@@ -102,14 +103,10 @@ export const WeeklyReportView: React.FC = () => {
   >('ALL');
 
   const isCoordinator = Boolean(currentUser.isSpecialEdCoordinator);
-  const isDirector =
-    currentUser.role === 'DIRECTOR' || currentUser.role === 'PRINCIPAL';
+  const isDirector = reachesOrganization(currentUser.permissions);
   const isCoordinatorOrLeadership = isCoordinator || isDirector;
 
-  const isSETeacher =
-    currentUser.isGPK ||
-    (currentUser.role === 'SPECIAL_ED_TEACHER' &&
-      !currentUser.isSpecialEdCoordinator);
+  const isSETeacher = Boolean(currentUser.isGPK);
 
   // Review & Feedback Modal state
   const [showReviewModal, setShowReviewModal] = useState(false);

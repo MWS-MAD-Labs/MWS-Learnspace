@@ -38,6 +38,7 @@ const account = {
   unitIds: [],
   gradeIds: [],
   subjectIds: [],
+  permissions: ['organization:admin'],
   updatedAt: '2026-08-24T00:00:00.000Z',
 };
 const mockedUseAuth = vi.mocked(useAuth);
@@ -104,7 +105,7 @@ beforeEach(() => {
   });
   service.getAccounts.mockResolvedValue({
     data: [account],
-    meta: { count: 1 },
+    meta: { count: 1, managedByCentral: false },
   });
   service.getUnits.mockResolvedValue({
     data: [
@@ -129,6 +130,41 @@ beforeEach(() => {
 });
 
 describe('PeopleAccessView', () => {
+  it('lets Central own who a person is and their role, and keeps scopes, title and status here', async () => {
+    const coach = {
+      ...account,
+      role: 'Reading Coach',
+      roleTitle: 'Coach',
+      permissions: ['scope.grade', 'attendance:read'],
+    };
+    service.getAccounts.mockResolvedValue({
+      data: [coach],
+      meta: { count: 1, managedByCentral: true },
+    });
+    service.updateAccount.mockResolvedValue({ data: coach });
+    render(<PeopleAccessView />);
+
+    await screen.findByRole('heading', { name: 'People & access' });
+    expect(screen.queryByRole('button', { name: 'New account' })).toBeNull();
+    fireEvent.click(await screen.findByText(coach.displayName));
+    expect(screen.getByLabelText('Display name')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Email')).toHaveAttribute('readonly');
+    expect(screen.queryByLabelText('Role')).toBeNull();
+    expect(screen.getByText('Reading coach')).toBeVisible();
+    // The role reaches by grade, so the grade scopes are offered.
+    fireEvent.click(screen.getByLabelText('Elementary'));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save access changes' }),
+    );
+
+    await waitFor(() => expect(service.updateAccount).toHaveBeenCalledOnce());
+    const sent = service.updateAccount.mock.calls[0][2];
+    expect(sent).not.toHaveProperty('role');
+    expect(sent).not.toHaveProperty('email');
+    expect(sent).not.toHaveProperty('displayName');
+    expect(sent).toMatchObject({ unitIds: [unitId] });
+  });
+
   it('keeps account administration available when timezone settings fail', async () => {
     service.getSettings.mockRejectedValue(new Error('Timezone unavailable'));
     render(<PeopleAccessView />);
