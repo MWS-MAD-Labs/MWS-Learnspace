@@ -34,8 +34,16 @@ export function createResourceRouter(
     }),
   );
   router.use(createStaffDirectoryRouter(prisma));
-  router.use(createStudentsRouter(prisma));
-  router.use(createGpkRouter(prisma));
+  router.use(
+    createStudentsRouter(prisma, {
+      managedByCentral: options.scopesManagedByCentral,
+    }),
+  );
+  router.use(
+    createGpkRouter(prisma, {
+      managedByCentral: options.scopesManagedByCentral,
+    }),
+  );
   router.use(createAttendanceRouter(prisma));
   return router;
 }

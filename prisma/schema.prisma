@@ -387,6 +387,7 @@ model Student {
   id                     String                      @id @default(uuid()) @db.Uuid
   organizationId         String                      @db.Uuid
   studentNumber          String
+  centralId              String?
   fullName               String
   nickname               String?
   gender                 Gender                      @default(UNSPECIFIED)
@@ -412,6 +413,7 @@ model Student {
   weeklyReports          WeeklyReport[]
 
   @@unique([organizationId, studentNumber])
+  @@unique([organizationId, centralId])
   @@index([organizationId, status, fullName])
   @@index([fullName(ops: raw("gin_trgm_ops"))], type: Gin, map: "Student_fullName_trgm_idx")
   @@index([nickname(ops: raw("gin_trgm_ops"))], type: Gin, map: "Student_nickname_trgm_idx")

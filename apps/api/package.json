@@ -27,6 +27,7 @@
     "db:backfill-central-principals": "bun src/application/external-principal-backfill-cli.ts",
     "central-access:sync": "bun src/application/central-access-sync-cli.ts",
     "central-academic:sync": "bun src/application/central-academic-sync-cli.ts",
+    "central-student:sync": "bun src/application/central-student-sync-cli.ts",
     "permissions:check": "bun src/application/permissions-cli.ts check",
     "permissions:sync": "bun src/application/permissions-cli.ts sync",
     "shared-session:readiness": "bun src/application/shared-session-readiness-cli.ts"

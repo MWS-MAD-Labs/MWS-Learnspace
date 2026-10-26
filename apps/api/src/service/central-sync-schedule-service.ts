@@ -11,6 +11,11 @@ import {
   synchronizeCentralAcademics,
   type AcademicCentralClient,
 } from './central-academic-sync-service.js';
+import {
+  createPostgresCentralStudentSyncLock,
+  synchronizeCentralStudents,
+  type StudentCentralClient,
+} from './central-student-sync-service.js';
 import { createCentralOrganizationService } from './central-organization-service.js';
 import { createCentralDataClient } from './shared-session-shadow-service.js';
 
@@ -41,7 +46,14 @@ export async function runCentralSyncRound(input: {
     localOrganizationId: organization.localOrganizationId,
     mode: 'apply',
   });
-  return { access, academics };
+  // Students come after the classes, because an enrollment needs the class.
+  const students = await synchronizeCentralStudents({
+    lock: createPostgresCentralStudentSyncLock(prisma),
+    central: central as unknown as StudentCentralClient,
+    localOrganizationId: organization.localOrganizationId,
+    mode: 'apply',
+  });
+  return { access, academics, students };
 }
 
 // Runs a round every CENTRAL_SYNC_INTERVAL_MINUTES, and once soon after start. Off unless the shared session is on and the
@@ -72,6 +84,7 @@ export function scheduleCentralSync(
         {
           access: report.access.counts,
           academics: report.academics.counts,
+          students: report.students.counts,
         },
         'central sync completed',
       );
