@@ -1,0 +1,109 @@
+{
+  "application_id": "learnspace",
+  "roles": [
+    {
+      "key": "DIRECTOR",
+      "label": "Director",
+      "permissions": [
+        "attendance:read",
+        "journey:read",
+        "journey:approve",
+        "special-ed:read",
+        "special-ed:review",
+        "report:export",
+        "student:admin",
+        "student:sensitive-read",
+        "staff-directory:read",
+        "staff-assignment:admin",
+        "organization:admin",
+        "scope.organization",
+        "iep:director-approve",
+        "iep:director-return",
+        "iep:activate",
+        "iep:archive",
+        "weekly-report:direct"
+      ],
+      "allows_employees": true,
+      "allows_students": false,
+      "allows_interns": false
+    },
+    {
+      "key": "PRINCIPAL",
+      "label": "Principal",
+      "permissions": [
+        "attendance:read",
+        "journey:read",
+        "journey:review",
+        "special-ed:read",
+        "special-ed:review",
+        "report:export",
+        "student:sensitive-read",
+        "staff-directory:read",
+        "scope.organization"
+      ],
+      "allows_employees": true,
+      "allows_students": false,
+      "allows_interns": false
+    },
+    {
+      "key": "SPECIAL_ED_COORDINATOR",
+      "label": "Special Education Coordinator",
+      "permissions": [
+        "attendance:read",
+        "special-ed:read",
+        "special-ed:write",
+        "special-ed:review",
+        "report:export",
+        "student:sensitive-read",
+        "staff-directory:read",
+        "staff-assignment:admin",
+        "observation:manage",
+        "scope.special-ed",
+        "iep:submit",
+        "iep:coordinator-approve",
+        "iep:coordinator-return",
+        "weekly-report:coordinate"
+      ],
+      "allows_employees": true,
+      "allows_students": false,
+      "allows_interns": false
+    },
+    {
+      "key": "GRADE_TEACHER",
+      "label": "Grade Teacher",
+      "permissions": [
+        "attendance:read",
+        "attendance:write",
+        "journey:read",
+        "journey:write",
+        "scope.grade"
+      ],
+      "allows_employees": true,
+      "allows_students": false,
+      "allows_interns": false
+    },
+    {
+      "key": "SUBJECT_TEACHER",
+      "label": "Subject Teacher",
+      "permissions": ["journey:read", "journey:write", "scope.subject"],
+      "allows_employees": true,
+      "allows_students": false,
+      "allows_interns": false
+    },
+    {
+      "key": "SPECIAL_ED_TEACHER",
+      "label": "Special Education Teacher",
+      "permissions": [
+        "attendance:read",
+        "special-ed:read",
+        "special-ed:write",
+        "scope.assigned",
+        "iep:submit",
+        "weekly-report:teach"
+      ],
+      "allows_employees": true,
+      "allows_students": false,
+      "allows_interns": false
+    }
+  ]
+}
