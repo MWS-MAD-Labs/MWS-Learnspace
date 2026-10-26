@@ -6,10 +6,12 @@ import { createOrganizationAccountsService } from '../service/organization-accou
 
 export function createOrganizationAccountsRouter(
   prisma: DatabaseClient,
+  options: { managedByCentral?: boolean } = {},
 ): Router {
   const router = createRouter();
   const controller = createOrganizationAccountsController(
     createOrganizationAccountsService(prisma),
+    options,
   );
   const root = '/organizations/:organizationId/accounts';
   router.get(root, controller.list);

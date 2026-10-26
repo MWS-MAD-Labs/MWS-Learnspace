@@ -208,6 +208,7 @@ export function createApp({
           database.client,
           authServices.shared ?? authServices.sessions,
           authServices.shadowObserver,
+          { accountsManagedByCentral: config.sharedSessionMode === 'shared' },
         ),
       );
       route(

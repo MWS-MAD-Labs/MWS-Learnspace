@@ -236,7 +236,12 @@ export class OAuthService {
       },
       orderBy: { createdAt: 'asc' },
     });
-    if (invitation && this.config.authAdmissionMode !== 'DENY_UNKNOWN') {
+    // With the shared session, Central admits people. A local invitation admits no one.
+    if (
+      invitation &&
+      this.config.authAdmissionMode !== 'DENY_UNKNOWN' &&
+      this.config.sharedSessionMode !== 'shared'
+    ) {
       try {
         return await this.prisma.$transaction(
           async (transactionClient: Prisma.TransactionClient) => {

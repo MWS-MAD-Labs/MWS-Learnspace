@@ -1,10 +1,12 @@
 import { Prisma } from '@prisma/client';
+import { permissionsOfMembership } from '../utils/authorization.js';
 
 export const organizationAccountSelect = {
   id: true,
   organizationId: true,
   role: true,
   roleTitle: true,
+  permissions: true,
   status: true,
   updatedAt: true,
   user: {
@@ -43,6 +45,7 @@ export function mapOrganizationAccount(account: SelectedOrganizationAccount) {
     userStatus: account.user.status,
     role: account.role,
     roleTitle: account.roleTitle,
+    permissions: permissionsOfMembership(account.role, account.permissions),
     membershipStatus: account.status,
     unitIds: account.unitScopes.map((scope) => scope.unitId),
     gradeIds: account.gradeScopes.map((scope) => scope.gradeId),

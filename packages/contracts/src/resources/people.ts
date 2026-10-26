@@ -41,6 +41,8 @@ export const staffDirectoryItemSchema = z
     avatarUrl: z.string().url().nullable(),
     role: roleKeySchema,
     roleTitle: z.string().nullable(),
+    // What the person may do, so a screen can tell a coordinator from a teacher without knowing role names.
+    permissions: z.array(z.string()),
     status: z.literal('ACTIVE'),
   })
   .strict();
@@ -62,6 +64,8 @@ export const organizationAccountSchema = z
     userStatus: accountStatusSchema,
     role: roleKeySchema,
     roleTitle: z.string().nullable(),
+    // What the role allows. It decides which scopes make sense: grade scopes, subject scopes or none.
+    permissions: z.array(z.string()),
     membershipStatus: accountStatusSchema,
     unitIds: z.array(uuidSchema),
     gradeIds: z.array(uuidSchema),
@@ -72,7 +76,8 @@ export const organizationAccountSchema = z
 export const organizationAccountsResponseSchema = z
   .object({
     data: z.array(organizationAccountSchema),
-    meta: collectionMetaSchema,
+    // When Central manages accounts, a person is made and changed there. Only scopes, role title and status stay here.
+    meta: collectionMetaSchema.extend({ managedByCentral: z.boolean() }),
   })
   .strict();
 

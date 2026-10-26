@@ -18,12 +18,17 @@ export function createResourceRouter(
   prisma: DatabaseClient,
   sessions: SessionService | RequestAuthenticationService,
   shadowObserver?: ShadowSessionObserver,
+  options: { accountsManagedByCentral?: boolean } = {},
 ): Router {
   const router = createRouter();
   router.use(createRequiredAuthentication(sessions, shadowObserver));
   router.use(createOrganizationsRouter(prisma));
   router.use(createAcademicsRouter(prisma));
-  router.use(createOrganizationAccountsRouter(prisma));
+  router.use(
+    createOrganizationAccountsRouter(prisma, {
+      managedByCentral: options.accountsManagedByCentral,
+    }),
+  );
   router.use(createStaffDirectoryRouter(prisma));
   router.use(createStudentsRouter(prisma));
   router.use(createGpkRouter(prisma));

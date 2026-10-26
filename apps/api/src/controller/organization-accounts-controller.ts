@@ -6,7 +6,7 @@ import {
   uuidSchema,
 } from '@learnspace/contracts';
 import { z } from 'zod';
-import { parseRequest } from '../middleware/http-errors.js';
+import { HttpError, parseRequest } from '../middleware/http-errors.js';
 import type { RequestHandler } from '../type/http.js';
 import {
   requireResourceAuth,
@@ -15,9 +15,22 @@ import {
 } from '../utils/resource-access.js';
 import type { OrganizationAccountsService } from '../service/organization-accounts-service.js';
 
+// Who a person is and what role they hold comes from Central when it manages accounts.
+const centralFields = ['email', 'displayName', 'avatarUrl', 'role'] as const;
+
+function managedByCentralError() {
+  return new HttpError(
+    409,
+    'MANAGED_BY_CENTRAL',
+    'Accounts and roles are managed in Central.',
+  );
+}
+
 export function createOrganizationAccountsController(
   service: OrganizationAccountsService,
+  options: { managedByCentral?: boolean } = {},
 ) {
+  const managedByCentral = options.managedByCentral === true;
   const list: RequestHandler = async (request, response, next) => {
     try {
       const organizationId = request.params.organizationId;
@@ -27,7 +40,7 @@ export function createOrganizationAccountsController(
       response.json(
         organizationAccountsResponseSchema.parse({
           data,
-          meta: { count: data.length },
+          meta: { count: data.length, managedByCentral },
         }),
       );
     } catch (error) {
@@ -36,6 +49,7 @@ export function createOrganizationAccountsController(
   };
   const create: RequestHandler = async (request, response, next) => {
     try {
+      if (managedByCentral) throw managedByCentralError();
       const command = parseRequest(
         organizationAccountCreateCommandSchema,
         request.body,
@@ -72,6 +86,9 @@ export function createOrganizationAccountsController(
       const auth = requireResourceAuth(request);
       const membership = resourceMembershipFor(request, path.organizationId);
       requireResourcePermission(membership, 'organization:admin');
+      if (managedByCentral && centralFields.some((key) => key in command)) {
+        throw managedByCentralError();
+      }
       const data = await service.update({
         ...path,
         command,

@@ -1,5 +1,8 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
-import { MembershipRole, grantedPermissions } from '../utils/authorization.js';
+import {
+  grantedPermissions,
+  permissionsOfMembership,
+} from '../utils/authorization.js';
 import type {
   OrganizationAccountCreateCommand,
   OrganizationAccountUpdateCommand,
@@ -12,33 +15,22 @@ import {
   organizationAccountSelect,
 } from '../model/organization-accounts-model.js';
 
+// Which rows a person reaches follows from what their role allows: grade scopes for `scope.grade`, subject scopes for
+// `scope.subject`, and none for a role that reaches the organization or only assigned students.
 function validateRoleScopes(input: {
-  role: MembershipRole;
+  permissions: readonly string[];
   unitIds: readonly string[];
   gradeIds: readonly string[];
   subjectIds: readonly string[];
 }) {
-  if (
-    input.role === 'GRADE_TEACHER' &&
-    input.subjectIds.length === 0 &&
-    (input.unitIds.length > 0 || input.gradeIds.length > 0)
-  )
-    return;
-  if (
-    input.role === 'SUBJECT_TEACHER' &&
-    input.unitIds.length === 0 &&
-    input.gradeIds.length === 0 &&
-    input.subjectIds.length > 0
-  )
-    return;
-  if (
-    input.role !== 'GRADE_TEACHER' &&
-    input.role !== 'SUBJECT_TEACHER' &&
-    input.unitIds.length === 0 &&
-    input.gradeIds.length === 0 &&
-    input.subjectIds.length === 0
-  )
-    return;
+  const byGrade = input.permissions.includes('scope.grade');
+  const bySubject = input.permissions.includes('scope.subject');
+  const gradeScopes = input.unitIds.length + input.gradeIds.length;
+  const subjectScopes = input.subjectIds.length;
+  if (byGrade && !bySubject && subjectScopes === 0 && gradeScopes > 0) return;
+  if (bySubject && !byGrade && gradeScopes === 0 && subjectScopes > 0) return;
+  if (byGrade && bySubject && gradeScopes + subjectScopes > 0) return;
+  if (!byGrade && !bySubject && gradeScopes + subjectScopes === 0) return;
   throw new HttpError(
     400,
     'INVALID_MEMBERSHIP_SCOPES',
@@ -145,7 +137,10 @@ export function createOrganizationAccountsService(prisma: PrismaClient) {
               subjectIds: input.command.subjectIds ?? [],
             },
           );
-          validateRoleScopes({ role: input.command.role, ...scopes });
+          validateRoleScopes({
+            permissions: grantedPermissions(input.command.role),
+            ...scopes,
+          });
           const email = input.command.email.toLowerCase();
           let user = await transaction.user.findUnique({
             where: { email },
@@ -290,7 +285,9 @@ export function createOrganizationAccountsService(prisma: PrismaClient) {
             : undefined;
           if (scopes)
             validateRoleScopes({
-              role: input.command.role ?? existing.role,
+              permissions: input.command.role
+                ? grantedPermissions(input.command.role)
+                : permissionsOfMembership(existing.role, existing.permissions),
               ...scopes,
             });
           const normalizedEmail = input.command.email?.toLowerCase();

@@ -1,7 +1,7 @@
 import type { RequestHandler } from '../type/http.js';
 import type { AppConfig } from '../lib/config.js';
 import type { Logger } from '../lib/logger.js';
-import { permissionsForRole } from '../utils/authorization.js';
+import { permissionsOfMembership } from '../utils/authorization.js';
 import { OAuthDeniedError, OAuthService } from '../service/oauth-service.js';
 import {
   appendCookie,
@@ -55,7 +55,10 @@ function sessionPayload(
           ),
         ]),
       ],
-      permissions: permissionsForRole(membership.role),
+      permissions: permissionsOfMembership(
+        membership.role,
+        membership.permissions,
+      ),
     })),
     expiresAt: session.expiresAt.toISOString(),
   };

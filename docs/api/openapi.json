@@ -11697,6 +11697,12 @@
                     }
                   ]
                 },
+                "permissions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "status": {
                   "const": "ACTIVE"
                 }
@@ -11709,6 +11715,7 @@
                 "avatarUrl",
                 "role",
                 "roleTitle",
+                "permissions",
                 "status"
               ],
               "additionalProperties": false
@@ -11795,6 +11802,12 @@
                     }
                   ]
                 },
+                "permissions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "membershipStatus": {
                   "type": "string",
                   "enum": [
@@ -11838,6 +11851,7 @@
                 "userStatus",
                 "role",
                 "roleTitle",
+                "permissions",
                 "membershipStatus",
                 "unitIds",
                 "gradeIds",
@@ -11853,10 +11867,14 @@
               "count": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "managedByCentral": {
+                "type": "boolean"
               }
             },
             "required": [
-              "count"
+              "count",
+              "managedByCentral"
             ],
             "additionalProperties": false
           }
@@ -12176,6 +12194,12 @@
                   }
                 ]
               },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
               "membershipStatus": {
                 "type": "string",
                 "enum": [
@@ -12219,6 +12243,7 @@
               "userStatus",
               "role",
               "roleTitle",
+              "permissions",
               "membershipStatus",
               "unitIds",
               "gradeIds",

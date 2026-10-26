@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { permissionsOfMembership } from '../utils/authorization.js';
 
 export function createStaffDirectoryService(prisma: PrismaClient) {
   return {
@@ -15,6 +16,7 @@ export function createStaffDirectoryService(prisma: PrismaClient) {
           organizationId: true,
           role: true,
           roleTitle: true,
+          permissions: true,
           status: true,
           user: { select: { id: true, displayName: true, avatarUrl: true } },
         },
@@ -27,6 +29,7 @@ export function createStaffDirectoryService(prisma: PrismaClient) {
         avatarUrl: row.user.avatarUrl,
         role: row.role,
         roleTitle: row.roleTitle,
+        permissions: permissionsOfMembership(row.role, row.permissions),
         status: row.status,
       }));
     },
