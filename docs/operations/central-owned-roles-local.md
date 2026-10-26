@@ -6,7 +6,8 @@ Learnspace takes the role key and the permission list of the Central entitlement
 
 1. Check out `feat/central-owned-roles`, then run `bun install`.
 2. Apply the migration `20261023000000_membership_role_text_and_permissions` with `bun run db:migrate:deploy`. It turns the role into text and gives each membership a stored permission list, filled from the built-in role for existing rows.
-3. Restart the API and the web app.
+3. Generate the Prisma client with `bun run --filter @learnspace/api prisma:generate`. The migration only changes the database. Without this step the API still has the old client and every sign-in answers "Unable to verify session".
+4. Restart the API and the web app.
 
 ## Publish the permissions to Central
 
