@@ -90,6 +90,13 @@ const rawEnvironmentSchema = z.object({
     .max(3_600)
     .default(30),
   SHARED_SESSION_LOG_MATCHES: booleanString,
+  // Minutes between runs of the Central access and academic sync inside the API. 0 keeps it off.
+  CENTRAL_SYNC_INTERVAL_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(1_440)
+    .default(0),
 
   SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(24),
   ALLOW_DEVELOPMENT_AUTH_PLACEHOLDERS: z
@@ -124,6 +131,7 @@ export type AppConfig = {
   sharedSessionLocalOrganizationId?: string;
   sharedSessionEntitlementCacheSeconds?: number;
   sharedSessionLogMatches?: boolean;
+  centralSyncIntervalMinutes?: number;
 
   sessionTtlHours: number;
   logLevel: (typeof logLevels)[number];
@@ -283,6 +291,7 @@ export function loadConfig(
     sharedSessionEntitlementCacheSeconds:
       values.SHARED_SESSION_ENTITLEMENT_CACHE_SECONDS,
     sharedSessionLogMatches: values.SHARED_SESSION_LOG_MATCHES,
+    centralSyncIntervalMinutes: values.CENTRAL_SYNC_INTERVAL_MINUTES,
 
     sessionTtlHours: values.SESSION_TTL_HOURS,
     logLevel: values.LOG_LEVEL,

@@ -4,6 +4,7 @@ import { loadConfig } from '../lib/config.js';
 import { createDatabase } from '../lib/database.js';
 import { createLogger } from '../lib/logger.js';
 import { scheduleAuthCleanup } from '../service/auth-cleanup-service.js';
+import { scheduleCentralSync } from '../service/central-sync-schedule-service.js';
 import { OAuthService } from '../service/oauth-service.js';
 import { SessionService } from '../service/session-service.js';
 import { createSharedSessionShadow } from '../service/shared-session-shadow-service.js';
@@ -33,6 +34,7 @@ async function main() {
     ),
   };
   const cleanupTimer = scheduleAuthCleanup(auth, logger);
+  const centralSync = scheduleCentralSync(database.client, config, logger);
   const app = createApp({ config, database, logger, auth });
   const server = serve(
     { fetch: app.fetch, port: config.port, hostname: '0.0.0.0' },
@@ -49,6 +51,7 @@ async function main() {
     if (shuttingDown) return;
     shuttingDown = true;
     clearInterval(cleanupTimer);
+    centralSync?.stop();
     logger.info({ signal }, 'shutdown started');
 
     server.close(async (error) => {

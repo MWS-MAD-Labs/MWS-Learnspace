@@ -27,7 +27,15 @@ export const iepSelect = {
   createdAt: true,
   updatedAt: true,
   student: { select: { id: true, studentNumber: true, fullName: true } },
-  academicYear: true,
+  academicYear: {
+    select: {
+      id: true,
+      organizationId: true,
+      name: true,
+      startsOn: true,
+      endsOn: true,
+    },
+  },
   semester: true,
   createdBy: { select: { id: true, displayName: true } },
   updatedBy: { select: { id: true, displayName: true } },

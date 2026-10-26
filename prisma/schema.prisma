@@ -252,6 +252,7 @@ model AcademicYear {
   id             String            @id @default(uuid()) @db.Uuid
   organizationId String            @db.Uuid
   name           String
+  centralId        String?
   startsOn       DateTime          @db.Date
   endsOn         DateTime          @db.Date
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -260,6 +261,7 @@ model AcademicYear {
   journeys       LearningJourney[]
   ieps           IEP[]
 
+  @@unique([organizationId, centralId])
   @@unique([organizationId, name])
   @@index([organizationId, startsOn, endsOn])
 }
@@ -287,12 +289,14 @@ model Unit {
   organizationId   String            @db.Uuid
   code             String
   name             String
+  centralId        String?
   organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   grades           Grade[]
   classes          SchoolClass[]
   membershipScopes MembershipUnit[]
   journeys         LearningJourney[]
 
+  @@unique([organizationId, centralId])
   @@unique([organizationId, code])
   @@unique([organizationId, name])
 }
@@ -303,6 +307,7 @@ model Grade {
   unitId           String            @db.Uuid
   code             String
   name             String
+  centralId        String?
   position         Int
   organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   unit             Unit              @relation(fields: [unitId], references: [id], onDelete: Restrict)
@@ -310,6 +315,7 @@ model Grade {
   membershipScopes MembershipGrade[]
   journeys         LearningJourney[]
 
+  @@unique([organizationId, centralId])
   @@unique([organizationId, code])
   @@unique([unitId, position])
   @@index([organizationId, unitId])
@@ -322,12 +328,14 @@ model SchoolClass {
   gradeId           String             @db.Uuid
   code              String
   name              String
+  centralId        String?
   organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   unit              Unit               @relation(fields: [unitId], references: [id], onDelete: Restrict)
   grade             Grade              @relation(fields: [gradeId], references: [id], onDelete: Restrict)
   enrollments       Enrollment[]
   attendanceRecords AttendanceRecord[]
 
+  @@unique([organizationId, centralId])
   @@unique([organizationId, code])
   @@unique([organizationId, gradeId, name])
   @@index([organizationId, gradeId])
@@ -338,10 +346,12 @@ model Subject {
   organizationId   String              @db.Uuid
   code             String
   name             String
+  centralKey       String?
   organization     Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   membershipScopes MembershipSubject[]
   journeys         LearningJourney[]
 
+  @@unique([organizationId, centralKey])
   @@unique([organizationId, code])
   @@unique([organizationId, name])
 }

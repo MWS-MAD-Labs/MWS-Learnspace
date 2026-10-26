@@ -20,6 +20,7 @@ export function createAcademicsService(prisma: PrismaClient) {
       requireAcademicCollectionAccess(membership, 'academicYears');
       const rows = await prisma.academicYear.findMany({
         where: { organizationId },
+        omit: { centralId: true },
         orderBy: [{ startsOn: 'desc' }, { id: 'asc' }],
       });
       return rows.map((row) => ({
@@ -72,6 +73,7 @@ export function createAcademicsService(prisma: PrismaClient) {
       }
       return prisma.unit.findMany({
         where,
+        omit: { centralId: true },
         orderBy: [{ name: 'asc' }, { id: 'asc' }],
       });
     },
@@ -101,6 +103,7 @@ export function createAcademicsService(prisma: PrismaClient) {
       }
       return prisma.grade.findMany({
         where,
+        omit: { centralId: true },
         orderBy: [{ position: 'asc' }, { id: 'asc' }],
       });
     },
@@ -117,6 +120,7 @@ export function createAcademicsService(prisma: PrismaClient) {
       }
       return prisma.schoolClass.findMany({
         where: { organizationId, ...classScope },
+        omit: { centralId: true },
         orderBy: [{ name: 'asc' }, { id: 'asc' }],
       });
     },
@@ -139,6 +143,7 @@ export function createAcademicsService(prisma: PrismaClient) {
       }
       return prisma.subject.findMany({
         where,
+        omit: { centralKey: true },
         orderBy: [{ name: 'asc' }, { id: 'asc' }],
       });
     },

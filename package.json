@@ -49,6 +49,7 @@
     "db:import:prepare-local": "bun scripts/prepare-local-import-rehearsal.ts",
     "db:backfill-central-principals": "bun run --filter @learnspace/api db:backfill-central-principals --",
     "central-access:sync": "bun run --filter @learnspace/api central-access:sync --",
+    "central-academic:sync": "bun run --filter @learnspace/api central-academic:sync --",
     "permissions:check": "bun run --filter @learnspace/api permissions:check --",
     "permissions:sync": "bun run --filter @learnspace/api permissions:sync --",
     "shared-session:readiness": "bun run --filter @learnspace/api shared-session:readiness --"
