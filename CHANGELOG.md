@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Central login, shadow check, readiness report and access sync accept any role key and take the permission list of the Central entitlement as the whole answer; unknown or duplicate permission keys are refused (ADR 0002).
 - Permission keys for how far a person reaches (`scope.organization`, `scope.grade`, `scope.subject`, `scope.special-ed`, `scope.assigned`), for each IEP workflow step (`iep:*`) and for the weekly report steps (`weekly-report:*`). Access rules read these instead of the role name; until Central roles carry them, the role gives them, so no one gains or loses access (ADR 0002, pinned by `role-policy-golden.test.ts`).
 - Reproducible Bun toolchain metadata with a committed `bun.lock` dependency lockfile.
 - Independent Prettier formatting, Oxlint syntax/semantic linting, required TypeScript 7 `tsc` checking, Vitest smoke testing, and production-build commands.

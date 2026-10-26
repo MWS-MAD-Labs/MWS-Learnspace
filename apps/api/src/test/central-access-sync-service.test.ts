@@ -1,4 +1,3 @@
-import { grantedPermissions } from '../utils/authorization.js';
 import { CentralApiError } from 'mws-central-auth/data-client';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -94,24 +93,38 @@ describe('Central access synchronization', () => {
     expect(report.counts.rolesUpdated).toBe(1);
     expect(context.database.membership.update).toHaveBeenCalledWith({
       where: { id: 'membership-1' },
-      // The permissions of the role go with it, so the membership never keeps those of the old one.
-      data: { role: 'DIRECTOR', permissions: grantedPermissions('DIRECTOR') },
+      // The list of Central is stored whole next to the role.
+      data: { role: 'DIRECTOR', permissions: permissionsForRole('DIRECTOR') },
     });
     expect(context.database.externalPrincipal.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { issuer: 'mws-hub', verified: true } }),
     );
   });
 
-  it('does not write in dry-run or when permissions do not exactly match', async () => {
+  it('does not write in dry-run or when the entitlement is not valid', async () => {
     const dryRun = setup({ mode: 'dry-run' });
     expect((await dryRun.run()).counts.rolesUpdated).toBe(1);
     expect(dryRun.database.membership.update).not.toHaveBeenCalled();
 
-    const mismatch = setup({
-      entitlement: entitlement({ permissions: ['attendance:read'] }),
+    const unknown = setup({
+      entitlement: entitlement({ permissions: ['attendance:read', 'nope:x'] }),
     });
-    expect((await mismatch.run()).counts.invalidEntitlements).toBe(1);
-    expect(mismatch.database.membership.update).not.toHaveBeenCalled();
+    expect((await unknown.run()).counts.invalidEntitlements).toBe(1);
+    expect(unknown.database.membership.update).not.toHaveBeenCalled();
+  });
+
+  it('applies any role key and a permission subset from Central', async () => {
+    const context = setup({
+      entitlement: entitlement({
+        role: 'Reading Coach',
+        permissions: ['attendance:read'],
+      }),
+    });
+    expect((await context.run()).counts.rolesUpdated).toBe(1);
+    expect(context.database.membership.update).toHaveBeenCalledWith({
+      where: { id: 'membership-1' },
+      data: { role: 'Reading Coach', permissions: ['attendance:read'] },
+    });
   });
 
   it.each([

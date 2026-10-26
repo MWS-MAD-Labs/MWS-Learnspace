@@ -1,4 +1,3 @@
-import { grantedPermissions } from '../utils/authorization.js';
 import { describe, expect, it, vi } from 'vitest';
 import { projectCentralPrincipal } from '../service/central-principal-projection-service.js';
 import { permissionsForRole } from '../utils/authorization.js';
@@ -174,15 +173,40 @@ describe('Central first-login principal projection', () => {
         organizationId: 'local-org-1',
         userId: 'user-new',
         role: 'GRADE_TEACHER',
-        permissions: grantedPermissions('GRADE_TEACHER'),
+        permissions: [...permissionsForRole('GRADE_TEACHER')],
       },
     });
   });
 
-  it('requires exact role permissions before opening a transaction', async () => {
+  it('takes any role key and the permissions Central answered, with no list of its own to match', async () => {
     const value = setup({
-      entitlement: entitlement({ permissions: ['attendance:read'] }),
+      entitlement: entitlement({
+        role: 'KEPALA_UNIT',
+        permissions: ['attendance:read', 'scope.organization'],
+      }),
     });
+    await expect(project(value)).resolves.toMatchObject({ ok: true });
+    expect(value.membershipCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        role: 'KEPALA_UNIT',
+        permissions: ['attendance:read', 'scope.organization'],
+      }),
+    });
+  });
+
+  it.each([
+    [
+      'a permission the manifest does not have',
+      { permissions: ['payroll:read'] },
+    ],
+    [
+      'a permission listed twice',
+      { permissions: ['attendance:read', 'attendance:read'] },
+    ],
+    ['an empty role', { role: '   ' }],
+    ['a role that is too long', { role: 'R'.repeat(129) }],
+  ])('refuses %s before opening a transaction', async (_name, overrides) => {
+    const value = setup({ entitlement: entitlement(overrides) });
     await expect(project(value)).resolves.toEqual({
       ok: false,
       kind: 'denied',

@@ -386,16 +386,24 @@ describe('what the role name gives as permissions', () => {
     }
   });
 
-  it('gives a Central permission list its own keys and still the ones the role implies', () => {
+  it('takes the permission list of Central as the whole answer, whatever the role name', () => {
     const fromCentral = membership('GRADE_TEACHER', {
       permissions: ['attendance:read', 'scope.organization'],
     });
     expect(membershipHasPermission(fromCentral, 'scope.organization')).toBe(
       true,
     );
-    expect(membershipHasPermission(fromCentral, 'scope.grade')).toBe(true);
+    expect(membershipHasPermission(fromCentral, 'attendance:read')).toBe(true);
+    // The role name adds nothing once Central answered.
+    expect(membershipHasPermission(fromCentral, 'scope.grade')).toBe(false);
     expect(membershipHasPermission(fromCentral, 'attendance:write')).toBe(
       false,
     );
+    expect(
+      membershipHasPermission(
+        membership('KEPALA_UNIT', { permissions: ['special-ed:read'] }),
+        'special-ed:read',
+      ),
+    ).toBe(true);
   });
 });

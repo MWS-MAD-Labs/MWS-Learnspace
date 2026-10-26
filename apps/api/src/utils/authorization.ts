@@ -263,8 +263,8 @@ export const permissionsByRole: Record<BuiltInRole, readonly Permission[]> = {
   SPECIALIST: ['special-ed:read', 'special-ed:write'],
 };
 
-// What the role name used to decide, as permissions. A Central role will carry these itself; until it does, the role
-// gives them, so nobody gains or loses anything. The golden test pins the result.
+// What the role name used to decide, as permissions. With the base list of a built-in role they are the default grant:
+// what a Central role of the same name is created with, and what a membership follows while none are stored with it.
 export const roleDerivedPermissions: Record<
   BuiltInRole,
   readonly Permission[]
@@ -358,16 +358,37 @@ export function membershipHasPermission(
   membership: MembershipScope,
   permission: Permission,
 ): boolean {
-  // Permissions given to the membership win, whether Central's or the ones stored with it. Without any it follows its
-  // built-in role.
-  const own = membership.permissions
-    ? membership.permissions.includes(permission)
-    : hasPermission(membership.role, permission);
-  return (
-    own ||
-    (isBuiltInRole(membership.role) &&
-      roleDerivedPermissions[membership.role].includes(permission))
-  );
+  // The permissions given to the membership are the whole answer, Central's or the ones stored with it. Only a
+  // membership that has none yet follows what its built-in role grants.
+  const granted = membership.permissions ?? grantedPermissions(membership.role);
+  return granted.includes(permission);
+}
+
+// What a membership may do: the permissions stored with it, or, while none are stored, what its built-in role grants.
+export function permissionsOfMembership(
+  role: MembershipRole,
+  stored?: readonly string[] | null,
+): Permission[] {
+  const known = (stored ?? []).filter(isPermission);
+  return known.length ? known : grantedPermissions(role);
+}
+
+export const MAX_ROLE_KEY_LENGTH = 128;
+
+// What Central says a person may do in this application, once it is checked: the role is any key Central made, and
+// every permission is one of the keys of the manifest, once. A key Learnspace does not know is refused, never ignored.
+export function centralEntitlementAccess(entitlement: {
+  role: string;
+  permissions: readonly string[];
+}): { role: string; permissions: Permission[] } | undefined {
+  const role =
+    typeof entitlement.role === 'string' ? entitlement.role.trim() : '';
+  if (!role || role.length > MAX_ROLE_KEY_LENGTH) return undefined;
+  if (!Array.isArray(entitlement.permissions)) return undefined;
+  const permissions = entitlement.permissions;
+  if (new Set(permissions).size !== permissions.length) return undefined;
+  if (!permissions.every(isPermission)) return undefined;
+  return { role, permissions: [...permissions] };
 }
 
 type AuditAppender = {

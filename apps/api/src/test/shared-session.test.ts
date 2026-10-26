@@ -275,7 +275,7 @@ describe('authoritative shared session', () => {
       { entitlement: entitlement({ organization_id: 'other' }) },
       'wrong Central organization',
     ],
-    [{ entitlement: entitlement({ role: 'UNKNOWN' }) }, 'unknown role'],
+    [{ entitlement: entitlement({ role: '' }) }, 'empty role'],
     [
       { entitlement: entitlement({ permissions: ['future:permission'] }) },
       'unknown permission',

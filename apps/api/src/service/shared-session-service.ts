@@ -8,11 +8,9 @@ import type { AppConfig } from '../lib/config.js';
 import type { Logger } from '../lib/logger.js';
 import type { AuthenticatedRequest, HttpRequest } from '../type/http.js';
 import {
-  PERMISSIONS,
-  permissionsByRole,
-  type Permission,
+  centralEntitlementAccess,
   type MembershipRole,
-  permissionsForRole,
+  type Permission,
 } from '../utils/authorization.js';
 import {
   centralOrganizationMappingErrorCodes,
@@ -32,9 +30,6 @@ import type {
   RequestAuthenticationService,
 } from './request-authentication-service.js';
 import { projectCentralPrincipal } from './central-principal-projection-service.js';
-
-const knownPermissions = new Set<string>(PERMISSIONS);
-const knownRoles = new Set<string>(Object.keys(permissionsByRole));
 
 export type SharedDependencyLabel = 'hub' | 'central';
 export type SharedDependencyStates = Record<
@@ -294,17 +289,7 @@ export class SharedSessionAuthenticationService implements RequestAuthentication
       entitlement.person_id !== claims.sub ||
       entitlement.application_id !== this.applicationId ||
       entitlement.organization_id !== this.centralOrganizationId ||
-      !knownRoles.has(entitlement.role) ||
-      entitlement.permissions.some(
-        (permission: string) => !knownPermissions.has(permission),
-      ) ||
-      entitlement.permissions.length !==
-        permissionsForRole(entitlement.role).length ||
-      new Set(entitlement.permissions).size !==
-        entitlement.permissions.length ||
-      !permissionsForRole(entitlement.role).every((permission) =>
-        entitlement.permissions.includes(permission),
-      )
+      !centralEntitlementAccess(entitlement)
     ) {
       return this.failure(
         403,
@@ -343,8 +328,8 @@ export class SharedSessionAuthenticationService implements RequestAuthentication
       );
     }
 
-    const role = entitlement.role as MembershipRole;
-    const permissions = entitlement.permissions as Permission[];
+    // The role and permissions are exactly what Central answered, checked above.
+    const { role, permissions } = centralEntitlementAccess(entitlement)!;
     const activeAssignments = membership.staffAssignments.filter(
       (assignment) =>
         assignment.startsOn <= now &&

@@ -9,7 +9,7 @@ import {
   normalizeCentralApiBaseUrl,
   PrincipalContextLoader,
 } from '../service/shared-session-shadow-service.js';
-import { permissionsForRole } from '../utils/authorization.js';
+import { grantedPermissions } from '../utils/authorization.js';
 import { createRouter } from '../type/http.js';
 import { httpTestClient } from './http-test-client.js';
 
@@ -27,7 +27,7 @@ function entitlement(overrides: Record<string, unknown> = {}) {
     application_id: 'learnspace',
     organization_id: 'central-org-1',
     role: 'DIRECTOR',
-    permissions: [...permissionsForRole('DIRECTOR')],
+    permissions: [...grantedPermissions('DIRECTOR')],
     version: 1,
     is_active: true,
     granted_at: '2026-01-01',
@@ -248,7 +248,7 @@ describe('shared session shadow mode', () => {
     await expect(
       loader({
         entitlement: entitlement({
-          permissions: [...permissionsForRole('DIRECTOR'), 'future:permission'],
+          permissions: [...grantedPermissions('DIRECTOR'), 'future:permission'],
         }),
       }).loader.load(identity, local),
     ).resolves.toMatchObject({
@@ -422,7 +422,7 @@ describe('shared session shadow mode', () => {
         membershipId: 'membership-1',
         entitlementId: 'entitlement-1',
         entitlementVersion: 1,
-        centralPermissions: permissionsForRole('DIRECTOR'),
+        centralPermissions: grantedPermissions('DIRECTOR'),
       }),
       'shared session shadow match',
     );

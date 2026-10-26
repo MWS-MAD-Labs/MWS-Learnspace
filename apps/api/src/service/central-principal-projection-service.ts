@@ -1,15 +1,9 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import type { HubSessionClaims } from 'mws-central-auth/server';
-import {
-  permissionsByRole,
-  permissionsForRole,
-  type MembershipRole,
-  grantedPermissions,
-} from '../utils/authorization.js';
+import { centralEntitlementAccess } from '../utils/authorization.js';
 import type { CentralEntitlement } from './shared-session-shadow-service.js';
 
 const projectionConflictCodes = new Set(['P2002', 'P2034']);
-const knownRoles = new Set<string>(Object.keys(permissionsByRole));
 
 export const centralProjectionDenialCodes = [
   'SOURCE_NOT_SUPPORTED',
@@ -55,16 +49,11 @@ function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function exactPermissions(
-  entitlement: NonNullable<CentralEntitlement>,
-  role: MembershipRole,
-): boolean {
-  const actual = entitlement.permissions;
-  const expected = permissionsForRole(role);
+// The same keys, whatever the order.
+function sameKeys(a: readonly string[], b: readonly string[]): boolean {
   return (
-    actual.length === expected.length &&
-    new Set(actual).size === actual.length &&
-    expected.every((permission) => actual.includes(permission))
+    a.length === b.length &&
+    [...a].sort().join('\n') === [...b].sort().join('\n')
   );
 }
 
@@ -121,14 +110,15 @@ export async function projectCentralPrincipal(input: {
     !entitlement.is_active ||
     entitlement.person_id !== input.claims.sub ||
     entitlement.application_id !== input.applicationId ||
-    entitlement.organization_id !== input.centralOrganizationId ||
-    !knownRoles.has(entitlement.role) ||
-    !exactPermissions(entitlement, entitlement.role as MembershipRole)
+    entitlement.organization_id !== input.centralOrganizationId
   ) {
     return { ok: false, kind: 'denied', code: 'ENTITLEMENT_INVALID' };
   }
-
-  const role = entitlement.role as MembershipRole;
+  const access = centralEntitlementAccess(entitlement);
+  if (!access) {
+    return { ok: false, kind: 'denied', code: 'ENTITLEMENT_INVALID' };
+  }
+  const { role, permissions } = access;
   const attempts = input.maxAttempts ?? 3;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
@@ -212,7 +202,7 @@ export async function projectCentralPrincipal(input: {
                 userId: user.id,
               },
             },
-            select: { id: true, status: true, role: true },
+            select: { id: true, status: true, role: true, permissions: true },
           });
           if (membership?.status === 'DISABLED') {
             throw new ProjectionDenied('MEMBERSHIP_DISABLED');
@@ -223,13 +213,16 @@ export async function projectCentralPrincipal(input: {
                 organizationId: input.localOrganizationId,
                 userId: user.id,
                 role,
-                permissions: grantedPermissions(role),
+                permissions,
               },
             });
-          } else if (membership.role !== role) {
+          } else if (
+            membership.role !== role ||
+            !sameKeys(membership.permissions, permissions)
+          ) {
             await transaction.membership.update({
               where: { id: membership.id },
-              data: { role, permissions: grantedPermissions(role) },
+              data: { role, permissions },
             });
           }
           return { ok: true, userId: user.id, entitlement } as const;

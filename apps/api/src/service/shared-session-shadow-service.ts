@@ -10,8 +10,8 @@ import type { Logger } from '../lib/logger.js';
 import type { HttpRequest } from '../type/http.js';
 import {
   PERMISSIONS,
-  permissionsByRole,
-  permissionsForRole,
+  centralEntitlementAccess,
+  permissionsOfMembership,
   type Permission,
   type MembershipRole,
 } from '../utils/authorization.js';
@@ -25,14 +25,9 @@ const mismatchLogLimit = 100;
 const logArrayLimit = 100;
 const permissionKeyLogLimit = 128;
 const knownPermissions = new Set<string>(PERMISSIONS);
-const membershipRoles = new Set<string>(Object.keys(permissionsByRole));
 
 function isKnownPermission(value: string): value is Permission {
   return knownPermissions.has(value);
-}
-
-function isMembershipRole(value: string): value is MembershipRole {
-  return membershipRoles.has(value);
 }
 
 function loggedPermissionKeys(values: readonly string[]): string[] {
@@ -110,20 +105,11 @@ export function isValidCentralEntitlement(
     !entitlement?.is_active ||
     entitlement.person_id !== input.subject ||
     entitlement.application_id !== input.applicationId ||
-    entitlement.organization_id !== input.centralOrganizationId ||
-    !isMembershipRole(entitlement.role) ||
-    entitlement.permissions.some((permission) => !isKnownPermission(permission))
+    entitlement.organization_id !== input.centralOrganizationId
   ) {
     return false;
   }
-  const expectedPermissions = permissionsForRole(entitlement.role);
-  return (
-    entitlement.permissions.length === expectedPermissions.length &&
-    new Set(entitlement.permissions).size === entitlement.permissions.length &&
-    expectedPermissions.every((permission) =>
-      entitlement.permissions.includes(permission),
-    )
-  );
+  return centralEntitlementAccess(entitlement) !== undefined;
 }
 
 export function normalizeCentralApiBaseUrl(value: string): string {
@@ -157,6 +143,7 @@ const localMembershipSelect = {
   id: true,
   organizationId: true,
   role: true,
+  permissions: true,
   status: true,
   organization: { select: { status: true } },
   unitScopes: { select: { unitId: true } },
@@ -229,10 +216,7 @@ export function compareCentralAuthorization(input: {
       unknownCentralPermissions,
     };
   }
-  if (
-    !isMembershipRole(entitlement.role) ||
-    entitlement.role !== input.localRole
-  ) {
+  if (entitlement.role !== input.localRole) {
     return { status: 'role_mismatch' };
   }
   const typedCentralPermissions =
@@ -413,7 +397,10 @@ export class PrincipalContextLoader {
       membershipId: membership.id,
       organizationId: membership.organizationId,
       role: membership.role,
-      permissions: permissionsForRole(membership.role),
+      permissions: permissionsOfMembership(
+        membership.role,
+        membership.permissions,
+      ),
       scopes: {
         unitIds: membership.unitScopes.map(({ unitId }) => unitId).sort(),
         gradeIds: membership.gradeScopes.map(({ gradeId }) => gradeId).sort(),

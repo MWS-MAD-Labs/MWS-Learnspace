@@ -66,7 +66,8 @@ Each role keeps today's permissions and adds:
 
 - Done: the new permissions are in the manifest and `permissions.json`; every access rule (attendance, resources, journeys, weekly reports, IEPs, observations, aggregates, and the services that scoped by role) asks for a permission. The role still supplies them through `roleDerivedPermissions`, so the snapshot is unchanged.
 - Done (data): `Membership.role` and `UserInvitation.role` are text, `Membership.permissions` stores what the membership is allowed, and the migration `20261023000000_membership_role_text_and_permissions` fills it from the built-in role (checked on rows that existed before). The local session passes the stored permissions into the request; the account, projection and sync writers keep them in step with the role. The API answers any role key; only the account commands still list the built-in roles.
-- Next: take the permissions of the entitlement at login and drop the exact-match rule in the Central login, then remove `roleDerivedPermissions`, and finally the local account and invitation commands.
+- Done (login): the Central login, the shadow check, the readiness report and the sync take the role key and the permission list of the entitlement as they are. Any non-empty role key is accepted; an unknown permission key or a duplicate refuses the entitlement. The stored list is the whole answer for a membership, even when empty. `roleDerivedPermissions` stays only as the default grant for built-in roles and for memberships with no stored list.
+- Next: disable the local account and invitation commands, then the web and docs follow-up.
 
 ## Consequences
 

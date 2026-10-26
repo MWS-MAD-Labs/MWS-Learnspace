@@ -4,7 +4,7 @@ import {
   type CentralEntitlementClient,
 } from './shared-session-shadow-service.js';
 import {
-  permissionsForRole,
+  permissionsOfMembership,
   type MembershipRole,
 } from '../utils/authorization.js';
 
@@ -114,6 +114,7 @@ export async function inspectSharedSessionReadiness(input: {
         where: { organizationId: input.localOrganizationId },
         select: {
           role: true,
+          permissions: true,
           status: true,
           organization: { select: { status: true } },
         },
@@ -212,7 +213,10 @@ export async function inspectSharedSessionReadiness(input: {
       applicationId: input.applicationId,
       centralOrganizationId: input.centralOrganizationId!,
       localRole: membership.role as MembershipRole,
-      localPermissions: permissionsForRole(membership.role),
+      localPermissions: permissionsOfMembership(
+        membership.role,
+        membership.permissions,
+      ),
     });
     if (entitlement?.is_active && entitlement.person_id === mapping.subject) {
       report.counts.entitlementActive += 1;

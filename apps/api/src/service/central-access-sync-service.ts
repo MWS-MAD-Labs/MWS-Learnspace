@@ -1,11 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { CentralApiError } from 'mws-central-auth/data-client';
-import {
-  permissionsByRole,
-  type MembershipRole,
-  permissionsForRole,
-  grantedPermissions,
-} from '../utils/authorization.js';
+import { centralEntitlementAccess } from '../utils/authorization.js';
 import type {
   CentralEntitlement,
   CentralEntitlementClient,
@@ -57,18 +52,12 @@ function emptyReport(mode: CentralAccessSyncMode): CentralAccessSyncReport {
   };
 }
 
-function entitlementRole(
-  entitlement: NonNullable<CentralEntitlement>,
-): MembershipRole | undefined {
-  if (!Object.hasOwn(permissionsByRole, entitlement.role)) return undefined;
-  const role = entitlement.role as MembershipRole;
-  const expected = new Set<string>(permissionsForRole(role));
-  const actual = new Set<string>(entitlement.permissions);
-  if (expected.size !== actual.size) return undefined;
-  for (const permission of expected) {
-    if (!actual.has(permission)) return undefined;
-  }
-  return role;
+// The same keys, whatever the order.
+function sameKeys(a: readonly string[], b: readonly string[]): boolean {
+  return (
+    a.length === b.length &&
+    [...a].sort().join('\n') === [...b].sort().join('\n')
+  );
 }
 
 export async function synchronizeCentralAccess(input: {
@@ -117,7 +106,7 @@ export async function synchronizeCentralAccess(input: {
             userId: principal.userId,
           },
         },
-        select: { id: true, role: true, status: true },
+        select: { id: true, role: true, permissions: true, status: true },
       });
       if (!membership) {
         report.counts.membershipsMissing += 1;
@@ -140,12 +129,12 @@ export async function synchronizeCentralAccess(input: {
         continue;
       }
 
-      const role = entitlementRole(entitlement);
+      const access = centralEntitlementAccess(entitlement);
       if (
         entitlement.person_id !== principal.subject ||
         entitlement.application_id !== input.applicationId ||
         entitlement.organization_id !== input.centralOrganizationId ||
-        !role
+        !access
       ) {
         report.counts.invalidEntitlements += 1;
         continue;
@@ -170,7 +159,11 @@ export async function synchronizeCentralAccess(input: {
         report.counts.locallyDisabledMemberships += 1;
         continue;
       }
-      if (membership.role === role) {
+      // A role or a permission that Central changed counts as an update: both are kept on the membership.
+      if (
+        membership.role === access.role &&
+        sameKeys(membership.permissions, access.permissions)
+      ) {
         report.counts.unchanged += 1;
         continue;
       }
@@ -179,7 +172,7 @@ export async function synchronizeCentralAccess(input: {
       if (input.mode === 'apply') {
         await database.membership.update({
           where: { id: membership.id },
-          data: { role, permissions: grantedPermissions(role) },
+          data: { role: access.role, permissions: access.permissions },
         });
       }
     }

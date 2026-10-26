@@ -3,7 +3,7 @@ import {
   inspectSharedSessionReadiness,
   sharedSessionReadinessReasonCodes,
 } from '../service/shared-session-readiness-service.js';
-import { permissionsForRole } from '../utils/authorization.js';
+import { grantedPermissions } from '../utils/authorization.js';
 
 const localOrganizationId = '10000000-0000-4000-8000-000000000001';
 
@@ -36,7 +36,7 @@ function entitlement(subject: string, overrides: Record<string, unknown> = {}) {
     application_id: 'learnspace',
     organization_id: 'central-org',
     role: 'DIRECTOR',
-    permissions: [...permissionsForRole('DIRECTOR')],
+    permissions: [...grantedPermissions('DIRECTOR')],
     version: 1,
     is_active: true,
     granted_at: '2026-01-01',
@@ -147,7 +147,7 @@ describe('shared session readiness service', () => {
       entitlement('role', { role: 'PRINCIPAL' }),
       entitlement('permission', { permissions: ['attendance:read'] }),
       entitlement('unknown', {
-        permissions: [...permissionsForRole('DIRECTOR'), 'future:permission'],
+        permissions: [...grantedPermissions('DIRECTOR'), 'future:permission'],
       }),
     ];
     const users = [
