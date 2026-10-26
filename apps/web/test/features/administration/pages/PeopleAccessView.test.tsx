@@ -39,6 +39,7 @@ const account = {
   gradeIds: [],
   subjectIds: [],
   permissions: ['organization:admin'],
+  needsScope: false,
   updatedAt: '2026-08-24T00:00:00.000Z',
 };
 const mockedUseAuth = vi.mocked(useAuth);
@@ -105,7 +106,7 @@ beforeEach(() => {
   });
   service.getAccounts.mockResolvedValue({
     data: [account],
-    meta: { count: 1, managedByCentral: false },
+    meta: { count: 1, managedByCentral: false, scopesManagedByCentral: false },
   });
   service.getUnits.mockResolvedValue({
     data: [
@@ -130,16 +131,50 @@ beforeEach(() => {
 });
 
 describe('PeopleAccessView', () => {
+  it('shows classes from Central as read-only, says who has none, and sends no scopes', async () => {
+    const teacher = {
+      ...account,
+      role: 'Class Lead',
+      roleTitle: 'Lead',
+      permissions: ['scope.grade'],
+      needsScope: true,
+    };
+    service.getAccounts.mockResolvedValue({
+      data: [teacher],
+      meta: { count: 1, managedByCentral: true, scopesManagedByCentral: true },
+    });
+    service.updateAccount.mockResolvedValue({ data: teacher });
+    render(<PeopleAccessView />);
+
+    expect(await screen.findByText('No class in Central')).toBeVisible();
+    fireEvent.click(await screen.findByText(teacher.displayName));
+    expect(screen.getByLabelText('Elementary')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Role title'), {
+      target: { value: 'Head Lead' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save access changes' }),
+    );
+
+    await waitFor(() => expect(service.updateAccount).toHaveBeenCalledOnce());
+    const sent = service.updateAccount.mock.calls[0][2];
+    expect(sent).toMatchObject({ roleTitle: 'Head Lead' });
+    expect(sent).not.toHaveProperty('unitIds');
+    expect(sent).not.toHaveProperty('gradeIds');
+    expect(sent).not.toHaveProperty('subjectIds');
+  });
+
   it('lets Central own who a person is and their role, and keeps scopes, title and status here', async () => {
     const coach = {
       ...account,
       role: 'Reading Coach',
       roleTitle: 'Coach',
       permissions: ['scope.grade', 'attendance:read'],
+      needsScope: false,
     };
     service.getAccounts.mockResolvedValue({
       data: [coach],
-      meta: { count: 1, managedByCentral: true },
+      meta: { count: 1, managedByCentral: true, scopesManagedByCentral: false },
     });
     service.updateAccount.mockResolvedValue({ data: coach });
     render(<PeopleAccessView />);

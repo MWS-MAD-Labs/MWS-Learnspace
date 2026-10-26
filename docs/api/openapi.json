@@ -11808,6 +11808,9 @@
                     "type": "string"
                   }
                 },
+                "needsScope": {
+                  "type": "boolean"
+                },
                 "membershipStatus": {
                   "type": "string",
                   "enum": [
@@ -11852,6 +11855,7 @@
                 "role",
                 "roleTitle",
                 "permissions",
+                "needsScope",
                 "membershipStatus",
                 "unitIds",
                 "gradeIds",
@@ -11870,11 +11874,15 @@
               },
               "managedByCentral": {
                 "type": "boolean"
+              },
+              "scopesManagedByCentral": {
+                "type": "boolean"
               }
             },
             "required": [
               "count",
-              "managedByCentral"
+              "managedByCentral",
+              "scopesManagedByCentral"
             ],
             "additionalProperties": false
           }
@@ -12200,6 +12208,9 @@
                   "type": "string"
                 }
               },
+              "needsScope": {
+                "type": "boolean"
+              },
               "membershipStatus": {
                 "type": "string",
                 "enum": [
@@ -12244,6 +12255,7 @@
               "role",
               "roleTitle",
               "permissions",
+              "needsScope",
               "membershipStatus",
               "unitIds",
               "gradeIds",

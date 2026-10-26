@@ -5,7 +5,7 @@ import { HttpError } from '../middleware/http-errors.js';
 const organizationId = '11111111-1111-4111-8111-111111111111';
 const membershipId = '33333333-3333-4333-8333-333333333333';
 
-function fixture(managedByCentral: boolean) {
+function fixture(managedByCentral: boolean, scopesManagedByCentral = false) {
   const service = {
     list: vi.fn(async () => []),
     create: vi.fn(async () => ({})),
@@ -13,6 +13,7 @@ function fixture(managedByCentral: boolean) {
   };
   const controller = createOrganizationAccountsController(service as never, {
     managedByCentral,
+    scopesManagedByCentral,
   });
   const run = async (
     handler: 'list' | 'create' | 'update',
@@ -66,6 +67,7 @@ describe('accounts when Central manages them', () => {
     expect(listed.json.mock.calls[0][0].meta).toEqual({
       count: 0,
       managedByCentral: true,
+      scopesManagedByCentral: false,
     });
     const refused = await run('create', create);
     const error = refused.next.mock.calls[0][0] as HttpError;
@@ -105,6 +107,29 @@ describe('accounts when Central manages them', () => {
     await run('create', create);
     expect(service.create).toHaveBeenCalledOnce();
     await run('update', { role: 'DIRECTOR' });
+    expect(service.update).toHaveBeenCalledOnce();
+  });
+});
+
+describe('scopes when Central also decides the classes', () => {
+  it('refuses scope fields, says so in the list, and keeps title and status', async () => {
+    const { service, run } = fixture(true, true);
+    expect(
+      (await run('list')).json.mock.calls[0][0].meta.scopesManagedByCentral,
+    ).toBe(true);
+    for (const body of [
+      { unitIds: [] },
+      { gradeIds: [] },
+      { subjectIds: [] },
+    ]) {
+      const refused = await run('update', body);
+      expect(refused.next.mock.calls[0][0]).toMatchObject({
+        status: 409,
+        code: 'MANAGED_BY_CENTRAL',
+      });
+    }
+    expect(service.update).not.toHaveBeenCalled();
+    await run('update', { roleTitle: 'Lead', membershipStatus: 'DISABLED' });
     expect(service.update).toHaveBeenCalledOnce();
   });
 });

@@ -19,6 +19,15 @@ Learnspace takes the role key and the permission list of the Central entitlement
 
 After `permissions:sync`, run in Central: `bun run seed:application-roles ../MWS-Learnspace/role-presets.json --as <super admin email> --dry-run`, then again without `--dry-run`. It makes Director, Principal, Special Education Coordinator, Grade Teacher, Subject Teacher and Special Education Teacher, and skips what exists. The specialist uses the Special Education Teacher role, because Central keeps one role per set of permissions.
 
+## Classes and scopes from Central
+
+Central's classes and class teacher assignments need the unit and grade ids (a Central with the ids, and `mws-central-auth` 0.11.0 for the types). Then:
+
+1. `bun run db:migrate:deploy` adds the Central key columns.
+2. `bun run central-academic:sync -- --dry-run` shows what would be made. Rows already here with the same name are reported as conflicts. Add `--adopt` to link them to their Central id instead of making a second one.
+3. `bun run central-academic:sync -- --apply` writes it. It also sets the scopes of people whose role has `scope.grade` or `scope.subject`.
+4. Set `CENTRAL_SYNC_INTERVAL_MINUTES` (for example 15) to run the access and academic sync from the API itself, once soon after start and then every interval.
+
 ## Give a role its permissions in Central
 
 Application Access, Learnspace, Roles. Pick the role and tick its permissions. A person signs in with whatever the role holds.

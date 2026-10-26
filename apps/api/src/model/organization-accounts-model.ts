@@ -34,6 +34,23 @@ type SelectedOrganizationAccount = Prisma.MembershipGetPayload<{
   select: typeof organizationAccountSelect;
 }>;
 
+function needsScope(account: SelectedOrganizationAccount): boolean {
+  const permissions = permissionsOfMembership(
+    account.role,
+    account.permissions,
+  );
+  const reachesByRows =
+    permissions.includes('scope.grade') ||
+    permissions.includes('scope.subject');
+  return (
+    reachesByRows &&
+    account.unitScopes.length +
+      account.gradeScopes.length +
+      account.subjectScopes.length ===
+      0
+  );
+}
+
 export function mapOrganizationAccount(account: SelectedOrganizationAccount) {
   return {
     membershipId: account.id,
@@ -46,6 +63,7 @@ export function mapOrganizationAccount(account: SelectedOrganizationAccount) {
     role: account.role,
     roleTitle: account.roleTitle,
     permissions: permissionsOfMembership(account.role, account.permissions),
+    needsScope: needsScope(account),
     membershipStatus: account.status,
     unitIds: account.unitScopes.map((scope) => scope.unitId),
     gradeIds: account.gradeScopes.map((scope) => scope.gradeId),

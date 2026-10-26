@@ -28,9 +28,13 @@ function managedByCentralError() {
 
 export function createOrganizationAccountsController(
   service: OrganizationAccountsService,
-  options: { managedByCentral?: boolean } = {},
+  options: {
+    managedByCentral?: boolean;
+    scopesManagedByCentral?: boolean;
+  } = {},
 ) {
   const managedByCentral = options.managedByCentral === true;
+  const scopesManagedByCentral = options.scopesManagedByCentral === true;
   const list: RequestHandler = async (request, response, next) => {
     try {
       const organizationId = request.params.organizationId;
@@ -40,7 +44,11 @@ export function createOrganizationAccountsController(
       response.json(
         organizationAccountsResponseSchema.parse({
           data,
-          meta: { count: data.length, managedByCentral },
+          meta: {
+            count: data.length,
+            managedByCentral,
+            scopesManagedByCentral,
+          },
         }),
       );
     } catch (error) {
@@ -87,6 +95,12 @@ export function createOrganizationAccountsController(
       const membership = resourceMembershipFor(request, path.organizationId);
       requireResourcePermission(membership, 'organization:admin');
       if (managedByCentral && centralFields.some((key) => key in command)) {
+        throw managedByCentralError();
+      }
+      if (
+        scopesManagedByCentral &&
+        ['unitIds', 'gradeIds', 'subjectIds'].some((key) => key in command)
+      ) {
         throw managedByCentralError();
       }
       const data = await service.update({

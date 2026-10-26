@@ -102,11 +102,13 @@ function ScopePicker({
   options,
   selected,
   onChange,
+  readOnly = false,
 }: {
   title: string;
   options: Option[];
   selected: string[];
   onChange: (ids: string[]) => void;
+  readOnly?: boolean;
 }) {
   return (
     <fieldset className="rounded-xl border border-stone-200 p-3">
@@ -116,6 +118,7 @@ function ScopePicker({
           <label key={option.id} className="flex items-center gap-2 text-xs">
             <input
               type="checkbox"
+              disabled={readOnly}
               checked={selected.includes(option.id)}
               onChange={(event) =>
                 onChange(
@@ -156,6 +159,8 @@ export const PeopleAccessView: React.FC = () => {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   // True when Central makes and changes the accounts. Here only scopes, title and status are set.
   const [managedByCentral, setManagedByCentral] = useState(false);
+  // True when Central also decides the classes and subjects of a person.
+  const [scopesManagedByCentral, setScopesManagedByCentral] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>();
   const loadController = useRef<AbortController | undefined>(undefined);
@@ -223,6 +228,7 @@ export const PeopleAccessView: React.FC = () => {
         ]);
       setAccounts(accountResponse.data);
       setManagedByCentral(accountResponse.meta.managedByCentral);
+      setScopesManagedByCentral(accountResponse.meta.scopesManagedByCentral);
       setUnits(unitResponse.data.map(({ id, name }) => ({ id, name })));
       setGrades(gradeResponse.data.map(({ id, name }) => ({ id, name })));
       setSubjects(subjectResponse.data.map(({ id, name }) => ({ id, name })));
@@ -322,9 +328,13 @@ export const PeopleAccessView: React.FC = () => {
     try {
       const scopes = {
         roleTitle: form.roleTitle.trim() || null,
-        unitIds: form.unitIds,
-        gradeIds: form.gradeIds,
-        subjectIds: form.subjectIds,
+        ...(scopesManagedByCentral
+          ? {}
+          : {
+              unitIds: form.unitIds,
+              gradeIds: form.gradeIds,
+              subjectIds: form.subjectIds,
+            }),
       };
       const common = {
         email: form.email,
@@ -530,6 +540,13 @@ export const PeopleAccessView: React.FC = () => {
                     <p className="mt-1 text-xs font-semibold text-[#6E161E]">
                       {account.roleTitle ?? roleLabel(account.role)}
                     </p>
+                    {account.needsScope && (
+                      <p className="mt-1 text-[10px] font-bold text-amber-700">
+                        {scopesManagedByCentral
+                          ? 'No class in Central'
+                          : 'No classes assigned'}
+                      </p>
+                    )}
                   </div>
                   <span
                     className={`rounded-full px-2 py-1 text-[10px] font-bold ${
@@ -683,6 +700,7 @@ export const PeopleAccessView: React.FC = () => {
                 title="Unit scopes"
                 options={units}
                 selected={form.unitIds}
+                readOnly={scopesManagedByCentral}
                 onChange={(unitIds) =>
                   setForm((current) => ({ ...current, unitIds }))
                 }
@@ -691,6 +709,7 @@ export const PeopleAccessView: React.FC = () => {
                 title="Grade scopes"
                 options={grades}
                 selected={form.gradeIds}
+                readOnly={scopesManagedByCentral}
                 onChange={(gradeIds) =>
                   setForm((current) => ({ ...current, gradeIds }))
                 }
@@ -703,6 +722,7 @@ export const PeopleAccessView: React.FC = () => {
                 title="Subject scopes"
                 options={subjects}
                 selected={form.subjectIds}
+                readOnly={scopesManagedByCentral}
                 onChange={(subjectIds) =>
                   setForm((current) => ({ ...current, subjectIds }))
                 }

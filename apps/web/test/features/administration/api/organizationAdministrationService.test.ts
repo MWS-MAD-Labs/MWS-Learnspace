@@ -16,6 +16,7 @@ const account = {
   role: 'GRADE_TEACHER' as const,
   roleTitle: 'Grade Teacher',
   permissions: ['scope.grade'],
+  needsScope: false,
   membershipStatus: 'ACTIVE' as const,
   unitIds: ['44444444-4444-4444-8444-444444444444'],
   gradeIds: ['55555555-5555-4555-8555-555555555555'],

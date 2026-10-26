@@ -66,6 +66,8 @@ export const organizationAccountSchema = z
     roleTitle: z.string().nullable(),
     // What the role allows. It decides which scopes make sense: grade scopes, subject scopes or none.
     permissions: z.array(z.string()),
+    // The role reaches rows by grade or by subject and nothing is assigned yet.
+    needsScope: z.boolean(),
     membershipStatus: accountStatusSchema,
     unitIds: z.array(uuidSchema),
     gradeIds: z.array(uuidSchema),
@@ -77,7 +79,11 @@ export const organizationAccountsResponseSchema = z
   .object({
     data: z.array(organizationAccountSchema),
     // When Central manages accounts, a person is made and changed there. Only scopes, role title and status stay here.
-    meta: collectionMetaSchema.extend({ managedByCentral: z.boolean() }),
+    meta: collectionMetaSchema.extend({
+      managedByCentral: z.boolean(),
+      // The classes and subjects of a person come from Central too, so they are shown and not edited here.
+      scopesManagedByCentral: z.boolean(),
+    }),
   })
   .strict();
 

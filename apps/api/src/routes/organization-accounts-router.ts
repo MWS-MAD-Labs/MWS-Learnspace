@@ -6,7 +6,10 @@ import { createOrganizationAccountsService } from '../service/organization-accou
 
 export function createOrganizationAccountsRouter(
   prisma: DatabaseClient,
-  options: { managedByCentral?: boolean } = {},
+  options: {
+    managedByCentral?: boolean;
+    scopesManagedByCentral?: boolean;
+  } = {},
 ): Router {
   const router = createRouter();
   const controller = createOrganizationAccountsController(

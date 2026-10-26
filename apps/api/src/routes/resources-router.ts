@@ -18,7 +18,10 @@ export function createResourceRouter(
   prisma: DatabaseClient,
   sessions: SessionService | RequestAuthenticationService,
   shadowObserver?: ShadowSessionObserver,
-  options: { accountsManagedByCentral?: boolean } = {},
+  options: {
+    accountsManagedByCentral?: boolean;
+    scopesManagedByCentral?: boolean;
+  } = {},
 ): Router {
   const router = createRouter();
   router.use(createRequiredAuthentication(sessions, shadowObserver));
@@ -27,6 +30,7 @@ export function createResourceRouter(
   router.use(
     createOrganizationAccountsRouter(prisma, {
       managedByCentral: options.accountsManagedByCentral,
+      scopesManagedByCentral: options.scopesManagedByCentral,
     }),
   );
   router.use(createStaffDirectoryRouter(prisma));
