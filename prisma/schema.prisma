@@ -93,31 +93,31 @@ model Organization {
   status                AccountStatus               @default(ACTIVE)
   createdAt             DateTime                    @default(now())
   updatedAt             DateTime                    @updatedAt
-  memberships           Membership[]
-  academicYears         AcademicYear[]
-  semesters             Semester[]
-  units                 Unit[]
-  grades                Grade[]
-  classes               SchoolClass[]
-  subjects              Subject[]
-  students              Student[]
-  enrollments           Enrollment[]
-  guardianContacts      GuardianContact[]
-  staffAssignments      StaffStudentAssignment[]
-  attendanceRecords     AttendanceRecord[]
-  learningJourneys      LearningJourney[]
-  workflowEvents        WorkflowEvent[]
-  definitions           ObservationDefinition[]
-  observationAssigns    ObservationAssignment[]
-  fedcObservations      FEDCObservation[]
-  sensoryObservations   SensoryProfileObservation[]
-  sfaObservations       SFAObservation[]
-  ieps                  IEP[]
-  weeklyReports         WeeklyReport[]
-  goalEvents            GoalAchievementEvent[]
-  auditEvents           AuditEvent[]
-  invitations           UserInvitation[]
-  importRuns            ImportRun[]
+  memberships         Membership[]
+  academicYears       AcademicYear[]
+  semesters           Semester[]
+  units               Unit[]
+  grades              Grade[]
+  classes             SchoolClass[]
+  subjects            Subject[]
+  students            Student[]
+  enrollments         Enrollment[]
+  guardianContacts    GuardianContact[]
+  staffAssignments    StaffStudentAssignment[]
+  attendanceRecords   AttendanceRecord[]
+  learningJourneys    LearningJourney[]
+  workflowEvents      WorkflowEvent[]
+  definitions         ObservationDefinition[]
+  observationAssigns  ObservationAssignment[]
+  fedcObservations    FEDCObservation[]
+  sensoryObservations SensoryProfileObservation[]
+  sfaObservations     SFAObservation[]
+  ieps                IEP[]
+  weeklyReports       WeeklyReport[]
+  goalEvents          GoalAchievementEvent[]
+  auditEvents         AuditEvent[]
+  invitations         UserInvitation[]
+  importRuns          ImportRun[]
 }
 
 model User {
@@ -151,17 +151,17 @@ model User {
 }
 
 model ExternalPrincipal {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @db.Uuid
-  issuer     String
-  subject    String
-  source     String
-  linkSource String
-  verified   Boolean   @default(false)
-  verifiedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  issuer      String
+  subject     String
+  source      String
+  linkSource  String
+  verified    Boolean  @default(false)
+  verifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([issuer, subject])
   @@unique([userId, issuer])
